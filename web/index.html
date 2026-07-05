@@ -92,6 +92,26 @@
   #endStats { margin-top:14px; font-size:15px; color:#d8c298; line-height:1.9; }
   .endBtns { display:flex; gap:14px; margin-top:10px; flex-wrap:wrap; justify-content:center; }
 
+  /* түүхийн бүлгүүд */
+  .badge { display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; border-radius:9px;
+    background:#c8392a; color:#fff; font-size:11px; font-weight:800; padding:0 5px; margin-left:6px; vertical-align:middle; }
+  .badge.hidden { display:none; }
+  .chapters { display:flex; flex-direction:column; gap:8px; margin-top:14px; width:min(600px, 92vw); }
+  .chRow { display:flex; align-items:center; gap:12px; text-align:left; padding:10px 16px; border-radius:12px;
+    background:linear-gradient(180deg, rgba(60,44,22,.9), rgba(32,22,10,.9)); border:1.5px solid #6e5426; cursor:pointer; }
+  .chRow.locked { opacity:.5; cursor:default; }
+  .chRow .chNum { font-size:18px; color:#c9973f; font-weight:800; min-width:28px; }
+  .chRow .chTitle { font-size:14px; font-weight:700; color:#f0dfae; flex:1; }
+  .chRow .chReq { font-size:11px; color:#8a7550; }
+  .chRow .chNew { color:#ffd873; font-size:16px; }
+  .reader { width:min(620px, 92vw); background:linear-gradient(180deg,#f0e6cc,#dcc9a0); color:#3a2a14;
+    border-radius:6px; padding:26px 30px; border:2px solid #a8813a; box-shadow:0 12px 40px rgba(0,0,0,.6), inset 0 0 60px rgba(160,120,60,.25);
+    font-family:Georgia, 'Times New Roman', serif; }
+  .rOrnament { color:#a8763a; letter-spacing:5px; font-size:13px; text-align:center; }
+  .reader h3 { font-size:21px; margin:10px 0 12px; letter-spacing:1px; text-align:center; }
+  .reader p { font-size:15px; line-height:1.85; text-align:left; }
+  #readerSrc { margin-top:14px; font-size:12px; font-style:italic; color:#7a5c2e; text-align:right; }
+
   /* амь багасахад анхааруулах улаан хүрээ */
   #lowHp { position:fixed; inset:0; z-index:15; pointer-events:none; opacity:0;
     box-shadow:inset 0 0 90px 20px rgba(200,30,20,.55); transition:opacity .3s; }
@@ -128,7 +148,30 @@
   <div class="subtitle">ТУЛААНЫ ТАЛБАР</div>
   <div class="tagline">Мөнх тэнгэрийн хүчин дор — Чингис хааны дайчдыг удирдан, Хорезмын их хаалгыг нурааж, талбарыг эзэгнэ!</div>
   <button class="btn" id="playBtn">ТОГЛОХ</button>
+  <button class="btn secondary" id="storyBtn">📜 ТҮҮХ <span id="storyBadge" class="badge hidden"></span></button>
   <div class="hint">Зүүн тал — хөдөлгөөний жойстик &nbsp;·&nbsp; Баруун тал — чадварын товчнууд<br>Энгийн довтолгоо автоматаар хийгдэнэ. Утсаа хөндлөн барьж тоглоорой.</div>
+</div>
+
+<!-- ================= STORY ================= -->
+<div id="storyScreen" class="screen hidden">
+  <h2 style="letter-spacing:4px;color:#e8b64c">МОНГОЛЫН НУУЦ ТОВЧОО</h2>
+  <div style="font-size:11px;color:#8a7550;margin-top:2px">Тэмүжингээс Чингис хаан хүртэлх зам · Тоглох тусам бүлгүүд нээгдэнэ</div>
+  <div class="chapters" id="chapters"></div>
+  <button class="btn secondary" id="storyBackBtn">БУЦАХ</button>
+</div>
+
+<!-- ================= READER ================= -->
+<div id="readerScreen" class="screen hidden">
+  <div class="reader">
+    <div class="rOrnament">⁂ ᠊᠊᠊᠊᠊᠊ ⁂</div>
+    <h3 id="readerTitle"></h3>
+    <p id="readerText"></p>
+    <div id="readerSrc"></div>
+  </div>
+  <div style="display:flex;gap:12px;margin-top:14px">
+    <button class="btn secondary" id="readerBackBtn">БУЦАХ</button>
+    <button class="btn" id="readerNextBtn">ДАРААХ БҮЛЭГ →</button>
+  </div>
 </div>
 
 <!-- ================= HERO SELECT ================= -->
@@ -319,15 +362,55 @@ function loadSave(){
   try{
     const s = JSON.parse(localStorage.getItem(SAVE_KEY));
     if(s && typeof s === 'object')
-      return Object.assign({gold:0, unlocked:['temuujin','zev'], mastery:{}}, s);
+      return Object.assign({gold:0, unlocked:['temuujin','zev'], mastery:{}, matches:0, wins:0, readChapters:[]}, s);
   }catch(e){}
-  return { gold:0, unlocked:['temuujin','zev'], mastery:{} };
+  return { gold:0, unlocked:['temuujin','zev'], mastery:{}, matches:0, wins:0, readChapters:[] };
 }
 let save = loadSave();
 function persistSave(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }catch(e){} }
 // үнэгүй баатрууд (cost 0) хуучин хадгалалттай ч үргэлж нээлттэй
 const isUnlocked = id => HERO_COST[id] === 0 || save.unlocked.includes(id);
 const masteryOf = id => save.mastery[id] || 0;
+
+// ---------- Монголын нууц товчоо — түүхийн бүлгүүд ----------
+const CHAPTERS = [
+  { id:'ch1', title:'Чонын удам', src:'§1', req:{type:'always'},
+    text:'Дээд тэнгэрээс заяат төрсөн Бөртэ чоно, түүний гэргий Гоо марал хоёр их далайг гэтэлж ирээд, Онон мөрний эх Бурхан халдун ууланд нутаглажээ. Тэдний удам угсаа өнөр өтгөн болж, монгол түмний язгуур эндээс эхэлсэн гэдэг. Хожим энэ удмаас дэлхийг донсолгох их хаан мэндлэх ажээ.' },
+  { id:'ch2', title:'Шагайн чинээ нөж атгасан хүү', src:'§59', req:{type:'matches', n:1},
+    text:'Есүхэй баатрын гэргий Өэлүн үжин Онон мөрний Дэлүүн болдогт хөвгүүн төрүүлэв. Хүү баруун гартаа шагайн чинээ нөж атган мэндэлжээ — энэ нь агуу заяаны бэлгэ тэмдэг байлаа. Тэр цагт татаарын Тэмүжин-Үгэг дийлсэн тул хүүдээ Тэмүжин хэмээх нэр өгөв.' },
+  { id:'ch3', title:'Таван мөчир сум', src:'§19–22', req:{type:'wins', n:1},
+    text:'Алун гоо эх таван хөвгүүндээ тус бүр нэг мөчир өгч хугал гэв — хялбархан хугарав. Тэгээд таван мөчрийг багцлан өгөхөд хэн нь ч хугалж чадсангүй. «Ганц нэгээрээ бол та нар хэврэг мөчир мэт. Эв нэгдэлтэй бол хэн ч та нарыг дийлэхгүй» гэж сургажээ.' },
+  { id:'ch4', title:'Өнчин хөвгүүний тангараг', src:'§68–73', req:{type:'wins', n:3},
+    text:'Есүхэй баатар татаарын хорд хорлогдон нас барахад Тэмүжин есөн настай байв. Тайчууд овгийнхон бэлбэсэн Өэлүн эхийг үр хүүхэдтэй нь эзгүй талд орхин нүүжээ. Эх нь үндэс, жимс түүж, Онон мөрнөөс загас барьж үр хүүхдээ өсгөв. Зовлон дундаас хатан зориг төржээ.' },
+  { id:'ch5', title:'Анхны анд Боорчи', src:'§90–93', req:{type:'unlocks', n:1},
+    text:'Тэмүжиний найман шарга морийг хулгайч авч одоход тэрбээр ганцаар мөрдөн хөөв. Замд гүү саж байсан Наху баяны хүү Боорчид учрахад тэр: «Эрийн зовлон адилхан. Би чамд нөхөр болъё» гээд хамт мордов. Ийнхүү анхны шадар анд олдож, хожмын их гүрний тулгын анхны чулуу тавигджээ.' },
+  { id:'ch6', title:'Бөртэ үжинг аварсан нь', src:'§104–113', req:{type:'wins', n:5},
+    text:'Гурван мэргэд гэнэт довтолж, Тэмүжиний хатан Бөртэ үжинг олзолж одов. Тэмүжин Бурхан халдунд мөргөж, Тоорил хан, Жамуха нартай хүч хамтран мэргэдийг бут цохив. Ийнхүү хатнаа эргүүлэн авчирч, алдсанаа дайнаар нөхөж болдгийг харуулжээ.' },
+  { id:'ch7', title:'Дөрвөн нохой, дөрвөн хүлэг', src:'§195, 209', req:{type:'unlocks', n:3},
+    text:'Чингис хаанд дөрвөн догшин «нохой» байв: Хубилай, Зэлмэ, Зэв, Сүбээдэй. Тулалдааны өдөр тэд хуй салхи мэт довтолно. Мөн дөрвөн «хүлэг» байв: Боорчи, Мухулай, Борохул, Чулуун. Эдгээр өрлөг жанжид газар дэлхийг доргиосон их аяныг тэргүүлжээ.' },
+  { id:'ch8', title:'Есөн хөлт цагаан туг', src:'§202', req:{type:'hero', id:'chinggis'},
+    text:'Барс жил (1206) Онон мөрний эхэнд их хуралдай чуулж, есөн хөлт цагаан тугаа босгоод, Тэмүжинд «Чингис хаан» цол өргөмжлөв. Хамаг Монголыг нэгтгэсэн их эзэн хаан ийнхүү мандаж, Мөнх тэнгэрийн хүчин дор Их Монгол Улс байгуулагдав.' }
+];
+function reqMet(req){
+  switch(req.type){
+    case 'always':  return true;
+    case 'matches': return (save.matches||0) >= req.n;
+    case 'wins':    return (save.wins||0) >= req.n;
+    case 'unlocks': return save.unlocked.filter(id => HERO_COST[id] > 0).length >= req.n;
+    case 'hero':    return isUnlocked(req.id);
+  }
+  return false;
+}
+function reqText(req){
+  switch(req.type){
+    case 'matches': return 'Тулаан ' + req.n + ' хийж нээнэ';
+    case 'wins':    return 'Ялалт ' + req.n + ' байгуулж нээнэ';
+    case 'unlocks': return 'Шинэ баатар ' + req.n + ' нээж нээнэ';
+    case 'hero':    return 'Чингис хааныг нээж нээнэ';
+  }
+  return '';
+}
+const chaptersUnlocked = ()=> CHAPTERS.filter(c => reqMet(c.req));
 
 // ---------- game state ----------
 let state = 'menu';           // menu | select | play | end
@@ -411,8 +494,52 @@ function setState(s){
   $('menuScreen').classList.toggle('hidden', s!=='menu');
   $('selectScreen').classList.toggle('hidden', s!=='select');
   $('endScreen').classList.toggle('hidden', s!=='end');
+  $('storyScreen').classList.toggle('hidden', s!=='story');
+  $('readerScreen').classList.toggle('hidden', s!=='reader');
   $('hud').classList.toggle('on', s==='play');
   $('rotate').classList.toggle('armed', s==='play');
+  if(s==='menu') updateStoryBadge();
+}
+
+// ---------- түүхийн дэлгэц ----------
+function updateStoryBadge(){
+  const unread = chaptersUnlocked().filter(c => !save.readChapters.includes(c.id)).length;
+  const b = $('storyBadge');
+  b.textContent = unread;
+  b.classList.toggle('hidden', unread === 0);
+}
+
+function buildChapters(){
+  const wrap = $('chapters');
+  wrap.innerHTML = '';
+  CHAPTERS.forEach((c, i)=>{
+    const unlocked = reqMet(c.req);
+    const unread = unlocked && !save.readChapters.includes(c.id);
+    const row = document.createElement('div');
+    row.className = 'chRow' + (unlocked? '':' locked');
+    row.innerHTML = '<div class="chNum">'+(unlocked? '📜':'🔒')+'</div>'
+      + '<div class="chTitle">'+(i+1)+'. '+(unlocked? c.title : '???')+'</div>'
+      + (unlocked
+          ? (unread? '<div class="chNew">● шинэ</div>' : '<div class="chReq">'+c.src+'</div>')
+          : '<div class="chReq">'+reqText(c.req)+'</div>');
+    if(unlocked) row.addEventListener('click', ()=>{ Snd.init(); openChapter(i); });
+    wrap.appendChild(row);
+  });
+}
+
+let readerIdx = 0;
+function openChapter(i){
+  const c = CHAPTERS[i];
+  readerIdx = i;
+  $('readerTitle').textContent = (i+1)+'. '+c.title;
+  $('readerText').textContent = c.text;
+  $('readerSrc').textContent = '— Монголын нууц товчоо, '+c.src;
+  if(!save.readChapters.includes(c.id)){ save.readChapters.push(c.id); persistSave(); }
+  // дараах бүлэг нээлттэй бол товч харуулна
+  const next = CHAPTERS[i+1];
+  $('readerNextBtn').style.display = (next && reqMet(next.req)) ? '' : 'none';
+  setState('reader');
+  Snd.beep(520,.08,'sine',.04);
 }
 
 // ---------- waves ----------
@@ -1354,8 +1481,11 @@ function endMatch(win){
   const secs = Math.floor(((performance.now()-matchStart)/1000) % 60);
 
   // шагнал: тулааны алт + түвшин + ялалтын урамшуулал, хэцүү байдлаар үржүүлнэ
+  const chBefore = new Set(chaptersUnlocked().map(c => c.id));
   const earned = Math.round((matchGold + player.level*5 + (win? 80 : 20)) * DIFFS[selDiff].gold);
   save.gold += earned;
+  save.matches = (save.matches||0) + 1;
+  if(win) save.wins = (save.wins||0) + 1;
   const heroId = player.hero.id;
   let masteryLine = '';
   if(win && masteryOf(heroId) < 5){
@@ -1371,10 +1501,16 @@ function endMatch(win){
     ? '<br><span style="font-size:12px;color:#8a7550">Дараагийн баатар '+nextLocked.name+': 🪙 '+HERO_COST[nextLocked.id]+' ('+(save.gold >= HERO_COST[nextLocked.id] ? 'нээх боломжтой!' : 'дахин '+(HERO_COST[nextLocked.id]-save.gold)+' алт')+')</span>'
     : '';
 
+  // шинэ түүхийн бүлэг нээгдсэн эсэх
+  const newChapters = chaptersUnlocked().filter(c => !chBefore.has(c.id));
+  const chapterLine = newChapters.length
+    ? '<br><span style="color:#ffd873">📜 Нууц товчооны шинэ бүлэг: «'+newChapters[0].title+'»</span>'
+    : '';
+
   const t = $('endTitle');
   const common = 'Алалт: <b>'+kills+'</b> · Түвшин: <b>'+player.level+'</b> · Хугацаа: <b>'+mins+':'+String(secs).padStart(2,'0')+'</b> · Хэцүү байдал: <b>'+DIFFS[selDiff].name+'</b>'
     + '<br>🪙 Олсон алт: <b id="goldCount" style="color:#ffd873">+0</b> · Нийт: <b style="color:#ffd873">'+save.gold+'</b>'
-    + masteryLine + unlockHint;
+    + masteryLine + chapterLine + unlockHint;
   if(win){
     t.textContent = 'ЯЛАЛТ!'; t.className = 'win';
     $('endStats').innerHTML = 'Мөнх тэнгэрийн хүчин дор дайсны хаалга нурлаа!<br>'+common;
@@ -1456,6 +1592,11 @@ $('playBtn').addEventListener('click', ()=>{ Snd.init(); buildCards(); buildDiff
 $('startBtn').addEventListener('click', ()=>{ Snd.init(); startMatch(); });
 $('againBtn').addEventListener('click', ()=>{ startMatch(); });
 $('changeBtn').addEventListener('click', ()=>{ buildCards(); buildDiffs(); setState('select'); });
+$('storyBtn').addEventListener('click', ()=>{ Snd.init(); buildChapters(); setState('story'); });
+$('storyBackBtn').addEventListener('click', ()=>{ setState('menu'); });
+$('readerBackBtn').addEventListener('click', ()=>{ buildChapters(); setState('story'); });
+$('readerNextBtn').addEventListener('click', ()=>{ openChapter(readerIdx+1); });
+updateStoryBadge();
 
 // ---------- main loop ----------
 let lastT = performance.now();
@@ -1490,7 +1631,8 @@ window.GAME = {
   startQuick(i, d){ selHero = i||0; if(d!==undefined) selDiff = d; startMatch(); },
   setDiff(d){ selDiff = d; },
   skipToWave(n){ waveNum = n - 1; nextWaveT = 0.1; },
-  resetSave(){ save = {gold:0, unlocked:['temuujin','zev'], mastery:{}}; persistSave(); },
+  resetSave(){ save = {gold:0, unlocked:['temuujin','zev'], mastery:{}, matches:0, wins:0, readChapters:[]}; persistSave(); },
+  get chapters(){ return CHAPTERS.map(c => ({id:c.id, unlocked:reqMet(c.req)})); },
   useSkill
 };
 </script>

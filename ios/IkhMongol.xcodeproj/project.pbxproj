@@ -18,6 +18,7 @@
 		BB0000000000000000000009 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FA0000000000000000000009 /* Assets.xcassets */; };
 		BB000000000000000000000A /* Audio.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000000000000000000000B /* Audio.swift */; };
 		BB000000000000000000000C /* Progress.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000000000000000000000D /* Progress.swift */; };
+		BB000000000000000000000D /* StoryScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000000000000000000000E /* StoryScene.swift */; };
 		BB000000000000000000000B /* Sounds in Resources */ = {isa = PBXBuildFile; fileRef = FA000000000000000000000C /* Sounds */; };
 /* End PBXBuildFile section */
 
@@ -35,6 +36,7 @@
 		FA000000000000000000000B /* Audio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Audio.swift; sourceTree = "<group>"; };
 		FA000000000000000000000C /* Sounds */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Sounds; sourceTree = "<group>"; };
 		FA000000000000000000000D /* Progress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Progress.swift; sourceTree = "<group>"; };
+		FA000000000000000000000E /* StoryScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryScene.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -69,6 +71,7 @@
 				FA0000000000000000000007 /* EndScene.swift */,
 				FA000000000000000000000B /* Audio.swift */,
 				FA000000000000000000000D /* Progress.swift */,
+				FA000000000000000000000E /* StoryScene.swift */,
 				FA0000000000000000000009 /* Assets.xcassets */,
 				FA000000000000000000000C /* Sounds */,
 			);
@@ -163,6 +166,7 @@
 				BB0000000000000000000007 /* EndScene.swift in Sources */,
 				BB000000000000000000000A /* Audio.swift in Sources */,
 				BB000000000000000000000C /* Progress.swift in Sources */,
+				BB000000000000000000000D /* StoryScene.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -66,6 +66,9 @@ final class EndScene: SKScene {
                 + String(repeating: "☆", count: 5 - stats.masteryStars)
             statsText += "\n\(hero.name) мастери: \(stars) (+3% хүч)"
         }
+        if let chapter = stats.newChapter {
+            statsText += "\n📜 Нууц товчооны шинэ бүлэг: «\(chapter)»"
+        }
         if let next = GameData.heroes.first(where: { !Progress.isUnlocked($0.id) }) {
             let hint = Progress.gold >= next.cost
                 ? "нээх боломжтой!"

@@ -229,4 +229,74 @@ enum Fonts {
     static let heavy = "AvenirNext-Heavy"
     static let bold  = "AvenirNext-Bold"
     static let demi  = "AvenirNext-DemiBold"
+    static let serif = "Georgia"
+    static let serifBold = "Georgia-Bold"
+}
+
+// MARK: - Монголын нууц товчоо — түүхийн бүлгүүд
+
+enum ChapterReq {
+    case always
+    case matches(Int)
+    case wins(Int)
+    case unlocks(Int)
+    case hero(String)
+
+    var isMet: Bool {
+        switch self {
+        case .always: return true
+        case .matches(let n): return Progress.matches >= n
+        case .wins(let n): return Progress.wins >= n
+        case .unlocks(let n): return Progress.paidUnlockCount >= n
+        case .hero(let id): return Progress.isUnlocked(id)
+        }
+    }
+
+    var text: String {
+        switch self {
+        case .always: return ""
+        case .matches(let n): return "Тулаан \(n) хийж нээнэ"
+        case .wins(let n): return "Ялалт \(n) байгуулж нээнэ"
+        case .unlocks(let n): return "Шинэ баатар \(n) нээж нээнэ"
+        case .hero: return "Чингис хааныг нээж нээнэ"
+        }
+    }
+}
+
+struct Chapter {
+    let id: String
+    let title: String
+    let src: String
+    let req: ChapterReq
+    let text: String
+}
+
+extension GameData {
+
+    static let chapters: [Chapter] = [
+        Chapter(id: "ch1", title: "Чонын удам", src: "§1", req: .always,
+                text: "Дээд тэнгэрээс заяат төрсөн Бөртэ чоно, түүний гэргий Гоо марал хоёр их далайг гэтэлж ирээд, Онон мөрний эх Бурхан халдун ууланд нутаглажээ. Тэдний удам угсаа өнөр өтгөн болж, монгол түмний язгуур эндээс эхэлсэн гэдэг. Хожим энэ удмаас дэлхийг донсолгох их хаан мэндлэх ажээ."),
+        Chapter(id: "ch2", title: "Шагайн чинээ нөж атгасан хүү", src: "§59", req: .matches(1),
+                text: "Есүхэй баатрын гэргий Өэлүн үжин Онон мөрний Дэлүүн болдогт хөвгүүн төрүүлэв. Хүү баруун гартаа шагайн чинээ нөж атган мэндэлжээ — энэ нь агуу заяаны бэлгэ тэмдэг байлаа. Тэр цагт татаарын Тэмүжин-Үгэг дийлсэн тул хүүдээ Тэмүжин хэмээх нэр өгөв."),
+        Chapter(id: "ch3", title: "Таван мөчир сум", src: "§19–22", req: .wins(1),
+                text: "Алун гоо эх таван хөвгүүндээ тус бүр нэг мөчир өгч хугал гэв — хялбархан хугарав. Тэгээд таван мөчрийг багцлан өгөхөд хэн нь ч хугалж чадсангүй. «Ганц нэгээрээ бол та нар хэврэг мөчир мэт. Эв нэгдэлтэй бол хэн ч та нарыг дийлэхгүй» гэж сургажээ."),
+        Chapter(id: "ch4", title: "Өнчин хөвгүүний тангараг", src: "§68–73", req: .wins(3),
+                text: "Есүхэй баатар татаарын хорд хорлогдон нас барахад Тэмүжин есөн настай байв. Тайчууд овгийнхон бэлбэсэн Өэлүн эхийг үр хүүхэдтэй нь эзгүй талд орхин нүүжээ. Эх нь үндэс, жимс түүж, Онон мөрнөөс загас барьж үр хүүхдээ өсгөв. Зовлон дундаас хатан зориг төржээ."),
+        Chapter(id: "ch5", title: "Анхны анд Боорчи", src: "§90–93", req: .unlocks(1),
+                text: "Тэмүжиний найман шарга морийг хулгайч авч одоход тэрбээр ганцаар мөрдөн хөөв. Замд гүү саж байсан Наху баяны хүү Боорчид учрахад тэр: «Эрийн зовлон адилхан. Би чамд нөхөр болъё» гээд хамт мордов. Ийнхүү анхны шадар анд олдож, хожмын их гүрний тулгын анхны чулуу тавигджээ."),
+        Chapter(id: "ch6", title: "Бөртэ үжинг аварсан нь", src: "§104–113", req: .wins(5),
+                text: "Гурван мэргэд гэнэт довтолж, Тэмүжиний хатан Бөртэ үжинг олзолж одов. Тэмүжин Бурхан халдунд мөргөж, Тоорил хан, Жамуха нартай хүч хамтран мэргэдийг бут цохив. Ийнхүү хатнаа эргүүлэн авчирч, алдсанаа дайнаар нөхөж болдгийг харуулжээ."),
+        Chapter(id: "ch7", title: "Дөрвөн нохой, дөрвөн хүлэг", src: "§195, 209", req: .unlocks(3),
+                text: "Чингис хаанд дөрвөн догшин «нохой» байв: Хубилай, Зэлмэ, Зэв, Сүбээдэй. Тулалдааны өдөр тэд хуй салхи мэт довтолно. Мөн дөрвөн «хүлэг» байв: Боорчи, Мухулай, Борохул, Чулуун. Эдгээр өрлөг жанжид газар дэлхийг доргиосон их аяныг тэргүүлжээ."),
+        Chapter(id: "ch8", title: "Есөн хөлт цагаан туг", src: "§202", req: .hero("chinggis"),
+                text: "Барс жил (1206) Онон мөрний эхэнд их хуралдай чуулж, есөн хөлт цагаан тугаа босгоод, Тэмүжинд «Чингис хаан» цол өргөмжлөв. Хамаг Монголыг нэгтгэсэн их эзэн хаан ийнхүү мандаж, Мөнх тэнгэрийн хүчин дор Их Монгол Улс байгуулагдав.")
+    ]
+
+    static var unlockedChapterCount: Int {
+        chapters.filter { $0.req.isMet }.count
+    }
+
+    static var unreadChapterCount: Int {
+        chapters.filter { $0.req.isMet && !Progress.readChapters.contains($0.id) }.count
+    }
 }

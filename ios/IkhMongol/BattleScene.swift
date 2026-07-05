@@ -1557,20 +1557,26 @@ final class BattleScene: SKScene {
 
         // шагнал: тулааны алт + түвшин + ялалтын урамшуулал, хэцүү байдлаар үржүүлнэ
         let heroId = GameData.heroes[heroIndex].id
+        let chaptersBefore = Set(GameData.chapters.filter { $0.req.isMet }.map { $0.id })
         let earned = Int(((CGFloat(matchGold) + CGFloat(player.level) * 5 + (win ? 80 : 20))
                           * diff.goldMult).rounded())
         Progress.gold += earned
+        Progress.recordMatch(win: win)
         var gainedStar = false
         if win && Progress.mastery(heroId) < 5 {
             Progress.addMasteryStar(heroId)
             gainedStar = true
         }
+        // тулааны дараа шинээр нээгдсэн түүхийн бүлэг
+        let newChapter = GameData.chapters
+            .first { $0.req.isMet && !chaptersBefore.contains($0.id) }?.title
 
         let stats = MatchStats(win: win, kills: kills, level: player.level,
                                seconds: Int(matchTime), heroIndex: heroIndex,
                                difficultyIndex: difficultyIndex,
                                goldEarned: earned, totalGold: Progress.gold,
-                               masteryStars: Progress.mastery(heroId), gainedStar: gainedStar)
+                               masteryStars: Progress.mastery(heroId), gainedStar: gainedStar,
+                               newChapter: newChapter)
         run(.sequence([
             .wait(forDuration: 0.9),
             .run { [weak self] in
@@ -1660,4 +1666,5 @@ struct MatchStats {
     let totalGold: Int
     let masteryStars: Int
     let gainedStar: Bool
+    let newChapter: String?
 }

@@ -62,15 +62,21 @@ final class MenuScene: SKScene {
         c.addChild(tagline)
 
         let play = UIFactory.button(text: "ТОГЛОХ", name: "play")
-        play.position = CGPoint(x: cx, y: size.height * 0.29)
+        play.position = CGPoint(x: cx, y: size.height * 0.31)
         c.addChild(play)
 
+        let unread = GameData.unreadChapterCount
+        let storyText = unread > 0 ? "📜 ТҮҮХ (\(unread))" : "📜 ТҮҮХ"
+        let story = UIFactory.button(text: storyText, name: "story", width: 210, height: 42, primary: false)
+        story.position = CGPoint(x: cx, y: size.height * 0.185)
+        c.addChild(story)
+
         let hint = UIFactory.multiline(
-            "Зүүн тал — хөдөлгөөний жойстик  ·  Баруун тал — чадварын товчнууд\nЭнгийн довтолгоо автоматаар хийгдэнэ.",
-            font: Fonts.demi, size: 10.5,
+            "Зүүн тал — хөдөлгөөний жойстик  ·  Баруун тал — чадварын товчнууд  ·  Энгийн довтолгоо автоматаар хийгдэнэ.",
+            font: Fonts.demi, size: 10,
             color: SKColor(red: 0.48, green: 0.41, blue: 0.28, alpha: 1),
-            width: size.width * 0.85)
-        hint.position = CGPoint(x: cx, y: size.height * 0.12)
+            width: size.width * 0.9)
+        hint.position = CGPoint(x: cx, y: size.height * 0.06)
         c.addChild(hint)
     }
 
@@ -83,6 +89,12 @@ final class MenuScene: SKScene {
             let select = HeroSelectScene(size: size)
             select.scaleMode = .resizeFill
             view.presentScene(select, transition: .fade(withDuration: 0.4))
+        } else if name == "story", let view = view {
+            Haptics.hit()
+            Audio.shared.play("tap")
+            let story = StoryScene(size: size)
+            story.scaleMode = .resizeFill
+            view.presentScene(story, transition: .fade(withDuration: 0.4))
         }
     }
 }
