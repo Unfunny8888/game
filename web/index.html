@@ -136,6 +136,20 @@
   #introFact { margin-top:12px; font-size:11.5px; line-height:1.6; color:#5a4326; text-align:left;
     background:rgba(160,120,60,.16); border-left:3px solid #a8763a; border-radius:4px; padding:8px 12px; }
   #introFact b { color:#7a4a10; }
+  /* нэвтэрхий толь */
+  #codexTabs { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; justify-content:center; }
+  .codexTab { padding:7px 18px; border-radius:16px; font-size:13px; font-weight:700; color:#e8d9b5;
+    background:#332818; border:1.5px solid #6e5426; cursor:pointer; }
+  .codexTab.sel { background:linear-gradient(180deg,#f2c96a,#cf9a35); color:#241503; border-color:#6e4c12; }
+  #codexList { margin-top:12px; width:min(700px,94vw); max-height:56vh; overflow-y:auto;
+    display:flex; flex-direction:column; gap:8px; padding:2px; }
+  .codexCard { display:flex; gap:12px; align-items:flex-start; text-align:left; padding:11px 14px; border-radius:10px;
+    background:linear-gradient(180deg, rgba(60,44,22,.92), rgba(32,22,10,.92)); border:1.5px solid #6e5426; }
+  .codexCard .cxIcon { font-size:30px; line-height:1; flex-shrink:0; width:38px; text-align:center; }
+  .codexCard .cxBody { flex:1; }
+  .codexCard .cxTitle { font-size:14px; font-weight:800; color:#f0dfae; }
+  .codexCard .cxSub { font-size:10.5px; color:#c9973f; letter-spacing:1px; margin:1px 0 4px; }
+  .codexCard .cxText { font-size:11.5px; line-height:1.55; color:#c8b590; }
 
   /* амь багасахад анхааруулах улаан хүрээ */
   #lowHp { position:fixed; inset:0; z-index:15; pointer-events:none; opacity:0;
@@ -176,8 +190,18 @@
   <div style="display:flex; gap:12px; margin-top:14px; flex-wrap:wrap; justify-content:center">
     <button class="btn secondary" id="playBtn">Чөлөөт тулаан</button>
     <button class="btn secondary" id="storyBtn">📜 ТҮҮХ <span id="storyBadge" class="badge hidden"></span></button>
+    <button class="btn secondary" id="codexBtn">📚 НЭВТЭРХИЙ ТОЛЬ</button>
   </div>
   <div class="hint">Зүүн тал — хөдөлгөөний жойстик &nbsp;·&nbsp; Баруун тал — чадвар ба ⚔️ довтлох товч<br>Утсаа хөндлөн барьж тоглоорой.</div>
+</div>
+
+<!-- ================= CODEX (encyclopedia) ================= -->
+<div id="codexScreen" class="screen hidden">
+  <h2 style="letter-spacing:3px;color:#e8b64c">📚 НЭВТЭРХИЙ ТОЛЬ</h2>
+  <div style="font-size:11px;color:#8a7550;margin-top:2px">Монголын түүх, соёл, баатрууд — сурч мэдээрэй</div>
+  <div id="codexTabs"></div>
+  <div id="codexList"></div>
+  <button class="btn secondary" id="codexBackBtn" style="margin-top:8px">БУЦАХ</button>
 </div>
 
 <!-- ================= CAMPAIGN (MAP) ================= -->
@@ -798,6 +822,7 @@ function setState(s){
   $('readerScreen').classList.toggle('hidden', s!=='reader');
   $('campaignScreen').classList.toggle('hidden', s!=='campaign');
   $('introScreen').classList.toggle('hidden', s!=='intro');
+  $('codexScreen').classList.toggle('hidden', s!=='codex');
   $('hud').classList.toggle('on', s==='play');
   $('rotate').classList.toggle('armed', s==='play');
   if(s==='menu') updateStoryBadge();
@@ -907,6 +932,70 @@ function ensureMapTip(){
   let t = document.getElementById('mapTip');
   if(!t){ t = document.createElement('div'); t.id='mapTip'; t.className='mapTip'; document.body.appendChild(t); }
   return t;
+}
+
+// ---------- Нэвтэрхий толь (encyclopedia) ----------
+const CODEX = {
+  heroes: { name:'Баатрууд', entries:[
+    {icon:'🐺', title:'Тэмүжин / Чингис хаан', sub:'~1162–1227', text:'Есүхэй баатрын хүү. Олон дайтагч овгийг нэгтгэж 1206 онд Их Монгол Улсыг байгуулав. «Их засаг» хууль, шуудангийн өртөө, бичиг үсэг, шашны хүлцэл зэргийг нэвтрүүлсэн төр ёсны агуу шинэчлэгч.'},
+    {icon:'🏹', title:'Зэв (Жэбэ)', sub:'«Сум» жанжин', text:'Анх Тэмүжинг тулаанд сумаар онсон дайсан байсан ч үнэнч зангаараа өршөөгдөж жанжин болов. Сүбээдэйтэй хамт Перс, Кавказ, Оросыг тагнан довтолсон домогт морин цэргийн удирдагч.'},
+    {icon:'🛡️', title:'Сүбээдэй баатар', sub:'1175–1248', text:'Түүхэн дэх хамгийн агуу цэргийн жанжны нэг. 20 гаруй улсыг эзэлж, Оросын ноёдыг Калк голд, Унгар Польшийг Европт бут цохив. Уриангхай гаралтай, стратегийн суут ухаантан.'},
+    {icon:'🪓', title:'Мухулай жанжин', sub:'1170–1223', text:'Зүүн гарын түмний ноён, Хойд Хятадыг захирах орлогч хаан (гуй ван) цол авсан. Жинь гүрний эсрэг аяныг Чингис хааны өмнөөс удирдсан итгэлт жанжин.'},
+    {icon:'🗡️', title:'Боорчи ноён', sub:'Анхны нөхөр', text:'Хулгайлагдсан адуу хайж явсан залуу Тэмүжинд туслаж, насан туршийн анд болов. Чингис хааны «дөрвөн хүлэг»-ийн тэргүүн, хамгийн итгэлт хүмүүсийн нэг.'},
+    {icon:'🎯', title:'Хасар мэргэн', sub:'Хааны дүү', text:'Чингис хааны дүү, домогт хүчтэй мэргэн харваач. Асар хүчтэй гар, хол оновчтой харвадгаараа алдартай. Нэгтгэлийн тулаануудад чухал үүрэг гүйцэтгэсэн.'}
+  ]},
+  enemies: { name:'Дайснууд', entries:[
+    {icon:'⚔️', title:'Тайчууд', sub:'МНТ §79–87', text:'Хамаг Монголын хүчирхэг овог. Есүхэйг үхсэний дараа Өэлүн эхийн айлыг орхиж, дараа нь залуу Тэмүжинг олзолж боол болгосон. Тэмүжин эндээс зугтсан нь эр зоригийнх нь эхлэл болов.'},
+    {icon:'🏕️', title:'Мэргэд', sub:'МНТ §104–113', text:'Сэлэнгэ мөрний сав нутгийн овог. Есүхэй Өэлүнг мэргэдээс булаасны өшөөгөөр тэд Бөртэ үжинг олзолсон. Тэмүжин холбоотнуудынхаа хамт мэргэдийг бут цохиж хатнаа авардаг.'},
+    {icon:'🤝', title:'Жамуха', sub:'МНТ §128', text:'Тэмүжинтэй гурван удаа анд болсон найз бөгөөд хожмын гол өрсөлдөгч. «Гүр хаан» цол авсан ч харгислалаараа дэмжигчдээ алдав. Далан балжудын тулаанд Тэмүжинг ялж байсан.'},
+    {icon:'✝️', title:'Ван хан (Хэрэйд)', sub:'МНТ §183', text:'Тоорил Ван хан — Хэрэйдийн (Христийн Несториан шашинт) хаан, Есүхэйн анд, Тэмүжинг ивээн тэтгэгч. 1203 онд холбоо эвдэрч, Жэр хавцалд ялагдав.'},
+    {icon:'📜', title:'Таян хан (Найман)', sub:'МНТ §189', text:'Найманы (Алтайн, Уйгур бичигтэй) хаан. 1204 онд Тэмүжинд ялагдсанаар Хамаг Монгол нэгдэв. Найманы бичээч Тататунга Монголд бичиг үсэг нэвтрүүлсэн.'},
+    {icon:'🕌', title:'Мухаммед II шах', sub:'Хорезм, 1219', text:'Хорезмын эзэнт гүрний султан. Отрарт монголын элч, худалдаачдыг алуулсан нь их аяны шалтгаан болов. Гүрэн нь нурж, тэрээр Каспийн тэнгисийн арал дээр гачигдан нас барав.'},
+    {icon:'🗡️', title:'Жалал ад-Дин', sub:'Инд, 1221', text:'Хорезмын сүүлчийн зоригт хунтайж (Мангуберди). Инд мөрний тулаанд ялагдсан ч мориороо эгц эргээс мөрөнд үсэрч амиа авран зугтсан нь Чингис хааны биширлийг төрүүлсэн.'}
+  ]},
+  culture: { name:'Соёл', entries:[
+    {icon:'⛺', title:'Гэр', sub:'Нүүдлийн орон сууц', text:'Модон хана, тооно, унины хийцтэй, эсгийгээр бүрсэн зөөврийн орон сууц. Задлаад тэргэн дээр ачиж нүүдэг. Тооногоор гэрэл орж, утаа гардаг. Дугуй хэлбэр нь салхи даахад тохиромжтой.'},
+    {icon:'🛖', title:'Тэрэг', sub:'Ачааны хэрэгсэл', text:'Модон дугуйтай, үхэр буюу тэмээгээр хөллөдөг тээврийн хэрэгсэл. Гэр, эд хогшлоо нүүлгэхэд зайлшгүй. Их нүүдэлд хэдэн зуун тэрэг цуваа болон хөдөлдөг байв.'},
+    {icon:'🪨', title:'Овоо', sub:'Тахилгын босгол', text:'Уул, давааны дээр босгосон чулуун овоо. Аялагчид чулуу нэмж, хөх хадаг өргөн, эргэн тойрон гурван удаа тойрч замын аюулгүй, сайн сайхныг ерөөдөг уламжлалтай.'},
+    {icon:'🎻', title:'Морин хуур', sub:'Ардын хөгжим', text:'Адууны толгойгоор чимэглэсэн хоёр чавхдаст нумт хөгжим. Монгол ардын хөгжмийн бэлгэдэл, тал нутгийн дуу аялгууны сэтгэлийг илэрхийлдэг. ЮНЕСКО-гийн соёлын өвд бүртгэгдсэн.'},
+    {icon:'🎤', title:'Хөөмий', sub:'Хоолойн урлаг', text:'Нэг хоолойгоор нэгэн зэрэг хоёр ая — гүн басс дуу ба исгэрсэн дээд аялгуу — гаргадаг өвөрмөц дуулах урлаг. Байгаль, уул усны дуу авиаг дуурайдаг. ЮНЕСКО-гийн өвд бүртгэгдсэн.'},
+    {icon:'🏹', title:'Монгол нум', sub:'Гол зэвсэг', text:'Эвэр, мод, шөрмөсөөр хийсэн нугарамтгай (композит) нум. Мориноос давхиж байхдаа буцаж эргэн харвах чадвар нь монгол цэргийн дэлхийг байлдан дагуулсан гол давуу тал байв.'},
+    {icon:'🕌', title:'Хорезмын сүм & минарет', sub:'Төв Ази', text:'Ислам соёлын цэнхэр вааран бөмбөгөрт сүм, өндөр минарет цамхаг. Самарканд, Бухар нь дэлхийд алдартай эрдэм соёлын төв байв. Монголчууд эдгээр хотыг 1220 онд эзэлсэн.'}
+  ]},
+  timeline: { name:'Он цаг', entries:[
+    {icon:'👶', title:'~1162', sub:'Мэндэлсэн нь', text:'Тэмүжин Онон голын Дэлүүн болдогт баруун гартаа нөж атган мэндэлэв — агуу заяаны бэлгэ тэмдэг гэж үздэг.'},
+    {icon:'⛓️', title:'~1177', sub:'Зугталт', text:'Тайчиудын боолчлолоос харуулын толгойг цохиж мултран зугтав. Энэ эр зориг түүний нэрийг тал нутагт цуурайтуулж эхлэв.'},
+    {icon:'🏇', title:'1189', sub:'Анхны хаан', text:'Хамаг Монголын хаан өргөмжлөгдөв. Ван хан, Жамуха нартай хүчээ уяж мэргэд, татаарыг дийлж эхлэв.'},
+    {icon:'👑', title:'1206', sub:'Их Монгол Улс', text:'Онон мөрний эхэнд их хуралдай чуулж, есөн хөлт цагаан тугаа босгоод Тэмүжинд «Чингис хаан» цол өргөмжлөв. Монголчууд нэгдэв.'},
+    {icon:'🏰', title:'1211–1215', sub:'Жинь аян', text:'Хойд Хятадын Жинь гүрний эсрэг аян эхлэв. 1215 онд нийслэл Бээжинг (Жунду) эзэлж, Торгоны замд хүрэв.'},
+    {icon:'🕌', title:'1219–1221', sub:'Баруун их аян', text:'Отрарын хядлагын хариуд Хорезмыг довтлов. Бухар, Самарканд, Ургэнч унаж, Жалал ад-Дин Инд мөрөн уруу шахагдав.'},
+    {icon:'⚰️', title:'1227', sub:'Их хааны төгсгөл', text:'Чингис хаан Тангуд (Баруун Ся) аяны үеэр таалал төгсөв. Оршуулгын газар нь өнөө хэр нууц хэвээр.'},
+    {icon:'🗺️', title:'1279', sub:'Хамгийн том хүрээ', text:'Ач хүү Хубилай хаан Өмнөд Сүн гүрнийг эзэлж Юань улсыг байгуулав. Эзэнт гүрэн Номхон далайгаас Дунай хүртэл — түүхэн дэх хамгийн том тив залгасан гүрэн болов.'}
+  ]}
+};
+let codexCat = 'heroes';
+function buildCodex(){
+  const tabs = $('codexTabs');
+  tabs.innerHTML = '';
+  for(const key of ['heroes','enemies','culture','timeline']){
+    const b = document.createElement('button');
+    b.className = 'codexTab' + (key===codexCat? ' sel':'');
+    b.textContent = CODEX[key].name;
+    b.addEventListener('click', ()=>{ codexCat = key; buildCodex(); Snd.init(); Snd.tone(440,.05,'sine',.04); });
+    tabs.appendChild(b);
+  }
+  const list = $('codexList');
+  list.innerHTML = '';
+  for(const e of CODEX[codexCat].entries){
+    const card = document.createElement('div');
+    card.className = 'codexCard';
+    card.innerHTML = '<div class="cxIcon">'+e.icon+'</div>'
+      + '<div class="cxBody"><div class="cxTitle">'+e.title+'</div>'
+      + '<div class="cxSub">'+e.sub+'</div>'
+      + '<div class="cxText">'+e.text+'</div></div>';
+    list.appendChild(card);
+  }
+  list.scrollTop = 0;
 }
 
 // ---------- түүхийн дэлгэц ----------
@@ -2441,6 +2530,8 @@ $('againBtn').addEventListener('click', ()=>{ startMatch(); });
 $('changeBtn').addEventListener('click', ()=>{ buildCards(); buildDiffs(); setState('select'); });
 $('menuBtn').addEventListener('click', ()=>{ Snd.init(); setState('menu'); });
 $('storyBtn').addEventListener('click', ()=>{ Snd.init(); buildChapters(); setState('story'); });
+$('codexBtn').addEventListener('click', ()=>{ Snd.init(); Snd.startMusic(); buildCodex(); setState('codex'); });
+$('codexBackBtn').addEventListener('click', ()=>{ setState('menu'); });
 $('storyBackBtn').addEventListener('click', ()=>{ setState('menu'); });
 $('readerBackBtn').addEventListener('click', ()=>{ buildChapters(); setState('story'); });
 $('readerNextBtn').addEventListener('click', ()=>{ openChapter(readerIdx+1); });

@@ -76,16 +76,12 @@ final class MenuScene: SKScene {
         let unread = GameData.unreadChapterCount
         let storyText = unread > 0 ? "📜 ТҮҮХ (\(unread))" : "📜 ТҮҮХ"
         let story = UIFactory.button(text: storyText, name: "story", width: 200, height: 40, primary: false)
-        story.position = CGPoint(x: cx, y: size.height * 0.10)
+        story.position = CGPoint(x: cx - 110, y: size.height * 0.09)
         c.addChild(story)
 
-        let hint = UIFactory.multiline(
-            "Зүүн тал — жойстик  ·  Баруун тал — чадвар ба ⚔️ довтлох товч (дарж байх зуур довтолно)",
-            font: Fonts.demi, size: 10,
-            color: SKColor(red: 0.48, green: 0.41, blue: 0.28, alpha: 1),
-            width: size.width * 0.9)
-        hint.position = CGPoint(x: cx, y: size.height * 0.025)
-        c.addChild(hint)
+        let codex = UIFactory.button(text: "📚 НЭВТЭРХИЙ ТОЛЬ", name: "codex", width: 200, height: 40, primary: false)
+        codex.position = CGPoint(x: cx + 110, y: size.height * 0.09)
+        c.addChild(codex)
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -115,6 +111,12 @@ final class MenuScene: SKScene {
             let lobby = PvpLobbyScene(size: size)
             lobby.scaleMode = .resizeFill
             view.presentScene(lobby, transition: .fade(withDuration: 0.4))
+        } else if name == "codex", let view = view {
+            Haptics.hit()
+            Audio.shared.play("tap")
+            let codex = CodexScene(size: size)
+            codex.scaleMode = .resizeFill
+            view.presentScene(codex, transition: .fade(withDuration: 0.4))
         }
     }
 }
