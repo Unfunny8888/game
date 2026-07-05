@@ -118,7 +118,6 @@ final class Unit: SKNode {
         ring.position = CGPoint(x: 0, y: -r * 0.75)
         addChild(ring)
 
-        // их бие (дээл / хуяг)
         let bodyColor: SKColor
         if isHero {
             bodyColor = heroDef?.color ?? Palette.gold
@@ -127,23 +126,71 @@ final class Unit: SKNode {
                 ? SKColor(red: 0.48, green: 0.35, blue: 0.20, alpha: 1)
                 : SKColor(red: 0.54, green: 0.27, blue: 0.22, alpha: 1)
         }
-        let body = SKShapeNode(ellipseOf: CGSize(width: r * 1.7, height: r * 2.0))
+
+        // хөл (SpriteKit-д +y дээшээ)
+        let legColor = team == .mongol
+            ? SKColor(red: 0.25, green: 0.16, blue: 0.09, alpha: 1)
+            : SKColor(red: 0.23, green: 0.14, blue: 0.09, alpha: 1)
+        for sx: CGFloat in [-1, 1] {
+            let lp = UIBezierPath()
+            lp.move(to: CGPoint(x: sx * r * 0.26, y: -r * 0.18))
+            lp.addLine(to: CGPoint(x: sx * r * 0.28, y: -r * 0.74))
+            let leg = SKShapeNode(path: lp.cgPath)
+            leg.strokeColor = legColor
+            leg.lineWidth = r * 0.32
+            leg.lineCap = .round
+            addChild(leg)
+        }
+
+        // ар гар
+        let backArm = SKShapeNode(path: {
+            let p = UIBezierPath()
+            p.move(to: CGPoint(x: -face * r * 0.4, y: r * 0.72))
+            p.addLine(to: CGPoint(x: -face * r * 0.72, y: r * 0.1))
+            return p.cgPath
+        }())
+        backArm.strokeColor = bodyColor
+        backArm.lineWidth = r * 0.28
+        backArm.lineCap = .round
+        addChild(backArm)
+
+        // их бие (дээл / хуяг)
+        let body = SKShapeNode(ellipseOf: CGSize(width: r * 1.32, height: r * 1.44))
         body.fillColor = bodyColor
-        body.strokeColor = SKColor(white: 0, alpha: 0.35)
+        body.strokeColor = SKColor(white: 0, alpha: 0.32)
         body.lineWidth = 1.5
-        body.position = CGPoint(x: 0, y: r * 0.1)
+        body.position = CGPoint(x: 0, y: r * 0.36)
         addChild(body)
+        // гэрэл ба сүүдэр (эзэлхүүн)
+        let hi = SKShapeNode(ellipseOf: CGSize(width: r * 0.7, height: r * 0.9))
+        hi.fillColor = SKColor(white: 1, alpha: 0.22)
+        hi.strokeColor = .clear
+        hi.position = CGPoint(x: -r * 0.28, y: r * 0.6)
+        addChild(hi)
+        // мөр (мөрөвч)
+        let shoulder = SKShapeNode(ellipseOf: CGSize(width: r * 1.32, height: r * 0.6))
+        shoulder.fillColor = isHero ? SKColor(red: 0.90, green: 0.80, blue: 0.47, alpha: 0.55)
+                                    : SKColor(white: 1, alpha: 0.14)
+        shoulder.strokeColor = .clear
+        shoulder.position = CGPoint(x: 0, y: r * 0.92)
+        addChild(shoulder)
 
-        // бүс
-        let belt = SKSpriteNode(color: SKColor(red: 0.23, green: 0.15, blue: 0.05, alpha: 0.85),
-                                size: CGSize(width: r * 1.7, height: r * 0.28))
-        belt.position = CGPoint(x: 0, y: -r * 0.05)
+        // бүс + товруу
+        let belt = SKSpriteNode(color: isHero ? SKColor(red: 0.42, green: 0.27, blue: 0.06, alpha: 1)
+                                              : SKColor(red: 0.23, green: 0.15, blue: 0.05, alpha: 0.85),
+                                size: CGSize(width: r * 1.28, height: r * 0.22))
+        belt.position = CGPoint(x: 0, y: r * 0.2)
         addChild(belt)
+        let buckle = SKSpriteNode(color: isHero ? SKColor(red: 0.91, green: 0.76, blue: 0.29, alpha: 1)
+                                                : SKColor(red: 0.70, green: 0.59, blue: 0.35, alpha: 0.7),
+                                  size: CGSize(width: r * 0.2, height: r * 0.22))
+        buckle.position = CGPoint(x: 0, y: r * 0.2)
+        addChild(buckle)
 
-        // толгой
-        let head = SKShapeNode(circleOfRadius: r * 0.55)
-        head.fillColor = SKColor(red: 0.88, green: 0.69, blue: 0.53, alpha: 1)
-        head.strokeColor = SKColor(white: 0, alpha: 0.25)
+        // толгой + царай
+        let head = SKShapeNode(circleOfRadius: r * 0.52)
+        head.fillColor = SKColor(red: 0.85, green: 0.65, blue: 0.47, alpha: 1)
+        head.strokeColor = SKColor(white: 0, alpha: 0.22)
         head.lineWidth = 1
         head.position = CGPoint(x: 0, y: r * 1.15)
         addChild(head)
@@ -211,21 +258,37 @@ final class Unit: SKNode {
             string.position = bow.position
             frontNode.addChild(string)
         } else {
-            // сэлэм
+            // сэлэм — барих гар, хамгаалалт, гэрэлтэй ир
+            let hand = SKShapeNode(path: {
+                let p = UIBezierPath()
+                p.move(to: CGPoint(x: -r * 0.5, y: r * 0.5))
+                p.addLine(to: .zero)
+                return p.cgPath
+            }())
+            hand.strokeColor = SKColor(red: 0.85, green: 0.65, blue: 0.47, alpha: 1)
+            hand.lineWidth = r * 0.24
+            hand.lineCap = .round
+            hand.position = CGPoint(x: r * 0.9, y: r * 0.3)
+            frontNode.addChild(hand)
+
             let bladePath = UIBezierPath()
             bladePath.move(to: .zero)
-            bladePath.addLine(to: CGPoint(x: r * 0.8, y: r * 1.1))
+            bladePath.addLine(to: CGPoint(x: r * 1.05, y: r * 1.0))
             let blade = SKShapeNode(path: bladePath.cgPath)
-            blade.strokeColor = SKColor(red: 0.85, green: 0.85, blue: 0.82, alpha: 1)
-            blade.lineWidth = 3
-            blade.position = CGPoint(x: r * 0.95, y: 0)
+            blade.strokeColor = SKColor(red: 0.93, green: 0.94, blue: 0.96, alpha: 1)
+            blade.lineWidth = 3.5
+            blade.lineCap = .round
+            blade.position = CGPoint(x: r * 0.9, y: r * 0.3)
             frontNode.addChild(blade)
 
-            let hilt = SKShapeNode(rect: CGRect(x: -2, y: -r * 0.25, width: 4, height: r * 0.35))
-            hilt.fillColor = SKColor(red: 0.54, green: 0.42, blue: 0.16, alpha: 1)
-            hilt.strokeColor = .clear
-            hilt.position = CGPoint(x: r * 0.95, y: 0)
-            frontNode.addChild(hilt)
+            let guardPath = UIBezierPath()
+            guardPath.move(to: CGPoint(x: -r * 0.12, y: -r * 0.14))
+            guardPath.addLine(to: CGPoint(x: r * 0.12, y: r * 0.14))
+            let guardN = SKShapeNode(path: guardPath.cgPath)
+            guardN.strokeColor = SKColor(red: 0.54, green: 0.42, blue: 0.16, alpha: 1)
+            guardN.lineWidth = 3
+            guardN.position = CGPoint(x: r * 0.9, y: r * 0.3)
+            frontNode.addChild(guardN)
         }
 
         // бамбайн цагираг
@@ -427,5 +490,29 @@ final class Unit: SKNode {
     func updateBars() {
         hpFill?.xScale = clampF(hp / maxHp, 0, 1)
         shieldFill?.xScale = clampF(shield / maxHp, 0, 1)
+    }
+
+    /// Хохирол авах үеийн цайвар гэрэлтэлт
+    func flashHit() {
+        guard kind == .minion || kind == .hero else { return }
+        let r = radius
+        let flash = SKShapeNode(ellipseOf: CGSize(width: r * 1.4, height: r * 1.7))
+        flash.fillColor = SKColor(white: 1, alpha: 0.7)
+        flash.strokeColor = .clear
+        flash.position = CGPoint(x: 0, y: r * 0.5)
+        flash.zPosition = 20
+        addChild(flash)
+        flash.run(.sequence([.fadeOut(withDuration: 0.14), .removeFromParent()]))
+    }
+
+    /// Зэвсгээ хийсгэх цохилтын хөдөлгөөн
+    func swingWeapon() {
+        guard let f = front else { return }
+        f.removeAction(forKey: "swing")
+        let swing = SKAction.sequence([
+            .rotate(toAngle: -face * 0.7, duration: 0.06, shortestUnitArc: true),
+            .rotate(toAngle: 0, duration: 0.16, shortestUnitArc: true)
+        ])
+        f.run(swing, withKey: "swing")
     }
 }

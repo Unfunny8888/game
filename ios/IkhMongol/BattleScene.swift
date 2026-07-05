@@ -149,6 +149,7 @@ final class BattleScene: SKScene {
     private var sunNode: SKNode?
     private var farHills: SKShapeNode?
     private var nearHills: SKShapeNode?
+    private let cloudLayer = SKNode()
 
     // нэгжүүд
     private var units: [Unit] = []
@@ -291,27 +292,56 @@ final class BattleScene: SKScene {
     // MARK: - Арын дэвсгэр
 
     private func buildBackground() {
-        let sky = SKSpriteNode(texture: Tex.linearGradient(
-            size: CGSize(width: 8, height: 128),
-            colors: [UIColor(red: 0.17, green: 0.24, blue: 0.40, alpha: 1),
-                     UIColor(red: 0.54, green: 0.42, blue: 0.29, alpha: 1),
-                     UIColor(red: 0.79, green: 0.58, blue: 0.36, alpha: 1)]))
+        let desert = (camp?.theme ?? .steppe) == .khwarezm
+        let skyColors: [UIColor] = desert
+            ? [UIColor(red: 0.23, green: 0.19, blue: 0.31, alpha: 1),
+               UIColor(red: 0.54, green: 0.35, blue: 0.28, alpha: 1),
+               UIColor(red: 0.84, green: 0.60, blue: 0.35, alpha: 1),
+               UIColor(red: 0.94, green: 0.78, blue: 0.50, alpha: 1)]
+            : [UIColor(red: 0.13, green: 0.20, blue: 0.37, alpha: 1),
+               UIColor(red: 0.29, green: 0.42, blue: 0.60, alpha: 1),
+               UIColor(red: 0.79, green: 0.65, blue: 0.42, alpha: 1),
+               UIColor(red: 0.90, green: 0.75, blue: 0.53, alpha: 1)]
+        let sky = SKSpriteNode(texture: Tex.linearGradient(size: CGSize(width: 8, height: 160), colors: skyColors))
         sky.zPosition = -1000
         addChild(sky)
         skySprite = sky
 
+        // нар + гэрлэн туяа
+        let sunTint = desert ? SKColor(red: 1.0, green: 0.82, blue: 0.51, alpha: 1)
+                             : SKColor(red: 1.0, green: 0.88, blue: 0.59, alpha: 1)
         let sun = SKNode()
-        let core = SKShapeNode(circleOfRadius: 30)
-        core.fillColor = SKColor(red: 1.0, green: 0.84, blue: 0.55, alpha: 0.9)
-        core.strokeColor = .clear
-        sun.addChild(core)
-        let halo = SKShapeNode(circleOfRadius: 52)
-        halo.fillColor = SKColor(red: 1.0, green: 0.84, blue: 0.55, alpha: 0.25)
+        let glow = SKShapeNode(circleOfRadius: 90)
+        glow.fillColor = sunTint.withAlphaComponent(0.22)
+        glow.strokeColor = .clear
+        sun.addChild(glow)
+        let halo = SKShapeNode(circleOfRadius: 54)
+        halo.fillColor = sunTint.withAlphaComponent(0.32)
         halo.strokeColor = .clear
         sun.addChild(halo)
+        let core = SKShapeNode(circleOfRadius: 32)
+        core.fillColor = sunTint.withAlphaComponent(0.95)
+        core.strokeColor = .clear
+        sun.addChild(core)
         sun.zPosition = -990
         addChild(sun)
         sunNode = sun
+
+        // хөвөгч үүл
+        cloudLayer.zPosition = -970
+        addChild(cloudLayer)
+        for i in 0..<4 {
+            let cloud = makeCloud(scale: 0.7 + CGFloat(i % 3) * 0.25)
+            cloud.position = CGPoint(x: CGFloat(i) * (size.width / 3) + 40,
+                                     y: size.height - 40 - CGFloat(i % 2) * 34)
+            cloud.alpha = 0.16
+            cloudLayer.addChild(cloud)
+            let span = size.width + 260
+            let speed = 26.0 + Double(i % 3) * 8
+            let drift = SKAction.moveBy(x: -span, y: 0, duration: span / speed)
+            let reset = SKAction.moveBy(x: span, y: 0, duration: 0)
+            cloud.run(.repeatForever(.sequence([drift, reset])))
+        }
 
         let far = SKShapeNode()
         far.fillColor = Palette.hillFar
@@ -331,6 +361,19 @@ final class BattleScene: SKScene {
         addChild(world)
         hud.zPosition = 1000
         addChild(hud)
+    }
+
+    private func makeCloud(scale: CGFloat) -> SKNode {
+        let node = SKNode()
+        let puffs: [(CGFloat, CGFloat, CGFloat)] = [(0, 0, 34), (-24, 4, 22), (26, 3, 24), (4, -8, 20)]
+        for (dx, dy, rr) in puffs {
+            let p = SKShapeNode(ellipseOf: CGSize(width: rr * 2 * scale, height: rr * 1.0 * scale))
+            p.fillColor = SKColor(white: 1, alpha: 1)
+            p.strokeColor = .clear
+            p.position = CGPoint(x: dx * scale, y: dy * scale)
+            node.addChild(p)
+        }
+        return node
     }
 
     private func hillPath(parallax: CGFloat, base: CGFloat, amp: CGFloat, horizonY: CGFloat) -> CGPath {
@@ -1174,6 +1217,7 @@ final class BattleScene: SKScene {
         }
         target.hp -= amount
         target.updateBars()
+        target.flashHit()
         let color: SKColor = target.team == .mongol
             ? SKColor(red: 1.0, green: 0.48, blue: 0.42, alpha: 1)
             : SKColor(red: 1.0, green: 0.85, blue: 0.45, alpha: 1)
@@ -1266,6 +1310,10 @@ final class BattleScene: SKScene {
         case .tower:
             Haptics.crash()
             Audio.shared.play("crash", volume: 1)
+            burst(at: CGPoint(x: u.position.x, y: u.position.y + 40),
+                  color: SKColor(red: 0.8, green: 0.72, blue: 0.6, alpha: 1), count: 26)
+            ringFx(at: u.position, radius: 120, color: SKColor(white: 0.85, alpha: 0.8))
+            screenFlash(SKColor(red: 0.91, green: 0.85, blue: 0.69, alpha: 1), alpha: 0.16)
             shakeT = max(shakeT, 0.55)
             announce(u.team == .khwarezm ? "Дайсны цамхаг нурлаа!" : "Манай цамхаг нурлаа!")
             netAnnounce(u.team == .khwarezm ? "Манай цамхаг нурлаа!" : "Дайсны цамхаг нурлаа!")
@@ -1276,6 +1324,10 @@ final class BattleScene: SKScene {
         case .gate:
             Haptics.crash()
             Audio.shared.play("crash", volume: 1)
+            burst(at: CGPoint(x: u.position.x, y: u.position.y + 50),
+                  color: SKColor(red: 0.85, green: 0.75, blue: 0.63, alpha: 1), count: 40)
+            ringFx(at: u.position, radius: 180, color: SKColor(white: 0.88, alpha: 0.85))
+            screenFlash(SKColor(red: 0.94, green: 0.88, blue: 0.75, alpha: 1), alpha: 0.22)
             shakeT = max(shakeT, 0.7)
             if u.team == .mongol {
                 // Манай хаалга унах нь зөвхөн хамгаалах даалгаварт ялагдал
@@ -1310,10 +1362,15 @@ final class BattleScene: SKScene {
         } else {
             Audio.shared.play("hit", volume: 0.4)
             dealDamage(to: target, amount: dmg, from: u)
-            slashFx(at: CGPoint(x: u.position.x + u.face * u.radius, y: u.position.y), face: u.face,
-                    color: u.team == .khwarezm
-                        ? SKColor(red: 1.0, green: 0.62, blue: 0.54, alpha: 1)
-                        : SKColor(red: 1.0, green: 0.91, blue: 0.66, alpha: 1))
+            let col: SKColor = u.team == .khwarezm
+                ? SKColor(red: 1.0, green: 0.62, blue: 0.54, alpha: 1)
+                : SKColor(red: 1.0, green: 0.91, blue: 0.66, alpha: 1)
+            slashFx(at: CGPoint(x: u.position.x + u.face * u.radius * 1.3, y: u.position.y - u.radius * 0.3),
+                    face: u.face, color: col)
+            sparks(at: CGPoint(x: target.position.x - u.face * target.radius * 0.5,
+                               y: target.position.y - target.radius * 0.4), face: u.face, color: col)
+            u.swingWeapon()
+            if u.kind == .hero { shakeT = max(shakeT, 0.12) }
             if u === player || target === player { Haptics.hit() }
         }
     }
@@ -1359,7 +1416,9 @@ final class BattleScene: SKScene {
             u.hp = min(u.maxHp, u.hp + u.maxHp * 0.35)
             u.updateBars()
             burst(at: u.position, color: Palette.xpBlue, count: 22)
+            ringFx(at: u.position, radius: 90, color: Palette.xpBlue)
             if u === player {
+                screenFlash(SKColor(red: 0.75, green: 0.88, blue: 1.0, alpha: 1), alpha: 0.22)
                 announce("Түвшин \(u.level) боллоо!")
                 Haptics.levelUp()
                 Audio.shared.play("level", volume: 0.7)
@@ -2134,9 +2193,12 @@ final class BattleScene: SKScene {
         l.fontColor = color
         l.position = CGPoint(x: pos.x + .random(in: -10...10), y: pos.y + dy)
         l.zPosition = 800
+        l.setScale(0.5)
         world.addChild(l)
         l.run(.sequence([
-            .group([.moveBy(x: 0, y: 40, duration: 0.9), .fadeOut(withDuration: 0.9)]),
+            .scale(to: 1.15, duration: 0.12),
+            .group([.moveBy(x: 0, y: 34, duration: 0.78),
+                    .sequence([.wait(forDuration: 0.4), .fadeOut(withDuration: 0.38)])]),
             .removeFromParent()
         ]))
     }
@@ -2144,17 +2206,41 @@ final class BattleScene: SKScene {
     private func burst(at pos: CGPoint, color: SKColor, count: Int) {
         for _ in 0..<count {
             let a = CGFloat.random(in: 0...(2 * .pi))
-            let s = CGFloat.random(in: 60...200)
+            let s = CGFloat.random(in: 50...200)
             let dot = SKShapeNode(circleOfRadius: .random(in: 2...5))
             dot.fillColor = color
             dot.strokeColor = .clear
             dot.position = pos
             dot.zPosition = 750
             world.addChild(dot)
-            let dur = Double.random(in: 0.4...0.8)
+            let dur = Double.random(in: 0.4...0.85)
+            // таталцлын нум (дээшээ хөөрөөд унана)
+            let up = SKAction.moveBy(x: cosF(a) * s * 0.5, y: sinF(a) * s * 0.5 + 30, duration: dur * 0.4)
+            up.timingMode = .easeOut
+            let down = SKAction.moveBy(x: cosF(a) * s * 0.25, y: -40, duration: dur * 0.6)
+            down.timingMode = .easeIn
             dot.run(.sequence([
-                .group([.moveBy(x: cosF(a) * s * 0.6, y: sinF(a) * s * 0.6, duration: dur),
-                        .fadeOut(withDuration: dur)]),
+                .group([.sequence([up, down]), .fadeOut(withDuration: dur)]),
+                .removeFromParent()
+            ]))
+        }
+    }
+
+    // цохилтын оч — чиглэлд шидэгдэх богино зураас
+    private func sparks(at pos: CGPoint, face: CGFloat, color: SKColor, count: Int = 5) {
+        for _ in 0..<count {
+            let a = (face > 0 ? 0 : CGFloat.pi) + CGFloat.random(in: -0.7...0.7)
+            let s = CGFloat.random(in: 100...180)
+            let sp = SKShapeNode(rectOf: CGSize(width: 6, height: 1.6), cornerRadius: 0.8)
+            sp.fillColor = color
+            sp.strokeColor = .clear
+            sp.zRotation = a
+            sp.position = pos
+            sp.zPosition = 760
+            world.addChild(sp)
+            sp.run(.sequence([
+                .group([.moveBy(x: cosF(a) * s * 0.4, y: sinF(a) * s * 0.4, duration: 0.24),
+                        .fadeOut(withDuration: 0.26)]),
                 .removeFromParent()
             ]))
         }
@@ -2163,33 +2249,50 @@ final class BattleScene: SKScene {
     private func ringFx(at pos: CGPoint, radius: CGFloat, color: SKColor) {
         let ring = SKShapeNode(circleOfRadius: radius)
         ring.strokeColor = color
-        ring.lineWidth = 5
+        ring.lineWidth = 6
         ring.fillColor = .clear
-        ring.yScale = 0.55
         ring.position = pos
         ring.zPosition = 700
         ring.setScale(0.15)
         ring.yScale = 0.15 * 0.55
         world.addChild(ring)
         ring.run(.sequence([
-            .group([.scaleX(to: 1, y: 0.55, duration: 0.3), .fadeOut(withDuration: 0.32)]),
+            .group([.scaleX(to: 1, y: 0.55, duration: 0.32), .fadeOut(withDuration: 0.34)]),
             .removeFromParent()
         ]))
     }
 
+    // дэлгэцийн гэрэлтэлт (том үйл явдал)
+    private func screenFlash(_ color: SKColor, alpha: CGFloat = 0.35) {
+        let f = SKSpriteNode(color: color, size: size)
+        f.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        f.zPosition = 1500
+        f.alpha = alpha
+        addChild(f)
+        f.run(.sequence([.fadeOut(withDuration: 0.16), .removeFromParent()]))
+    }
+
     private func slashFx(at pos: CGPoint, face: CGFloat, color: SKColor) {
-        let start: CGFloat = face > 0 ? -1 : .pi - 1
-        let end: CGFloat = face > 0 ? 1 : .pi + 1
-        let path = UIBezierPath(arcCenter: .zero, radius: 26,
-                                startAngle: start, endAngle: end, clockwise: true)
-        let arc = SKShapeNode(path: path.cgPath)
-        arc.strokeColor = color
-        arc.lineWidth = 4
-        arc.fillColor = .clear
-        arc.position = pos
-        arc.zPosition = 700
-        world.addChild(arc)
-        arc.run(.sequence([.fadeOut(withDuration: 0.18), .removeFromParent()]))
+        let start: CGFloat = face > 0 ? -1.15 : .pi - 1.15
+        let end: CGFloat = start + 2.3
+        let makeArc: (SKColor, CGFloat) -> SKShapeNode = { col, lw in
+            let path = UIBezierPath(arcCenter: .zero, radius: 30,
+                                    startAngle: start, endAngle: end, clockwise: true)
+            let arc = SKShapeNode(path: path.cgPath)
+            arc.strokeColor = col
+            arc.lineWidth = lw
+            arc.lineCap = .round
+            arc.fillColor = .clear
+            arc.position = pos
+            arc.zPosition = 700
+            return arc
+        }
+        let glow = makeArc(SKColor(white: 1, alpha: 0.9), 6)
+        let core = makeArc(color, 3)
+        world.addChild(glow); world.addChild(core)
+        for a in [glow, core] {
+            a.run(.sequence([.fadeOut(withDuration: 0.2), .removeFromParent()]))
+        }
     }
 
     // MARK: - Тоглоомын төгсгөл
