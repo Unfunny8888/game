@@ -131,17 +131,22 @@ final class EndScene: SKScene {
         if name == "again" {
             Haptics.skill()
             Audio.shared.play("tap")
-            let battle = BattleScene(size: size, heroIndex: stats.heroIndex,
-                                     difficultyIndex: stats.difficultyIndex,
-                                     campaignLevel: stats.campaignLevel)
-            view.presentScene(battle, transition: .fade(withDuration: 0.5))
+            if let level = stats.campaignLevel {
+                // Аяны түвшинг дахин эхлэхэд даалгаврын танилцуулгыг эхлээд харуулна
+                let intro = MissionIntroScene(size: size, heroIndex: stats.heroIndex, level: level)
+                view.presentScene(intro, transition: .fade(withDuration: 0.5))
+            } else {
+                let battle = BattleScene(size: size, heroIndex: stats.heroIndex,
+                                         difficultyIndex: stats.difficultyIndex,
+                                         campaignLevel: nil)
+                view.presentScene(battle, transition: .fade(withDuration: 0.5))
+            }
         } else if name == "nextLevel", let level = stats.campaignLevel {
             Haptics.skill()
             Audio.shared.play("tap")
-            let battle = BattleScene(size: size, heroIndex: stats.heroIndex,
-                                     difficultyIndex: stats.difficultyIndex,
-                                     campaignLevel: level + 1)
-            view.presentScene(battle, transition: .fade(withDuration: 0.5))
+            // Дараагийн түвшний даалгаврын танилцуулгыг харуулна
+            let intro = MissionIntroScene(size: size, heroIndex: stats.heroIndex, level: level + 1)
+            view.presentScene(intro, transition: .fade(withDuration: 0.5))
         } else if name == "campaign" {
             Haptics.hit()
             Audio.shared.play("tap")

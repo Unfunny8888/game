@@ -296,6 +296,7 @@
   <div id="endTitle" class="win">ЯЛАЛТ!</div>
   <div id="endStats"></div>
   <div class="endBtns">
+    <button class="btn" id="nextBtn" style="display:none">ДАРААГИЙН ТҮВШИН ⚔️</button>
     <button class="btn" id="againBtn">ДАХИН ТУЛАЛДАХ</button>
     <button class="btn secondary" id="changeBtn">БААТАР СОЛИХ</button>
     <button class="btn secondary" id="menuBtn">ҮНДСЭН ЦЭС</button>
@@ -2638,6 +2639,11 @@ function endMatch(win){
     Snd.lose();
   }
 
+  // Аяны горим: дараагийн түвшин байвал товч харуулна (даалгавраар нь дамжина)
+  const canNext = inCampaign && win && campaignLevel+1 < LEVELS.length;
+  $('nextBtn').style.display = canNext ? '' : 'none';
+  $('againBtn').textContent = inCampaign ? 'ЭНЭ ТҮВШНИЙГ ДАХИХ' : 'ДАХИН ТУЛАЛДАХ';
+
   // алт тоолох анимаци
   const el = $('goldCount');
   const t0 = performance.now();
@@ -2714,23 +2720,25 @@ function buildCards(){
 $('playBtn').addEventListener('click', ()=>{ Snd.init(); Snd.startMusic(); campaignLevel = null; buildCards(); buildDiffs(); setState('select'); });
 $('campaignBtn').addEventListener('click', ()=>{ Snd.init(); Snd.startMusic(); buildLevels(); setState('campaign'); });
 $('campaignBackBtn').addEventListener('click', ()=>{ setState('menu'); });
+// Аяны даалгаврын танилцуулгыг харуулна (түвшин бүр эхлэхэд)
+function showIntro(){
+  const L = LEVELS[campaignLevel];
+  $('introTitle').textContent = (campaignLevel+1) + '. ' + L.title;
+  $('introText').textContent = L.intro;
+  $('introObj').textContent = '🎯 ' + L.obj.label;
+  $('introFact').innerHTML = '<b>📖 Түүхэн баримт (' + L.src + '):</b> ' + L.fact;
+  setState('intro');
+  Snd.horn(293.66, .5, .09);
+}
 $('startBtn').addEventListener('click', ()=>{
   Snd.init();
-  if(campaignLevel !== null){
-    const L = LEVELS[campaignLevel];
-    $('introTitle').textContent = (campaignLevel+1) + '. ' + L.title;
-    $('introText').textContent = L.intro;
-    $('introObj').textContent = '🎯 ' + L.obj.label;
-    $('introFact').innerHTML = '<b>📖 Түүхэн баримт (' + L.src + '):</b> ' + L.fact;
-    setState('intro');
-    Snd.horn(293.66, .5, .09);
-  } else {
-    startMatch();
-  }
+  if(campaignLevel !== null) showIntro();
+  else startMatch();
 });
 $('introGoBtn').addEventListener('click', ()=>{ Snd.init(); startMatch(); });
 $('introBackBtn').addEventListener('click', ()=>{ buildLevels(); setState('campaign'); });
-$('againBtn').addEventListener('click', ()=>{ startMatch(); });
+$('nextBtn').addEventListener('click', ()=>{ Snd.init(); campaignLevel = campaignLevel + 1; showIntro(); });
+$('againBtn').addEventListener('click', ()=>{ Snd.init(); if(campaignLevel !== null) showIntro(); else startMatch(); });
 $('changeBtn').addEventListener('click', ()=>{ buildCards(); buildDiffs(); setState('select'); });
 $('menuBtn').addEventListener('click', ()=>{ Snd.init(); setState('menu'); });
 $('storyBtn').addEventListener('click', ()=>{ Snd.init(); buildChapters(); setState('story'); });
@@ -2786,6 +2794,8 @@ window.GAME = {
   get escapeZone(){ return escapeZone; },
   get pickups(){ return pickups; },
   get rescuee(){ return rescuee; },
+  get campaignLevel(){ return campaignLevel; },
+  winNow(){ if(state==='play') endMatch(true); },
   useSkill
 };
 </script>
