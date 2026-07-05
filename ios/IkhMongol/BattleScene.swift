@@ -664,15 +664,138 @@ final class BattleScene: SKScene {
             rock.zPosition = zFor(y: y)
             world.addChild(rock)
         }
-        // Монгол гэрүүд (өөрийн талд, замын ард)
-        addGer(x: 210, y: 545, scale: 1.15)
-        addGer(x: 340, y: 565, scale: 0.85)
-        // Дайсны майхан
-        addTent(x: 2760, y: 550, scale: 1.1)
-        addTent(x: 2650, y: 568, scale: 0.85)
+        // Монгол буурь (өөрийн талд): гэр, тэрэг, овоо
+        addGer(x: 190, y: 548, scale: 1.2, banner: SKColor(red: 0.72, green: 0.23, blue: 0.16, alpha: 1))
+        addGer(x: 315, y: 566, scale: 0.85, banner: SKColor(red: 0.72, green: 0.23, blue: 0.16, alpha: 1))
+        addCart(x: 405, y: 552, scale: 1.0)
+        addOvoo(x: 480, y: 560, scale: 1.0)
+        // Дайсны тал — соёлоор ялгаатай
+        let theme = camp?.theme ?? .khwarezm
+        if theme == .khwarezm {
+            addMosque(x: 2760, y: 552, scale: 1.15)
+            addMinaret(x: 2645, y: 560, scale: 1.1)
+            addMinaret(x: 2880, y: 556, scale: 0.9)
+        } else {
+            addGer(x: 2770, y: 550, scale: 1.15, banner: SKColor(red: 0.23, green: 0.35, blue: 0.55, alpha: 1))
+            addGer(x: 2650, y: 568, scale: 0.85, banner: SKColor(red: 0.23, green: 0.35, blue: 0.55, alpha: 1))
+            addCart(x: 2560, y: 556, scale: 0.95)
+        }
     }
 
-    private func addGer(x: CGFloat, y: CGFloat, scale s: CGFloat) {
+    // Монгол тэрэг (модон дугуйтай)
+    private func addCart(x: CGFloat, y: CGFloat, scale s: CGFloat) {
+        let cart = SKNode()
+        let bed = SKSpriteNode(color: SKColor(red: 0.48, green: 0.35, blue: 0.20, alpha: 1),
+                               size: CGSize(width: 52 * s, height: 8 * s))
+        bed.position = CGPoint(x: 0, y: 4 * s)
+        cart.addChild(bed)
+        let load = SKShapeNode(ellipseOf: CGSize(width: 40 * s, height: 18 * s))
+        load.fillColor = SKColor(red: 0.79, green: 0.66, blue: 0.42, alpha: 1)
+        load.strokeColor = .clear
+        load.position = CGPoint(x: 0, y: 14 * s)
+        cart.addChild(load)
+        for wx in [-16 * s, 16 * s] {
+            let wheel = SKShapeNode(circleOfRadius: 9 * s)
+            wheel.fillColor = .clear
+            wheel.strokeColor = SKColor(red: 0.35, green: 0.23, blue: 0.10, alpha: 1)
+            wheel.lineWidth = 2.5
+            wheel.position = CGPoint(x: wx, y: -6 * s)
+            cart.addChild(wheel)
+        }
+        cart.position = CGPoint(x: x, y: y)
+        cart.zPosition = zFor(y: y)
+        world.addChild(cart)
+    }
+
+    // Овоо (тахилгын чулуун овоо, хөх хадагтай)
+    private func addOvoo(x: CGFloat, y: CGFloat, scale s: CGFloat) {
+        let ovoo = SKNode()
+        let path = UIBezierPath()
+        path.move(to: CGPoint(x: -20 * s, y: 0))
+        path.addLine(to: CGPoint(x: 0, y: 44 * s))
+        path.addLine(to: CGPoint(x: 20 * s, y: 0))
+        path.close()
+        let cairn = SKShapeNode(path: path.cgPath)
+        cairn.fillColor = SKColor(red: 0.54, green: 0.51, blue: 0.45, alpha: 1)
+        cairn.strokeColor = SKColor(white: 0, alpha: 0.2)
+        ovoo.addChild(cairn)
+        let pole = SKSpriteNode(color: SKColor(red: 0.35, green: 0.23, blue: 0.10, alpha: 1),
+                                size: CGSize(width: 2, height: 16 * s))
+        pole.position = CGPoint(x: 0, y: 52 * s)
+        ovoo.addChild(pole)
+        let khadag = SKShapeNode(rectOf: CGSize(width: 22 * s, height: 8 * s))
+        khadag.fillColor = SKColor(red: 0.29, green: 0.56, blue: 0.82, alpha: 1)
+        khadag.strokeColor = .clear
+        khadag.position = CGPoint(x: 10 * s, y: 56 * s)
+        ovoo.addChild(khadag)
+        ovoo.position = CGPoint(x: x, y: y)
+        ovoo.zPosition = zFor(y: y)
+        world.addChild(ovoo)
+    }
+
+    // Хорезмын бөмбөгөр сүм (цэнхэр вааран бөмбөгөр)
+    private func addMosque(x: CGFloat, y: CGFloat, scale s: CGFloat) {
+        let m = SKNode()
+        let base = SKSpriteNode(color: SKColor(red: 0.79, green: 0.66, blue: 0.47, alpha: 1),
+                                size: CGSize(width: 80 * s, height: 34 * s))
+        base.position = CGPoint(x: 0, y: 17 * s)
+        m.addChild(base)
+        let dome = SKShapeNode(path: {
+            let p = UIBezierPath()
+            p.move(to: CGPoint(x: -30 * s, y: 34 * s))
+            p.addCurve(to: CGPoint(x: 30 * s, y: 34 * s),
+                       controlPoint1: CGPoint(x: -30 * s, y: 78 * s),
+                       controlPoint2: CGPoint(x: 30 * s, y: 78 * s))
+            p.close()
+            return p.cgPath
+        }())
+        dome.fillColor = SKColor(red: 0.31, green: 0.66, blue: 0.82, alpha: 1)
+        dome.strokeColor = SKColor(red: 0.10, green: 0.31, blue: 0.44, alpha: 1)
+        dome.lineWidth = 1
+        m.addChild(dome)
+        let finial = SKShapeNode(circleOfRadius: 4 * s)
+        finial.fillColor = SKColor(red: 0.91, green: 0.78, blue: 0.29, alpha: 1)
+        finial.strokeColor = .clear
+        finial.position = CGPoint(x: 0, y: 84 * s)
+        m.addChild(finial)
+        let arch = SKShapeNode(rectOf: CGSize(width: 16 * s, height: 22 * s))
+        arch.fillColor = SKColor(red: 0.29, green: 0.22, blue: 0.16, alpha: 1)
+        arch.strokeColor = .clear
+        arch.position = CGPoint(x: 0, y: 11 * s)
+        m.addChild(arch)
+        m.position = CGPoint(x: x, y: y)
+        m.zPosition = zFor(y: y)
+        world.addChild(m)
+    }
+
+    // Минарет (өндөр цамхаг)
+    private func addMinaret(x: CGFloat, y: CGFloat, scale s: CGFloat) {
+        let m = SKNode()
+        let shaft = SKSpriteNode(color: SKColor(red: 0.85, green: 0.72, blue: 0.53, alpha: 1),
+                                 size: CGSize(width: 14 * s, height: 74 * s))
+        shaft.position = CGPoint(x: 0, y: 37 * s)
+        m.addChild(shaft)
+        let balcony = SKSpriteNode(color: SKColor(red: 0.72, green: 0.60, blue: 0.41, alpha: 1),
+                                   size: CGSize(width: 20 * s, height: 4 * s))
+        balcony.position = CGPoint(x: 0, y: 60 * s)
+        m.addChild(balcony)
+        let top = SKShapeNode(path: {
+            let p = UIBezierPath()
+            p.move(to: CGPoint(x: -8 * s, y: 74 * s))
+            p.addQuadCurve(to: CGPoint(x: 8 * s, y: 74 * s), controlPoint: CGPoint(x: 0, y: 92 * s))
+            p.close()
+            return p.cgPath
+        }())
+        top.fillColor = SKColor(red: 0.23, green: 0.56, blue: 0.72, alpha: 1)
+        top.strokeColor = .clear
+        m.addChild(top)
+        m.position = CGPoint(x: x, y: y)
+        m.zPosition = zFor(y: y)
+        world.addChild(m)
+    }
+
+    private func addGer(x: CGFloat, y: CGFloat, scale s: CGFloat,
+                        banner: SKColor = SKColor(red: 0.72, green: 0.27, blue: 0.16, alpha: 1)) {
         let ger = SKNode()
         let wallH = 18 * s
 
@@ -698,10 +821,17 @@ final class BattleScene: SKScene {
         roof.lineWidth = 1.5
         ger.addChild(roof)
 
-        let door = SKSpriteNode(color: SKColor(red: 0.72, green: 0.27, blue: 0.16, alpha: 1),
-                                size: CGSize(width: 16 * s, height: 16 * s))
+        let door = SKSpriteNode(color: banner, size: CGSize(width: 16 * s, height: 16 * s))
         door.position = CGPoint(x: 0, y: -wallH / 2 + 8 * s)
         ger.addChild(door)
+
+        // тооно (оройн цагираг)
+        let toono = SKShapeNode(ellipseOf: CGSize(width: 16 * s, height: 7 * s))
+        toono.strokeColor = SKColor(red: 0.54, green: 0.48, blue: 0.35, alpha: 1)
+        toono.lineWidth = 1.5
+        toono.fillColor = .clear
+        toono.position = CGPoint(x: 0, y: wallH / 2 + 24 * s)
+        ger.addChild(toono)
 
         ger.position = CGPoint(x: x, y: y)
         ger.zPosition = zFor(y: y)

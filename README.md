@@ -1,8 +1,16 @@
 # Их Монгол — Тулааны Талбар ⚔️
 
-**Mobile Legends маягийн, монгол сэдэвт тулааны тоглоом.** Чингис хаан болон түүний жанждыг удирдан, Хорезмын их хаалгыг нурааж ялалт байгуул!
+**Mobile Legends маягийн, монгол сэдэвт тулаан бөгөөд түүх сургах тоглоом.** Чингис хаан болон түүний жанждыг удирдан, Монголын нууц товчоогоор аялж, Их Монгол улсыг байгуул!
 
-A Mongolian-themed, Mobile Legends-style lane-battle game featuring Chinggis Khaan and his generals. Fully in the Mongolian language. iPhone-first (iPhone X and newer).
+A Mongolian-themed, Mobile Legends-style lane-battle game **and a history learning tool** featuring Chinggis Khaan and his generals, tracing the real Secret History of the Mongols. Fully in the Mongolian language. iPhone-first (iPhone X and newer).
+
+## 📚 Түүх сургах хэрэгсэл (Educational)
+
+Тоглоом нь хүүхэд, том хүнд Монголын түүхийг сургах зорилготой:
+- **Түүхэн танилцуулга** — түвшин бүрийн өмнө Нууц товчоогоор сэдэвлэсэн үйл явдал + **эх сурвалж заасан түүхэн баримт** (жинхэнэ он цаг, хүмүүс, ач холбогдол).
+- **Соёл иргэншлийн архитектур** — монгол талд гэр, тэрэг, овоо; дайсны талд тухайн үндэстний барилга (Хорезмын цэнхэр бөмбөгөрт сүм, минарет).
+- **Соёлын ялгаатай дайчид** — монгол шовгор дуулга vs Хорезмын ороолт, дугуй бамбай.
+- **Байлдан дагуулалтын газрын зураг** — түүхэн байршил, эзэнт гүрний тэлэлт, 1206–1279 оны бодит хүрээ.
 
 ![Тулаан](docs/screenshot-battle.png)
 

@@ -77,8 +77,22 @@ final class MissionIntroScene: SKScene {
 
         let objL = UIFactory.label("🎯 \(L.objective.label)", font: Fonts.bold, size: 13,
                                    color: SKColor(red: 0.35, green: 0.48, blue: 0.18, alpha: 1))
-        objL.position = CGPoint(x: 0, y: -pageH / 2 + 22)
+        objL.position = CGPoint(x: 0, y: -pageH / 2 + 74)
         page.addChild(objL)
+
+        // Түүхэн баримт (сургалтын самбар)
+        let factBox = SKShapeNode(rectOf: CGSize(width: pageW - 40, height: 58), cornerRadius: 4)
+        factBox.fillColor = SKColor(red: 0.63, green: 0.47, blue: 0.24, alpha: 0.16)
+        factBox.strokeColor = SKColor(red: 0.66, green: 0.46, blue: 0.23, alpha: 1)
+        factBox.lineWidth = 1
+        factBox.position = CGPoint(x: 0, y: -pageH / 2 + 38)
+        page.addChild(factBox)
+        let factL = UIFactory.multiline("📖 Түүхэн баримт (\(L.src)): \(L.fact)",
+                                        font: Fonts.serif, size: 9.5,
+                                        color: SKColor(red: 0.35, green: 0.26, blue: 0.14, alpha: 1),
+                                        width: pageW - 56)
+        factL.position = CGPoint(x: 0, y: -pageH / 2 + 38)
+        page.addChild(factL)
 
         let back = UIFactory.button(text: "БУЦАХ", name: "back", width: 150, height: 44, primary: false)
         back.position = CGPoint(x: cx - 110, y: max(28, size.height * 0.1))
