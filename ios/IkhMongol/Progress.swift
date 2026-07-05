@@ -6,7 +6,7 @@ enum Progress {
     private static let goldKey = "im_gold"
     private static let unlockedKey = "im_unlocked"
     private static let masteryKey = "im_mastery"
-    private static let freeHeroes = ["chinggis", "zev"]
+    private static let freeHeroes = ["temuujin", "zev"]
 
     static var gold: Int {
         get { UserDefaults.standard.integer(forKey: goldKey) }

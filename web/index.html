@@ -104,6 +104,8 @@
   #goldBar.flash { animation:goldFlash .5s; }
   @keyframes goldFlash { 0%,100% { color:#ffd873; } 50% { color:#ff6b57; } }
   .card.locked { opacity:.55; filter:grayscale(.4); }
+  .card.premium { border-color:#f2c96a; box-shadow:0 0 18px rgba(242,201,106,.3); }
+  .card.premium.locked { opacity:.75; filter:none; }
   .card .lockTag { font-size:12px; font-weight:800; color:#ffd873; margin-top:6px; }
   .card .stars { font-size:11px; color:#ffd873; letter-spacing:2px; margin-top:2px; }
 
@@ -251,11 +253,11 @@ $('muteBtn').addEventListener('click', ()=>{ Snd.muted=!Snd.muted; $('muteBtn').
 // ---------- heroes ----------
 const HEROES = [
   {
-    id:'chinggis', name:'Чингис хаан', role:'ТУЛААНЧ', icon:'⚔️', color:'#e8b64c',
-    hp:980, dmg:66, range:78, speed:182, atkCd:0.85,
-    desc:'Их Монгол улсыг үндэслэгч эзэн хаан. Ойрын тулаанд хүчирхэг, тэнцвэртэй баатар.',
-    s1:{ name:'Сэлмийн хуй', short:'Сэлэм', icon:'🌪️', cd:6,  desc:'Эргэн тойрны бүх дайсанд хүчтэй цохилт өгнө.' },
-    s2:{ name:'Тэнгэрийн ивээл', short:'Ивээл', icon:'🌟', cd:14, desc:'Амиа сэргээж, түр хугацаанд хурдална.' }
+    id:'temuujin', name:'Тэмүжин', role:'ЗАЛУУ ДАЙЧИН', icon:'🐺', color:'#d8a35a',
+    hp:850, dmg:56, range:75, speed:185, atkCd:0.9,
+    desc:'Ирээдүйн их хааны залуу нас. Эр зориг бадарсан залуу дайчин.',
+    s1:{ name:'Хурц сэлэм', short:'Сэлэм', icon:'⚔️', cd:6, desc:'Урд байгаа дайснуудыг хүчтэй цавчина.' },
+    s2:{ name:'Өсөх хүч', short:'Хүч', icon:'🌱', cd:14, desc:'Амиа хэсэгчлэн сэргээнэ.' }
   },
   {
     id:'zev', name:'Зэв жанжин', role:'ХАРВААЧ', icon:'🏹', color:'#8fb573',
@@ -291,6 +293,13 @@ const HEROES = [
     desc:'Чингис хааны дүү, домогт хүчтэй мэргэн харваач.',
     s1:{ name:'Гурван сум', short:'3 сум', icon:'☄️', cd:6, desc:'Ойрын гурван дайсан руу зэрэг сум харвана.' },
     s2:{ name:'Тэнгэрийн нум', short:'Нум', icon:'🌠', cd:13, desc:'Түр хугацаанд харвах хурдаа хоёр дахин нэмнэ.' }
+  },
+  {
+    id:'chinggis', name:'Чингис хаан', role:'ИХ ЭЗЭН ХААН 👑', icon:'⚔️', color:'#e8b64c',
+    hp:1150, dmg:78, range:80, speed:188, atkCd:0.8,
+    desc:'Их Монгол улсын эзэн хаан — тоглоомын хамгийн хүчирхэг дээд зэргийн баатар.',
+    s1:{ name:'Сэлмийн хуй', short:'Сэлэм', icon:'🌪️', cd:6,  desc:'Эргэн тойрны бүх дайсанд аймшигт хүчтэй цохилт өгнө.' },
+    s2:{ name:'Тэнгэрийн ивээл', short:'Ивээл', icon:'🌟', cd:13, desc:'Амиа ихээр сэргээж, удаан хугацаанд хурдална.' }
   }
 ];
 let selHero = 0;
@@ -305,18 +314,19 @@ let selDiff = 1;
 
 // ---------- байнгын хадгалалт: алт, нээлт, мастери ----------
 const SAVE_KEY = 'ikhmongol_save';
-const HERO_COST = { chinggis:0, zev:0, subedei:150, mukhulai:300, boorchi:500, khasar:750 };
+const HERO_COST = { temuujin:0, zev:0, subedei:150, mukhulai:300, boorchi:500, khasar:750, chinggis:1500 };
 function loadSave(){
   try{
     const s = JSON.parse(localStorage.getItem(SAVE_KEY));
     if(s && typeof s === 'object')
-      return Object.assign({gold:0, unlocked:['chinggis','zev'], mastery:{}}, s);
+      return Object.assign({gold:0, unlocked:['temuujin','zev'], mastery:{}}, s);
   }catch(e){}
-  return { gold:0, unlocked:['chinggis','zev'], mastery:{} };
+  return { gold:0, unlocked:['temuujin','zev'], mastery:{} };
 }
 let save = loadSave();
 function persistSave(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }catch(e){} }
-const isUnlocked = id => save.unlocked.includes(id);
+// үнэгүй баатрууд (cost 0) хуучин хадгалалттай ч үргэлж нээлттэй
+const isUnlocked = id => HERO_COST[id] === 0 || save.unlocked.includes(id);
 const masteryOf = id => save.mastery[id] || 0;
 
 // ---------- game state ----------
@@ -572,16 +582,28 @@ function useSkill(idx){
   const lvl = player.level;
 
   if(def.id==='chinggis'){
-    if(idx===0){ // Сэлмийн хуй — AoE spin
-      const R = 150;
+    if(idx===0){ // Сэлмийн хуй — том хүчирхэг AoE (премиум хувилбар)
+      const R = 170;
       ringFx(player.x, player.y, R, '#ffe9a8');
       for(const e of units) if(!e.dead && e.team!==player.team && dist(player,e) < R+e.r)
-        dealDamage(e, player.dmg*1.6 + lvl*8, player);
-    } else {     // Тэнгэрийн ивээл — heal + haste
+        dealDamage(e, player.dmg*1.8 + lvl*10, player);
+    } else {     // Тэнгэрийн ивээл — их эдгэрэлт + урт хурд
       Snd.heal();
-      player.hp = Math.min(player.maxHp, player.hp + player.maxHp*0.3);
-      player.hasteT = 3.5;
+      player.hp = Math.min(player.maxHp, player.hp + player.maxHp*0.35);
+      player.hasteT = 4;
       for(let i=0;i<16;i++) particles.push({x:player.x+(Math.random()*60-30), y:player.y+(Math.random()*40-20), vx:0, vy:-60-Math.random()*50, life:.9, size:3, color:'#a8e8b0'});
+    }
+  }
+  else if(def.id==='temuujin'){
+    if(idx===0){ // Хурц сэлэм — урд талын цавчилт
+      const fx = player.x + player.face*80;
+      ringFx(fx, player.y, 100, '#ffd9a8');
+      for(const e of units) if(!e.dead && e.team!==player.team && Math.hypot(e.x-fx, e.y-player.y) < 100+e.r)
+        dealDamage(e, player.dmg*1.5 + lvl*7, player);
+    } else {     // Өсөх хүч — дунд зэргийн эдгэрэлт
+      Snd.heal();
+      player.hp = Math.min(player.maxHp, player.hp + player.maxHp*0.25);
+      for(let i=0;i<10;i++) particles.push({x:player.x+(Math.random()*50-25), y:player.y+(Math.random()*36-18), vx:0, vy:-55-Math.random()*45, life:.8, size:3, color:'#c8e8a0'});
     }
   }
   else if(def.id==='zev'){
@@ -1399,8 +1421,8 @@ function buildCards(){
     const unlocked = isUnlocked(h.id);
     const m = masteryOf(h.id);
     const c = document.createElement('div');
-    c.className = 'card' + (i===selHero? ' sel':'') + (unlocked? '':' locked');
-    c.innerHTML = '<div class="icon">'+(unlocked? h.icon : '🔒')+'</div>'
+    c.className = 'card' + (i===selHero? ' sel':'') + (unlocked? '':' locked') + (h.id==='chinggis'? ' premium':'');
+    c.innerHTML = '<div class="icon">'+(unlocked? h.icon : (h.id==='chinggis'? '👑':'🔒'))+'</div>'
       + '<div class="hname">'+h.name+'</div>'
       + '<div class="hrole">'+h.role+'</div>'
       + (unlocked && m>0 ? '<div class="stars">'+'★'.repeat(m)+'☆'.repeat(5-m)+'</div>' : '')
@@ -1468,7 +1490,7 @@ window.GAME = {
   startQuick(i, d){ selHero = i||0; if(d!==undefined) selDiff = d; startMatch(); },
   setDiff(d){ selDiff = d; },
   skipToWave(n){ waveNum = n - 1; nextWaveT = 0.1; },
-  resetSave(){ save = {gold:0, unlocked:['chinggis','zev'], mastery:{}}; persistSave(); },
+  resetSave(){ save = {gold:0, unlocked:['temuujin','zev'], mastery:{}}; persistSave(); },
   useSkill
 };
 </script>

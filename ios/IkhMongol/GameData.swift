@@ -56,17 +56,17 @@ enum GameData {
     /// Тоглогчийн сонгож болох баатрууд
     static let heroes: [HeroDef] = [
         HeroDef(
-            id: "chinggis",
-            name: "Чингис хаан",
-            role: "ТУЛААНЧ",
-            icon: "⚔️",
-            color: SKColor(red: 0.91, green: 0.71, blue: 0.30, alpha: 1),
-            hp: 980, dmg: 66, range: 78, speed: 182, atkCd: 0.85,
-            desc: "Их Монгол улсыг үндэслэгч эзэн хаан. Ойрын тулаанд хүчирхэг, тэнцвэртэй баатар.",
-            s1: SkillDef(name: "Сэлмийн хуй", short: "Сэлэм", icon: "🌪", cd: 6,
-                         desc: "Эргэн тойрны бүх дайсанд хүчтэй цохилт өгнө."),
-            s2: SkillDef(name: "Тэнгэрийн ивээл", short: "Ивээл", icon: "🌟", cd: 14,
-                         desc: "Амиа сэргээж, түр хугацаанд хурдална.")
+            id: "temuujin",
+            name: "Тэмүжин",
+            role: "ЗАЛУУ ДАЙЧИН",
+            icon: "🐺",
+            color: SKColor(red: 0.85, green: 0.64, blue: 0.35, alpha: 1),
+            hp: 850, dmg: 56, range: 75, speed: 185, atkCd: 0.9,
+            desc: "Ирээдүйн их хааны залуу нас. Эр зориг бадарсан залуу дайчин.",
+            s1: SkillDef(name: "Хурц сэлэм", short: "Сэлэм", icon: "⚔️", cd: 6,
+                         desc: "Урд байгаа дайснуудыг хүчтэй цавчина."),
+            s2: SkillDef(name: "Өсөх хүч", short: "Хүч", icon: "🌱", cd: 14,
+                         desc: "Амиа хэсэгчлэн сэргээнэ.")
         ),
         HeroDef(
             id: "zev",
@@ -136,6 +136,20 @@ enum GameData {
             s2: SkillDef(name: "Тэнгэрийн нум", short: "Нум", icon: "🌠", cd: 13,
                          desc: "Түр хугацаанд харвах хурдаа хоёр дахин нэмнэ."),
             cost: 750
+        ),
+        HeroDef(
+            id: "chinggis",
+            name: "Чингис хаан",
+            role: "ИХ ЭЗЭН ХААН 👑",
+            icon: "⚔️",
+            color: SKColor(red: 0.91, green: 0.71, blue: 0.30, alpha: 1),
+            hp: 1150, dmg: 78, range: 80, speed: 188, atkCd: 0.8,
+            desc: "Их Монгол улсын эзэн хаан — тоглоомын хамгийн хүчирхэг дээд зэргийн баатар.",
+            s1: SkillDef(name: "Сэлмийн хуй", short: "Сэлэм", icon: "🌪", cd: 6,
+                         desc: "Эргэн тойрны бүх дайсанд аймшигт хүчтэй цохилт өгнө."),
+            s2: SkillDef(name: "Тэнгэрийн ивээл", short: "Ивээл", icon: "🌟", cd: 13,
+                         desc: "Амиа ихээр сэргээж, удаан хугацаанд хурдална."),
+            cost: 1500
         )
     ]
 

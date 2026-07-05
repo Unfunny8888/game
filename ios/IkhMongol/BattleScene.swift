@@ -892,20 +892,20 @@ final class BattleScene: SKScene {
         switch def.id {
         case "chinggis":
             if idx == 0 {
-                // Сэлмийн хуй — тойрсон цохилт
-                let radius: CGFloat = 150
+                // Сэлмийн хуй — том хүчирхэг тойрсон цохилт (премиум)
+                let radius: CGFloat = 170
                 ringFx(at: player.position, radius: radius,
                        color: SKColor(red: 1.0, green: 0.91, blue: 0.66, alpha: 1))
                 for e in units where !e.isDead && e.team != player.team {
                     if player.position.distance(to: e.position) < radius + e.radius {
-                        dealDamage(to: e, amount: player.dmg * 1.6 + lvl * 8, from: player)
+                        dealDamage(to: e, amount: player.dmg * 1.8 + lvl * 10, from: player)
                     }
                 }
             } else {
-                // Тэнгэрийн ивээл — эдгэрэлт + хурд
+                // Тэнгэрийн ивээл — их эдгэрэлт + урт хурд
                 Audio.shared.play("heal", volume: 0.7)
-                player.hp = min(player.maxHp, player.hp + player.maxHp * 0.3)
-                player.hasteT = 3.5
+                player.hp = min(player.maxHp, player.hp + player.maxHp * 0.35)
+                player.hasteT = 4
                 player.updateBars()
                 for _ in 0..<14 {
                     let spark = SKShapeNode(circleOfRadius: 3)
@@ -917,6 +917,37 @@ final class BattleScene: SKScene {
                     world.addChild(spark)
                     spark.run(.sequence([
                         .group([.moveBy(x: 0, y: 60, duration: 0.9), .fadeOut(withDuration: 0.9)]),
+                        .removeFromParent()
+                    ]))
+                }
+            }
+
+        case "temuujin":
+            if idx == 0 {
+                // Хурц сэлэм — урд талын цавчилт
+                let center = CGPoint(x: player.position.x + player.face * 80, y: player.position.y)
+                ringFx(at: center, radius: 100,
+                       color: SKColor(red: 1.0, green: 0.85, blue: 0.66, alpha: 1))
+                for e in units where !e.isDead && e.team != player.team {
+                    if center.distance(to: e.position) < 100 + e.radius {
+                        dealDamage(to: e, amount: player.dmg * 1.5 + lvl * 7, from: player)
+                    }
+                }
+            } else {
+                // Өсөх хүч — дунд зэргийн эдгэрэлт
+                Audio.shared.play("heal", volume: 0.6)
+                player.hp = min(player.maxHp, player.hp + player.maxHp * 0.25)
+                player.updateBars()
+                for _ in 0..<10 {
+                    let spark = SKShapeNode(circleOfRadius: 3)
+                    spark.fillColor = SKColor(red: 0.78, green: 0.91, blue: 0.63, alpha: 1)
+                    spark.strokeColor = .clear
+                    spark.position = CGPoint(x: player.position.x + .random(in: -25...25),
+                                             y: player.position.y + .random(in: -18...18))
+                    spark.zPosition = 700
+                    world.addChild(spark)
+                    spark.run(.sequence([
+                        .group([.moveBy(x: 0, y: 55, duration: 0.8), .fadeOut(withDuration: 0.8)]),
                         .removeFromParent()
                     ]))
                 }

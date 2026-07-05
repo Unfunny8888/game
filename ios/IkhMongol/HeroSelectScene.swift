@@ -55,27 +55,32 @@ final class HeroSelectScene: SKScene {
         c.addChild(gold)
         goldLabel = gold
 
-        // 3×2 картын сүлжээ (авсаархан)
-        let cardW = min(196, (size.width - 90) / 3)
+        // 4+3 картын сүлжээ (7 баатар)
+        let cardW = min(165, (size.width - 100) / 4)
         let cardH: CGFloat = size.height * 0.155
-        let gapX: CGFloat = 12
+        let gapX: CGFloat = 10
         let gapY: CGFloat = 10
-        let startX = cx - (cardW + gapX)
         let row1Y = size.height * 0.72
         let row2Y = row1Y - cardH - gapY
 
         for (i, hero) in GameData.heroes.enumerated() {
-            let col = CGFloat(i % 3)
-            let rowY = i < 3 ? row1Y : row2Y
+            let inFirstRow = i < 4
+            let col = CGFloat(inFirstRow ? i : i - 4)
+            let count: CGFloat = inFirstRow ? 4 : 3
+            let rowWidth = count * cardW + (count - 1) * gapX
+            let startX = cx - rowWidth / 2 + cardW / 2
+            let rowY = inFirstRow ? row1Y : row2Y
             let unlocked = Progress.isUnlocked(hero.id)
 
             let card = SKShapeNode(rectOf: CGSize(width: cardW, height: cardH), cornerRadius: 10)
             card.fillColor = SKColor(red: 0.16, green: 0.11, blue: 0.05, alpha: 0.96)
-            card.strokeColor = SKColor(red: 0.43, green: 0.33, blue: 0.15, alpha: 1)
+            card.strokeColor = hero.id == "chinggis"
+                ? Palette.goldLight
+                : SKColor(red: 0.43, green: 0.33, blue: 0.15, alpha: 1)
             card.lineWidth = 2
             card.name = "card\(i)"
             card.position = CGPoint(x: startX + col * (cardW + gapX), y: rowY)
-            card.alpha = unlocked ? 1 : 0.55
+            card.alpha = unlocked ? 1 : (hero.id == "chinggis" ? 0.8 : 0.55)
             c.addChild(card)
             cardNodes.append(card)
 
@@ -87,7 +92,7 @@ final class HeroSelectScene: SKScene {
             iconBg.name = card.name
             card.addChild(iconBg)
 
-            let icon = SKLabelNode(text: unlocked ? hero.icon : "🔒")
+            let icon = SKLabelNode(text: unlocked ? hero.icon : (hero.id == "chinggis" ? "👑" : "🔒"))
             icon.fontSize = cardH * 0.38
             icon.verticalAlignmentMode = .center
             icon.position = iconBg.position
@@ -163,7 +168,8 @@ final class HeroSelectScene: SKScene {
         if !Progress.isUnlocked(GameData.heroes[selIndex].id) { selIndex = 0 }
         for (i, card) in cardNodes.enumerated() {
             let selected = i == selIndex
-            card.strokeColor = selected
+            let premium = GameData.heroes[i].id == "chinggis"
+            card.strokeColor = (selected || premium)
                 ? Palette.goldLight
                 : SKColor(red: 0.43, green: 0.33, blue: 0.15, alpha: 1)
             card.lineWidth = selected ? 3 : 2
