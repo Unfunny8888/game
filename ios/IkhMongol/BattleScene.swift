@@ -206,6 +206,8 @@ final class BattleScene: SKScene {
     private var attackButton: SKNode!
     private var exitButton: SKNode!
     private var lowHpFrame: SKShapeNode!
+    private var attackHeld = false
+    private weak var attackTouch: UITouch?
     private var announceQueue: [String] = []
     private var announceBusy = false
 
@@ -213,10 +215,24 @@ final class BattleScene: SKScene {
 
     // MARK: - Инициализаци
 
-    init(size: CGSize, heroIndex: Int, difficultyIndex: Int, pvpRemoteHero: Int? = nil) {
+    private let campaignLevel: Int?
+    private var isCampaign: Bool { campaignLevel != nil }
+    private var camp: CampaignLevel? { campaignLevel.map { GameData.campaign[$0] } }
+
+    // Дайсны хүчний үржүүлэгчид — аян дайн эсвэл сонгосон хүндрэлээс
+    private var effMinionHp: CGFloat { camp?.minionMul ?? diff.minionHp }
+    private var effMinionDmg: CGFloat { camp?.minionMul ?? diff.minionDmg }
+    private var effHeroHp: CGFloat { camp?.heroMul ?? diff.heroHp }
+    private var effHeroDmg: CGFloat { camp?.heroMul ?? diff.heroDmg }
+    private var enemyHeroName: String { camp?.enemyName ?? GameData.jalal.name }
+    private var goldMult: CGFloat { isCampaign ? 1 : diff.goldMult }
+
+    init(size: CGSize, heroIndex: Int, difficultyIndex: Int,
+         pvpRemoteHero: Int? = nil, campaignLevel: Int? = nil) {
         self.heroIndex = heroIndex
         self.difficultyIndex = min(max(difficultyIndex, 0), GameData.difficulties.count - 1)
         self.pvpRemoteHero = pvpRemoteHero
+        self.campaignLevel = campaignLevel
         super.init(size: size)
         scaleMode = .resizeFill
         backgroundColor = Palette.night
@@ -239,8 +255,14 @@ final class BattleScene: SKScene {
 
         if isPvp { NetHub.current?.delegate = self }
 
-        announce("Тулаан эхэллээ!")
-        announce("Дайсны их хаалгыг нураа!")
+        if let level = campaignLevel {
+            let L = GameData.campaign[level]
+            announce("\(level + 1)-р түвшин: \(L.title)")
+            announce(L.desc)
+        } else {
+            announce("Тулаан эхэллээ!")
+            announce("Дайсны их хаалгыг нураа!")
+        }
     }
 
     override func didChangeSize(_ oldSize: CGSize) {
@@ -377,9 +399,9 @@ final class BattleScene: SKScene {
                           atkCd: rd.atkCd, moveSpeed: rd.speed, aggro: 320, heroDef: rd)
         } else {
             let jd = GameData.jalal
-            aiHero = Unit(kind: .hero, team: .khwarezm, displayName: jd.name,
-                          radius: 20, hp: (jd.hp * diff.heroHp).rounded(),
-                          dmg: (jd.dmg * diff.heroDmg).rounded(), range: jd.range,
+            aiHero = Unit(kind: .hero, team: .khwarezm, displayName: enemyHeroName,
+                          radius: 20, hp: (jd.hp * effHeroHp).rounded(),
+                          dmg: (jd.dmg * effHeroDmg).rounded(), range: jd.range,
                           atkCd: jd.atkCd, moveSpeed: jd.speed, aggro: 320, heroDef: jd)
         }
         aiHero.position = CGPoint(x: World.eGateX - 130, y: World.laneY)
@@ -718,8 +740,8 @@ final class BattleScene: SKScene {
         for team in [Team.mongol, Team.khwarezm] {
             let gate: Unit = team == .mongol ? pGate : eGate
             let dir: CGFloat = team == .mongol ? 1 : -1
-            let mHp = team == .khwarezm ? hp * diff.minionHp : hp
-            let mDmg = team == .khwarezm ? dmg * diff.minionDmg : dmg
+            let mHp = team == .khwarezm ? hp * effMinionHp : hp
+            let mDmg = team == .khwarezm ? dmg * effMinionDmg : dmg
             for i in 0..<4 {
                 let archer = i == 3
                 let m = Unit(kind: .minion, team: team,
@@ -740,10 +762,10 @@ final class BattleScene: SKScene {
         }
         // 5 давалгаа тутамд аварга дайчин
         if waveNum % 5 == 0 {
-            let bhp = (1100 + CGFloat(waveNum) * 45) * diff.minionHp
+            let bhp = (1100 + CGFloat(waveNum) * 45) * effMinionHp
             let b = Unit(kind: .minion, team: .khwarezm, displayName: "Аварга дайчин",
                          radius: 26, hp: bhp,
-                         dmg: (55 + CGFloat(waveNum) * 2) * diff.minionDmg,
+                         dmg: (55 + CGFloat(waveNum) * 2) * effMinionDmg,
                          range: 52, atkCd: 1.2, moveSpeed: 78, aggro: 320, boss: true)
             b.position = CGPoint(x: eGate.position.x - 90, y: World.laneY)
             b.face = -1
@@ -1223,7 +1245,7 @@ final class BattleScene: SKScene {
         NetHub.current?.send(.announce(text), reliable: true)
     }
 
-    /// Довтлох товч — дайсны баатрыг тэргүүн ээлжид онилно
+    /// Довтлох товч (нэг удаагийн) — дайсны баатрыг тэргүүн ээлжид онилно (PvP-д ашиглагдана)
     private func forceAttack(_ u: Unit) {
         guard !u.isDead, u.stun <= 0, u.atkT <= 0, u.dashT <= 0 else { return }
         var target: Unit?
@@ -1234,6 +1256,20 @@ final class BattleScene: SKScene {
             if let t = findTarget(for: u, maxDist: u.range, unitsOnly: false) { target = t }
         }
         if let t = target { performAttack(u, on: t) }
+    }
+
+    /// Довтлох товч (барих) — онилох бай: хүрээн доторх дайсны баатар → хамгийн ойрын дайсан →
+    /// хүрээнээс гадуурх дайсны баатар (түүн уруу ойртоно)
+    private func seekTarget(for u: Unit) -> Unit? {
+        var hero: Unit?
+        var heroD = CGFloat.greatestFiniteMagnitude
+        for e in units where !e.isDead && e.team != u.team && e.kind == .hero {
+            let d = u.position.distance(to: e.position) - e.radius
+            if d < heroD { heroD = d; hero = e }
+        }
+        if let hero = hero, heroD <= u.range { return hero }
+        if let near = findTarget(for: u, maxDist: u.range, unitsOnly: false) { return near }
+        return hero
     }
 
     private func buildSnapshot() -> Snapshot {
@@ -1354,7 +1390,8 @@ final class BattleScene: SKScene {
 
         // жойстикийн хөдөлгөөн
         let m = vecLen(joyVec.dx, joyVec.dy)
-        if m > 0.15 && player.stun <= 0 && player.dashT <= 0 {
+        let moving = m > 0.15 && player.stun <= 0 && player.dashT <= 0
+        if moving {
             let sp = player.moveSpeed * (player.hasteT > 0 ? 1.35 : 1) * min(m, 1)
             player.position.x = clampF(player.position.x + joyVec.dx / m * sp * dt, 30, World.width - 30)
             player.position.y = clampF(player.position.y + joyVec.dy / m * sp * dt,
@@ -1362,10 +1399,34 @@ final class BattleScene: SKScene {
             if abs(joyVec.dx) > 0.1 { player.face = joyVec.dx > 0 ? 1 : -1 }
         }
 
-        // автомат довтолгоо
-        if player.atkT <= 0 && player.stun <= 0 && player.dashT <= 0 {
-            if let t = findTarget(for: player, maxDist: player.range, unitsOnly: false) {
-                performAttack(player, on: t)
+        // Довтолгоо (ML маяг):
+        //  · Довтлох товч барьж байвал: дайсныг мөшгин довтолно (хол бол ойртоно)
+        //  · Жойстикээр хөдөлж байвал: автоматаар довтлохгүй
+        //  · Зогсож байвал: хүрээн доторх дайсныг автоматаар цохино
+        if player.stun <= 0 && player.dashT <= 0 {
+            if attackHeld {
+                if let t = seekTarget(for: player) {
+                    let d = player.position.distance(to: t.position) - t.radius
+                    if d <= player.range {
+                        player.face = t.position.x >= player.position.x ? 1 : -1
+                        if player.atkT <= 0 { performAttack(player, on: t) }
+                    } else if !moving {
+                        let dx = t.position.x - player.position.x
+                        let dy = t.position.y - player.position.y
+                        let dd = vecLen(dx, dy)
+                        if dd > 1 {
+                            let sp = player.moveSpeed * (player.hasteT > 0 ? 1.35 : 1)
+                            player.position.x = clampF(player.position.x + dx / dd * sp * dt, 30, World.width - 30)
+                            player.position.y = clampF(player.position.y + dy / dd * sp * dt,
+                                                       World.groundBottom, World.groundTop)
+                            player.face = dx > 0 ? 1 : -1
+                        }
+                    }
+                }
+            } else if !moving && player.atkT <= 0 {
+                if let t = findTarget(for: player, maxDist: player.range, unitsOnly: false) {
+                    performAttack(player, on: t)
+                }
             }
         }
 
@@ -1718,10 +1779,19 @@ final class BattleScene: SKScene {
         // (PvP-д тогтмол: ялбал 100, ялагдвал 30)
         let heroId = GameData.heroes[heroIndex].id
         let chaptersBefore = Set(GameData.chapters.filter { $0.req.isMet }.map { $0.id })
-        let earned = isPvp
+        var earned = isPvp
             ? (win ? 100 : 30)
             : Int(((CGFloat(matchGold) + CGFloat(player.level) * 5 + (win ? 80 : 20))
-                   * diff.goldMult).rounded())
+                   * goldMult).rounded())
+
+        // Аян дайн: анх удаа даван туулбал түвшин ахьж, бонус алт өгнө
+        var campaignCleared: (index: Int, reward: Int, last: Bool)? = nil
+        if let level = campaignLevel, win, Progress.clearCampaignLevel(level) {
+            let L = GameData.campaign[level]
+            earned += L.reward
+            campaignCleared = (level, L.reward, level + 1 >= GameData.campaign.count)
+        }
+
         Progress.gold += earned
         Progress.recordMatch(win: win)
         var gainedStar = false
@@ -1733,12 +1803,20 @@ final class BattleScene: SKScene {
         let newChapter = GameData.chapters
             .first { $0.req.isMet && !chaptersBefore.contains($0.id) }?.title
 
+        var campaignLine: String? = nil
+        if let c = campaignCleared {
+            campaignLine = c.last
+                ? "🏆 Аян дайныг бүрэн дуусгав! Их Монгол Улс мандтугай!"
+                : "⚔️ \(c.index + 1)-р түвшин анх удаа дуусгав! +\(c.reward) 🪙 · Дараагийн түвшин нээгдлээ"
+        }
+
         let stats = MatchStats(win: win, kills: kills, level: player.level,
                                seconds: Int(matchTime), heroIndex: heroIndex,
                                difficultyIndex: difficultyIndex,
                                goldEarned: earned, totalGold: Progress.gold,
                                masteryStars: Progress.mastery(heroId), gainedStar: gainedStar,
-                               newChapter: newChapter, isPvp: isPvp)
+                               newChapter: newChapter, isPvp: isPvp,
+                               campaignLevel: campaignLevel, campaignLine: campaignLine)
         run(.sequence([
             .wait(forDuration: 0.9),
             .run { [weak self] in
@@ -1783,11 +1861,12 @@ final class BattleScene: SKScene {
                 return
             }
 
-            // довтлох товч
-            if p.distance(to: attackButton.position) <= 44 {
-                forceAttack(player)
-                attackButton.run(.sequence([.scale(to: 0.88, duration: 0.05),
-                                            .scale(to: 1.0, duration: 0.08)]))
+            // довтлох товч (барих) — дарж байх зуур дайсныг мөшгин довтолно
+            if p.distance(to: attackButton.position) <= 46 {
+                attackHeld = true
+                attackTouch = t
+                attackButton.setScale(0.9)
+                Haptics.hit()
                 continue
             }
 
@@ -1831,10 +1910,17 @@ final class BattleScene: SKScene {
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        for t in touches where t === joyTouch {
-            joyTouch = nil
-            joyVec = .zero
-            joyBase.isHidden = true
+        for t in touches {
+            if t === joyTouch {
+                joyTouch = nil
+                joyVec = .zero
+                joyBase.isHidden = true
+            }
+            if t === attackTouch {
+                attackTouch = nil
+                attackHeld = false
+                attackButton.setScale(1.0)
+            }
         }
     }
 
@@ -1858,6 +1944,8 @@ struct MatchStats {
     let gainedStar: Bool
     let newChapter: String?
     var isPvp: Bool = false
+    var campaignLevel: Int? = nil
+    var campaignLine: String? = nil
 }
 
 // MARK: - PvP мессеж хүлээн авах (хост)

@@ -57,9 +57,13 @@ final class EndScene: SKScene {
             : "Их хаалга нурсан ч дайн дуусаагүй..."
         let mins = stats.seconds / 60
         let secs = stats.seconds % 60
-        let diffName = GameData.difficulties[stats.difficultyIndex].name
-        var statsText = "\(flavour)\nАлалт: \(stats.kills)  ·  Түвшин: \(stats.level)  ·  Хугацаа: \(mins):\(String(format: "%02d", secs))  ·  Хэцүү байдал: \(diffName)"
+        let modeName = stats.campaignLevel.map { "\($0 + 1)-р түвшин" }
+            ?? GameData.difficulties[stats.difficultyIndex].name
+        var statsText = "\(flavour)\nАлалт: \(stats.kills)  ·  Түвшин: \(stats.level)  ·  Хугацаа: \(mins):\(String(format: "%02d", secs))  ·  \(modeName)"
         statsText += "\n🪙 Олсон алт: +\(stats.goldEarned)  ·  Нийт: \(stats.totalGold)"
+        if let line = stats.campaignLine {
+            statsText += "\n\(line)"
+        }
         if stats.gainedStar {
             let hero = GameData.heroes[stats.heroIndex]
             let stars = String(repeating: "★", count: stats.masteryStars)
@@ -90,6 +94,21 @@ final class EndScene: SKScene {
             let menu = UIFactory.button(text: "ҮНДСЭН ЦЭС", name: "menu", width: 210, height: 50, primary: false)
             menu.position = CGPoint(x: cx + 140, y: size.height * 0.2)
             c.addChild(menu)
+        } else if let level = stats.campaignLevel {
+            // Аян дайн: ялбал дараагийн түвшин, эс бөгөөс дахин оролдох
+            let hasNext = stats.win && level + 1 < GameData.campaign.count && Progress.campaign > level
+            if hasNext {
+                let next = UIFactory.button(text: "ДАРААГИЙН ТҮВШИН →", name: "nextLevel", width: 250, height: 50)
+                next.position = CGPoint(x: cx - 140, y: size.height * 0.2)
+                c.addChild(next)
+            } else {
+                let retry = UIFactory.button(text: "ДАХИН ОРОЛДОХ", name: "again", width: 250, height: 50)
+                retry.position = CGPoint(x: cx - 140, y: size.height * 0.2)
+                c.addChild(retry)
+            }
+            let menu = UIFactory.button(text: "АЯН ДАЙН", name: "campaign", width: 210, height: 50, primary: false)
+            menu.position = CGPoint(x: cx + 140, y: size.height * 0.2)
+            c.addChild(menu)
         } else {
             let again = UIFactory.button(text: "ДАХИН ТУЛАЛДАХ", name: "again", width: 230, height: 48)
             again.position = CGPoint(x: cx - 175, y: size.height * 0.2)
@@ -113,8 +132,22 @@ final class EndScene: SKScene {
             Haptics.skill()
             Audio.shared.play("tap")
             let battle = BattleScene(size: size, heroIndex: stats.heroIndex,
-                                     difficultyIndex: stats.difficultyIndex)
+                                     difficultyIndex: stats.difficultyIndex,
+                                     campaignLevel: stats.campaignLevel)
             view.presentScene(battle, transition: .fade(withDuration: 0.5))
+        } else if name == "nextLevel", let level = stats.campaignLevel {
+            Haptics.skill()
+            Audio.shared.play("tap")
+            let battle = BattleScene(size: size, heroIndex: stats.heroIndex,
+                                     difficultyIndex: stats.difficultyIndex,
+                                     campaignLevel: level + 1)
+            view.presentScene(battle, transition: .fade(withDuration: 0.5))
+        } else if name == "campaign" {
+            Haptics.hit()
+            Audio.shared.play("tap")
+            let camp = CampaignScene(size: size)
+            camp.scaleMode = .resizeFill
+            view.presentScene(camp, transition: .fade(withDuration: 0.4))
         } else if name == "change" {
             Haptics.hit()
             Audio.shared.play("tap")

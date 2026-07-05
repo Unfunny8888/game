@@ -237,28 +237,19 @@ enum Fonts {
 
 enum ChapterReq {
     case always
-    case matches(Int)
-    case wins(Int)
-    case unlocks(Int)
-    case hero(String)
+    case level(Int)      // аян дайны түвшин дуусгасан тоо
 
     var isMet: Bool {
         switch self {
         case .always: return true
-        case .matches(let n): return Progress.matches >= n
-        case .wins(let n): return Progress.wins >= n
-        case .unlocks(let n): return Progress.paidUnlockCount >= n
-        case .hero(let id): return Progress.isUnlocked(id)
+        case .level(let n): return Progress.campaign >= n
         }
     }
 
     var text: String {
         switch self {
         case .always: return ""
-        case .matches(let n): return "Тулаан \(n) хийж нээнэ"
-        case .wins(let n): return "Ялалт \(n) байгуулж нээнэ"
-        case .unlocks(let n): return "Шинэ баатар \(n) нээж нээнэ"
-        case .hero: return "Чингис хааныг нээж нээнэ"
+        case .level(let n): return "Аян дайны \(n)-р түвшинг дуусгаж нээнэ"
         }
     }
 }
@@ -276,19 +267,19 @@ extension GameData {
     static let chapters: [Chapter] = [
         Chapter(id: "ch1", title: "Чонын удам", src: "§1", req: .always,
                 text: "Дээд тэнгэрээс заяат төрсөн Бөртэ чоно, түүний гэргий Гоо марал хоёр их далайг гэтэлж ирээд, Онон мөрний эх Бурхан халдун ууланд нутаглажээ. Тэдний удам угсаа өнөр өтгөн болж, монгол түмний язгуур эндээс эхэлсэн гэдэг. Хожим энэ удмаас дэлхийг донсолгох их хаан мэндлэх ажээ."),
-        Chapter(id: "ch2", title: "Шагайн чинээ нөж атгасан хүү", src: "§59", req: .matches(1),
+        Chapter(id: "ch2", title: "Шагайн чинээ нөж атгасан хүү", src: "§59", req: .level(1),
                 text: "Есүхэй баатрын гэргий Өэлүн үжин Онон мөрний Дэлүүн болдогт хөвгүүн төрүүлэв. Хүү баруун гартаа шагайн чинээ нөж атган мэндэлжээ — энэ нь агуу заяаны бэлгэ тэмдэг байлаа. Тэр цагт татаарын Тэмүжин-Үгэг дийлсэн тул хүүдээ Тэмүжин хэмээх нэр өгөв."),
-        Chapter(id: "ch3", title: "Таван мөчир сум", src: "§19–22", req: .wins(1),
+        Chapter(id: "ch3", title: "Таван мөчир сум", src: "§19–22", req: .level(2),
                 text: "Алун гоо эх таван хөвгүүндээ тус бүр нэг мөчир өгч хугал гэв — хялбархан хугарав. Тэгээд таван мөчрийг багцлан өгөхөд хэн нь ч хугалж чадсангүй. «Ганц нэгээрээ бол та нар хэврэг мөчир мэт. Эв нэгдэлтэй бол хэн ч та нарыг дийлэхгүй» гэж сургажээ."),
-        Chapter(id: "ch4", title: "Өнчин хөвгүүний тангараг", src: "§68–73", req: .wins(3),
+        Chapter(id: "ch4", title: "Өнчин хөвгүүний тангараг", src: "§68–73", req: .level(3),
                 text: "Есүхэй баатар татаарын хорд хорлогдон нас барахад Тэмүжин есөн настай байв. Тайчууд овгийнхон бэлбэсэн Өэлүн эхийг үр хүүхэдтэй нь эзгүй талд орхин нүүжээ. Эх нь үндэс, жимс түүж, Онон мөрнөөс загас барьж үр хүүхдээ өсгөв. Зовлон дундаас хатан зориг төржээ."),
-        Chapter(id: "ch5", title: "Анхны анд Боорчи", src: "§90–93", req: .unlocks(1),
+        Chapter(id: "ch5", title: "Анхны анд Боорчи", src: "§90–93", req: .level(4),
                 text: "Тэмүжиний найман шарга морийг хулгайч авч одоход тэрбээр ганцаар мөрдөн хөөв. Замд гүү саж байсан Наху баяны хүү Боорчид учрахад тэр: «Эрийн зовлон адилхан. Би чамд нөхөр болъё» гээд хамт мордов. Ийнхүү анхны шадар анд олдож, хожмын их гүрний тулгын анхны чулуу тавигджээ."),
-        Chapter(id: "ch6", title: "Бөртэ үжинг аварсан нь", src: "§104–113", req: .wins(5),
+        Chapter(id: "ch6", title: "Бөртэ үжинг аварсан нь", src: "§104–113", req: .level(5),
                 text: "Гурван мэргэд гэнэт довтолж, Тэмүжиний хатан Бөртэ үжинг олзолж одов. Тэмүжин Бурхан халдунд мөргөж, Тоорил хан, Жамуха нартай хүч хамтран мэргэдийг бут цохив. Ийнхүү хатнаа эргүүлэн авчирч, алдсанаа дайнаар нөхөж болдгийг харуулжээ."),
-        Chapter(id: "ch7", title: "Дөрвөн нохой, дөрвөн хүлэг", src: "§195, 209", req: .unlocks(3),
+        Chapter(id: "ch7", title: "Дөрвөн нохой, дөрвөн хүлэг", src: "§195, 209", req: .level(6),
                 text: "Чингис хаанд дөрвөн догшин «нохой» байв: Хубилай, Зэлмэ, Зэв, Сүбээдэй. Тулалдааны өдөр тэд хуй салхи мэт довтолно. Мөн дөрвөн «хүлэг» байв: Боорчи, Мухулай, Борохул, Чулуун. Эдгээр өрлөг жанжид газар дэлхийг доргиосон их аяныг тэргүүлжээ."),
-        Chapter(id: "ch8", title: "Есөн хөлт цагаан туг", src: "§202", req: .hero("chinggis"),
+        Chapter(id: "ch8", title: "Есөн хөлт цагаан туг", src: "§202", req: .level(8),
                 text: "Барс жил (1206) Онон мөрний эхэнд их хуралдай чуулж, есөн хөлт цагаан тугаа босгоод, Тэмүжинд «Чингис хаан» цол өргөмжлөв. Хамаг Монголыг нэгтгэсэн их эзэн хаан ийнхүү мандаж, Мөнх тэнгэрийн хүчин дор Их Монгол Улс байгуулагдав.")
     ]
 
@@ -299,4 +290,45 @@ extension GameData {
     static var unreadChapterCount: Int {
         chapters.filter { $0.req.isMet && !Progress.readChapters.contains($0.id) }.count
     }
+}
+
+// MARK: - Аян дайн — Нууц товчооны замаар 8 түвшин
+
+struct CampaignLevel {
+    let title: String
+    let src: String
+    let desc: String
+    let minionMul: CGFloat   // цэргийн хүч
+    let heroMul: CGFloat     // дайсны командлагчийн хүч
+    let enemyName: String
+    let reward: Int          // анх удаа даван туулбал өгөх бонус алт
+}
+
+extension GameData {
+    static let campaign: [CampaignLevel] = [
+        CampaignLevel(title: "Зугталт", src: "МНТ §79–87",
+                      desc: "Тайчиудын хавчлагаас зугтаж, анхны тулаанаа хий.",
+                      minionMul: 0.55, heroMul: 0.55, enemyName: "Тайчууд дайчин", reward: 80),
+        CampaignLevel(title: "Найман шарга морь", src: "МНТ §90–93",
+                      desc: "Хулгайлагдсан адуугаа мөрдөж, буцааж ав.",
+                      minionMul: 0.70, heroMul: 0.70, enemyName: "Хулгайн ноён", reward: 100),
+        CampaignLevel(title: "Бөртэг аврах", src: "МНТ §104–113",
+                      desc: "Мэргэдийг бут цохиж, Бөртэ үжинг авар.",
+                      minionMul: 0.85, heroMul: 0.85, enemyName: "Тогтоа бэх", reward: 120),
+        CampaignLevel(title: "Анд ба дайсан", src: "МНТ §128–129",
+                      desc: "Далан балжудад анд Жамухатай тулалд.",
+                      minionMul: 1.00, heroMul: 1.00, enemyName: "Жамуха", reward: 150),
+        CampaignLevel(title: "Хэрэйдийн уналт", src: "МНТ §183–185",
+                      desc: "Ван ханы хүчийг эцэслэн буулга.",
+                      minionMul: 1.12, heroMul: 1.10, enemyName: "Ван хан", reward: 180),
+        CampaignLevel(title: "Найманы төгсгөл", src: "МНТ §189–196",
+                      desc: "Таян ханыг уулархаг нутагт нь дийл.",
+                      minionMul: 1.25, heroMul: 1.20, enemyName: "Таян хан", reward: 220),
+        CampaignLevel(title: "Хорезмын аян", src: "1219 он",
+                      desc: "Их баруун аян эхлэв — Шахын их цэргийг няцаа.",
+                      minionMul: 1.38, heroMul: 1.30, enemyName: "Мухаммед шах", reward: 260),
+        CampaignLevel(title: "Инду мөрний тулаан", src: "1221 он",
+                      desc: "Хамгийн зоригтой дайсантай сүүлчийн тулаан.",
+                      minionMul: 1.50, heroMul: 1.45, enemyName: "Жалал ад-Дин", reward: 300)
+    ]
 }

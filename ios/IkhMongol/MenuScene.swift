@@ -61,33 +61,43 @@ final class MenuScene: SKScene {
         tagline.position = CGPoint(x: cx, y: size.height * 0.47)
         c.addChild(tagline)
 
-        let play = UIFactory.button(text: "ТОГЛОХ", name: "play")
-        play.position = CGPoint(x: cx, y: size.height * 0.32)
+        let campaign = UIFactory.button(text: "⚔️ АЯН ДАЙН", name: "campaign")
+        campaign.position = CGPoint(x: cx, y: size.height * 0.33)
+        c.addChild(campaign)
+
+        let play = UIFactory.button(text: "Чөлөөт тулаан", name: "play", width: 200, height: 42, primary: false)
+        play.position = CGPoint(x: cx - 110, y: size.height * 0.185)
         c.addChild(play)
 
         let pvp = UIFactory.button(text: "🤝 НАЙЗТАЙГАА", name: "pvp", width: 200, height: 42, primary: false)
-        pvp.position = CGPoint(x: cx - 110, y: size.height * 0.185)
+        pvp.position = CGPoint(x: cx + 110, y: size.height * 0.185)
         c.addChild(pvp)
 
         let unread = GameData.unreadChapterCount
         let storyText = unread > 0 ? "📜 ТҮҮХ (\(unread))" : "📜 ТҮҮХ"
-        let story = UIFactory.button(text: storyText, name: "story", width: 200, height: 42, primary: false)
-        story.position = CGPoint(x: cx + 110, y: size.height * 0.185)
+        let story = UIFactory.button(text: storyText, name: "story", width: 200, height: 40, primary: false)
+        story.position = CGPoint(x: cx, y: size.height * 0.10)
         c.addChild(story)
 
         let hint = UIFactory.multiline(
-            "Зүүн тал — хөдөлгөөний жойстик  ·  Баруун тал — чадварын товчнууд  ·  Энгийн довтолгоо автоматаар хийгдэнэ.",
+            "Зүүн тал — жойстик  ·  Баруун тал — чадвар ба ⚔️ довтлох товч (дарж байх зуур довтолно)",
             font: Fonts.demi, size: 10,
             color: SKColor(red: 0.48, green: 0.41, blue: 0.28, alpha: 1),
             width: size.width * 0.9)
-        hint.position = CGPoint(x: cx, y: size.height * 0.06)
+        hint.position = CGPoint(x: cx, y: size.height * 0.025)
         c.addChild(hint)
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let t = touches.first else { return }
         let name = UIFactory.nodeName(at: t.location(in: self), in: self)
-        if name == "play", let view = view {
+        if name == "campaign", let view = view {
+            Haptics.skill()
+            Audio.shared.play("tap")
+            let camp = CampaignScene(size: size)
+            camp.scaleMode = .resizeFill
+            view.presentScene(camp, transition: .fade(withDuration: 0.4))
+        } else if name == "play", let view = view {
             Haptics.skill()
             Audio.shared.play("tap")
             let select = HeroSelectScene(size: size)

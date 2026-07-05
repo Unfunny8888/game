@@ -88,8 +88,8 @@
   #btnS2 { right:62px; bottom:78px; }
   #btnAtk { position:absolute; right:0; bottom:0; width:78px; height:78px; border-radius:50%;
     background:radial-gradient(circle at 35% 30%, #a03424, #58180e); border:3px solid #e88a5a;
-    font-size:32px; box-shadow:0 4px 16px rgba(0,0,0,.55); }
-  #btnAtk:active { transform:scale(.9); }
+    font-size:32px; box-shadow:0 4px 16px rgba(0,0,0,.55); transition:transform .06s; }
+  #btnAtk:active, #btnAtk.held { transform:scale(.9); border-color:#ffd0a8; box-shadow:0 0 18px rgba(255,140,90,.7); }
 
   /* end screen */
   #endTitle { font-size:clamp(40px, 11vw, 72px); font-weight:800; letter-spacing:8px; }
@@ -103,6 +103,16 @@
     background:#c8392a; color:#fff; font-size:11px; font-weight:800; padding:0 5px; margin-left:6px; vertical-align:middle; }
   .badge.hidden { display:none; }
   .chapters { display:flex; flex-direction:column; gap:8px; margin-top:14px; width:min(600px, 92vw); }
+  .levels { display:flex; flex-direction:column; gap:8px; margin-top:14px; width:min(600px, 92vw); }
+  .lvRow { display:flex; align-items:center; gap:12px; text-align:left; padding:10px 16px; border-radius:12px;
+    background:linear-gradient(180deg, rgba(60,44,22,.9), rgba(32,22,10,.9)); border:1.5px solid #6e5426; cursor:pointer; }
+  .lvRow.locked { opacity:.5; cursor:default; }
+  .lvRow.cleared { border-color:#8ce87a; }
+  .lvRow .lvNum { font-size:16px; font-weight:800; color:#c9973f; min-width:26px; text-align:center; }
+  .lvRow .lvBody { flex:1; }
+  .lvRow .lvTitle { font-size:14px; font-weight:700; color:#f0dfae; }
+  .lvRow .lvDesc { font-size:10.5px; color:#9a8560; margin-top:2px; }
+  .lvRow .lvTag { font-size:16px; }
   .chRow { display:flex; align-items:center; gap:12px; text-align:left; padding:10px 16px; border-radius:12px;
     background:linear-gradient(180deg, rgba(60,44,22,.9), rgba(32,22,10,.9)); border:1.5px solid #6e5426; cursor:pointer; }
   .chRow.locked { opacity:.5; cursor:default; }
@@ -153,9 +163,20 @@
   <h1 class="title">ИХ МОНГОЛ</h1>
   <div class="subtitle">ТУЛААНЫ ТАЛБАР</div>
   <div class="tagline">Мөнх тэнгэрийн хүчин дор — Чингис хааны дайчдыг удирдан, Хорезмын их хаалгыг нурааж, талбарыг эзэгнэ!</div>
-  <button class="btn" id="playBtn">ТОГЛОХ</button>
-  <button class="btn secondary" id="storyBtn">📜 ТҮҮХ <span id="storyBadge" class="badge hidden"></span></button>
-  <div class="hint">Зүүн тал — хөдөлгөөний жойстик &nbsp;·&nbsp; Баруун тал — чадварын товчнууд<br>Энгийн довтолгоо автоматаар хийгдэнэ. Утсаа хөндлөн барьж тоглоорой.</div>
+  <button class="btn" id="campaignBtn">⚔️ АЯН ДАЙН</button>
+  <div style="display:flex; gap:12px; margin-top:14px; flex-wrap:wrap; justify-content:center">
+    <button class="btn secondary" id="playBtn">Чөлөөт тулаан</button>
+    <button class="btn secondary" id="storyBtn">📜 ТҮҮХ <span id="storyBadge" class="badge hidden"></span></button>
+  </div>
+  <div class="hint">Зүүн тал — хөдөлгөөний жойстик &nbsp;·&nbsp; Баруун тал — чадвар ба ⚔️ довтлох товч<br>Утсаа хөндлөн барьж тоглоорой.</div>
+</div>
+
+<!-- ================= CAMPAIGN ================= -->
+<div id="campaignScreen" class="screen hidden">
+  <h2 style="letter-spacing:4px;color:#e8b64c">АЯН ДАЙН</h2>
+  <div style="font-size:11px;color:#8a7550;margin-top:2px">Монголын нууц товчоогоор — Тэмүжингээс дэлхийн эзэн хаан хүртэл</div>
+  <div class="levels" id="levels"></div>
+  <button class="btn secondary" id="campaignBackBtn">БУЦАХ</button>
 </div>
 
 <!-- ================= STORY ================= -->
@@ -371,9 +392,9 @@ function loadSave(){
   try{
     const s = JSON.parse(localStorage.getItem(SAVE_KEY));
     if(s && typeof s === 'object')
-      return Object.assign({gold:0, unlocked:['temuujin','zev'], mastery:{}, matches:0, wins:0, readChapters:[]}, s);
+      return Object.assign({gold:0, unlocked:['temuujin','zev'], mastery:{}, matches:0, wins:0, readChapters:[], campaign:0}, s);
   }catch(e){}
-  return { gold:0, unlocked:['temuujin','zev'], mastery:{}, matches:0, wins:0, readChapters:[] };
+  return { gold:0, unlocked:['temuujin','zev'], mastery:{}, matches:0, wins:0, readChapters:[], campaign:0 };
 }
 let save = loadSave();
 function persistSave(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }catch(e){} }
@@ -385,19 +406,19 @@ const masteryOf = id => save.mastery[id] || 0;
 const CHAPTERS = [
   { id:'ch1', title:'Чонын удам', src:'§1', req:{type:'always'},
     text:'Дээд тэнгэрээс заяат төрсөн Бөртэ чоно, түүний гэргий Гоо марал хоёр их далайг гэтэлж ирээд, Онон мөрний эх Бурхан халдун ууланд нутаглажээ. Тэдний удам угсаа өнөр өтгөн болж, монгол түмний язгуур эндээс эхэлсэн гэдэг. Хожим энэ удмаас дэлхийг донсолгох их хаан мэндлэх ажээ.' },
-  { id:'ch2', title:'Шагайн чинээ нөж атгасан хүү', src:'§59', req:{type:'matches', n:1},
+  { id:'ch2', title:'Шагайн чинээ нөж атгасан хүү', src:'§59', req:{type:'level', n:1},
     text:'Есүхэй баатрын гэргий Өэлүн үжин Онон мөрний Дэлүүн болдогт хөвгүүн төрүүлэв. Хүү баруун гартаа шагайн чинээ нөж атган мэндэлжээ — энэ нь агуу заяаны бэлгэ тэмдэг байлаа. Тэр цагт татаарын Тэмүжин-Үгэг дийлсэн тул хүүдээ Тэмүжин хэмээх нэр өгөв.' },
-  { id:'ch3', title:'Таван мөчир сум', src:'§19–22', req:{type:'wins', n:1},
+  { id:'ch3', title:'Таван мөчир сум', src:'§19–22', req:{type:'level', n:2},
     text:'Алун гоо эх таван хөвгүүндээ тус бүр нэг мөчир өгч хугал гэв — хялбархан хугарав. Тэгээд таван мөчрийг багцлан өгөхөд хэн нь ч хугалж чадсангүй. «Ганц нэгээрээ бол та нар хэврэг мөчир мэт. Эв нэгдэлтэй бол хэн ч та нарыг дийлэхгүй» гэж сургажээ.' },
-  { id:'ch4', title:'Өнчин хөвгүүний тангараг', src:'§68–73', req:{type:'wins', n:3},
+  { id:'ch4', title:'Өнчин хөвгүүний тангараг', src:'§68–73', req:{type:'level', n:3},
     text:'Есүхэй баатар татаарын хорд хорлогдон нас барахад Тэмүжин есөн настай байв. Тайчууд овгийнхон бэлбэсэн Өэлүн эхийг үр хүүхэдтэй нь эзгүй талд орхин нүүжээ. Эх нь үндэс, жимс түүж, Онон мөрнөөс загас барьж үр хүүхдээ өсгөв. Зовлон дундаас хатан зориг төржээ.' },
-  { id:'ch5', title:'Анхны анд Боорчи', src:'§90–93', req:{type:'unlocks', n:1},
+  { id:'ch5', title:'Анхны анд Боорчи', src:'§90–93', req:{type:'level', n:4},
     text:'Тэмүжиний найман шарга морийг хулгайч авч одоход тэрбээр ганцаар мөрдөн хөөв. Замд гүү саж байсан Наху баяны хүү Боорчид учрахад тэр: «Эрийн зовлон адилхан. Би чамд нөхөр болъё» гээд хамт мордов. Ийнхүү анхны шадар анд олдож, хожмын их гүрний тулгын анхны чулуу тавигджээ.' },
-  { id:'ch6', title:'Бөртэ үжинг аварсан нь', src:'§104–113', req:{type:'wins', n:5},
+  { id:'ch6', title:'Бөртэ үжинг аварсан нь', src:'§104–113', req:{type:'level', n:5},
     text:'Гурван мэргэд гэнэт довтолж, Тэмүжиний хатан Бөртэ үжинг олзолж одов. Тэмүжин Бурхан халдунд мөргөж, Тоорил хан, Жамуха нартай хүч хамтран мэргэдийг бут цохив. Ийнхүү хатнаа эргүүлэн авчирч, алдсанаа дайнаар нөхөж болдгийг харуулжээ.' },
-  { id:'ch7', title:'Дөрвөн нохой, дөрвөн хүлэг', src:'§195, 209', req:{type:'unlocks', n:3},
+  { id:'ch7', title:'Дөрвөн нохой, дөрвөн хүлэг', src:'§195, 209', req:{type:'level', n:6},
     text:'Чингис хаанд дөрвөн догшин «нохой» байв: Хубилай, Зэлмэ, Зэв, Сүбээдэй. Тулалдааны өдөр тэд хуй салхи мэт довтолно. Мөн дөрвөн «хүлэг» байв: Боорчи, Мухулай, Борохул, Чулуун. Эдгээр өрлөг жанжид газар дэлхийг доргиосон их аяныг тэргүүлжээ.' },
-  { id:'ch8', title:'Есөн хөлт цагаан туг', src:'§202', req:{type:'hero', id:'chinggis'},
+  { id:'ch8', title:'Есөн хөлт цагаан туг', src:'§202', req:{type:'level', n:8},
     text:'Барс жил (1206) Онон мөрний эхэнд их хуралдай чуулж, есөн хөлт цагаан тугаа босгоод, Тэмүжинд «Чингис хаан» цол өргөмжлөв. Хамаг Монголыг нэгтгэсэн их эзэн хаан ийнхүү мандаж, Мөнх тэнгэрийн хүчин дор Их Монгол Улс байгуулагдав.' }
 ];
 function reqMet(req){
@@ -407,6 +428,7 @@ function reqMet(req){
     case 'wins':    return (save.wins||0) >= req.n;
     case 'unlocks': return save.unlocked.filter(id => HERO_COST[id] > 0).length >= req.n;
     case 'hero':    return isUnlocked(req.id);
+    case 'level':   return (save.campaign||0) >= req.n;
   }
   return false;
 }
@@ -416,10 +438,32 @@ function reqText(req){
     case 'wins':    return 'Ялалт ' + req.n + ' байгуулж нээнэ';
     case 'unlocks': return 'Шинэ баатар ' + req.n + ' нээж нээнэ';
     case 'hero':    return 'Чингис хааныг нээж нээнэ';
+    case 'level':   return 'Аян дайны ' + req.n + '-р түвшинг дуусгаж нээнэ';
   }
   return '';
 }
 const chaptersUnlocked = ()=> CHAPTERS.filter(c => reqMet(c.req));
+
+// ---------- Аян дайн — Нууц товчооны замаар 8 түвшин ----------
+const LEVELS = [
+  { title:'Зугталт',              src:'МНТ §79–87',   mult:0.55, hero:null,                              reward:80,
+    desc:'Тайчиудын хавчлагаас зугтаж, анхны тулаанаа хий.' },
+  { title:'Найман шарга морь',    src:'МНТ §90–93',   mult:0.70, hero:{ name:'Хулгайн ноён',  k:0.70 },  reward:100,
+    desc:'Хулгайлагдсан адуугаа мөрдөж, буцааж ав.' },
+  { title:'Бөртэг аврах',         src:'МНТ §104–113', mult:0.85, hero:{ name:'Тогтоа бэх',    k:0.85 },  reward:120,
+    desc:'Мэргэдийг бут цохиж, Бөртэ үжинг авар.' },
+  { title:'Анд ба дайсан',        src:'МНТ §128–129', mult:1.00, hero:{ name:'Жамуха',        k:1.00 },  reward:150,
+    desc:'Далан балжудад анд Жамухатай тулалд.' },
+  { title:'Хэрэйдийн уналт',      src:'МНТ §183–185', mult:1.12, hero:{ name:'Ван хан',       k:1.10 },  reward:180,
+    desc:'Ван ханы хүчийг эцэслэн буулга.' },
+  { title:'Найманы төгсгөл',      src:'МНТ §189–196', mult:1.25, hero:{ name:'Таян хан',      k:1.20 },  reward:220,
+    desc:'Таян ханыг уулархаг нутагт нь дийл.' },
+  { title:'Хорезмын аян',         src:'1219 он',      mult:1.38, hero:{ name:'Мухаммед шах',  k:1.30 },  reward:260,
+    desc:'Их баруун аян эхлэв — Шахын их цэргийг няцаа.' },
+  { title:'Инду мөрний тулаан',   src:'1221 он',      mult:1.50, hero:{ name:'Жалал ад-Дин',  k:1.45 },  reward:300,
+    desc:'Хамгийн зоригтой дайсантай сүүлчийн тулаан.' }
+];
+let campaignLevel = null;   // null = энгийн тулаан
 
 // ---------- game state ----------
 let state = 'menu';           // menu | select | play | end
@@ -455,11 +499,23 @@ function heroUnit(def, team, x){
 }
 
 // ---------- setup match ----------
+let matchDiff = DIFFS[1];   // идэвхтэй тулааны хүндрэл (энгийн эсвэл аяны)
 function startMatch(){
   units = []; projectiles = []; particles = []; floaters = []; zones = []; strikes = [];
   gameT = 0; waveNum = 0; nextWaveT = 2.5; kills = 0; announceQ = []; announceT = 0;
   matchGold = 0; combo = 0; comboT = 0; shakeT = 0;
   matchStart = performance.now();
+
+  // Аян дайны түвшин эсвэл энгийн хүндрэлээс тулааны параметрийг тодорхойлно
+  const inCampaign = campaignLevel !== null;
+  if(inCampaign){
+    const L = LEVELS[campaignLevel];
+    const k = L.hero ? L.hero.k : L.mult;
+    matchDiff = { name:L.title, mHp:L.mult, mDmg:L.mult, hHp:k, hDmg:k, gold:1,
+                  eName:(L.hero ? L.hero.name : 'Дайсны дайчин') };
+  } else {
+    matchDiff = Object.assign({ eName:'Жалал ад-Дин' }, DIFFS[selDiff]);
+  }
 
   pGate = makeUnit({ type:'gate', team:0, x:P_GATE_X, y:LANE_Y, r:52, hp:2000, maxHp:2000, isStruct:true, name:'Их хаалга' });
   eGate = makeUnit({ type:'gate', team:1, x:E_GATE_X, y:LANE_Y, r:52, hp:2000, maxHp:2000, isStruct:true, name:'Хорезмын хаалга' });
@@ -478,10 +534,10 @@ function startMatch(){
   }
   units.push(player);
 
-  // enemy AI hero — Jalal ad-Din of Khwarezm (хэцүү байдлаар тохируулна)
+  // enemy AI hero — тухайн түвшний командлагч / хүндрэлээр тохируулна
   aiHero = heroUnit({
-    id:'jalal', name:'Жалал ад-Дин', color:'#c85a4a',
-    hp:Math.round(900*DIFFS[selDiff].hHp), dmg:Math.round(60*DIFFS[selDiff].hDmg),
+    id:'jalal', name:matchDiff.eName, color:'#c85a4a',
+    hp:Math.round(900*matchDiff.hHp), dmg:Math.round(60*matchDiff.hDmg),
     range:80, speed:172, atkCd:0.9,
     s1:{cd:7}, s2:{cd:15}
   }, 1, E_GATE_X - 130);
@@ -494,8 +550,13 @@ function startMatch(){
   $('s2icon').textContent = def.s2.icon; $('s2name').textContent = def.s2.short;
 
   setState('play');
-  announce('Тулаан эхэллээ!');
-  announce('Дайсны их хаалгыг нураа!');
+  if(campaignLevel !== null){
+    announce((campaignLevel+1) + '-р түвшин: ' + LEVELS[campaignLevel].title);
+    announce(LEVELS[campaignLevel].desc);
+  } else {
+    announce('Тулаан эхэллээ!');
+    announce('Дайсны их хаалгыг нураа!');
+  }
 }
 
 function setState(s){
@@ -505,9 +566,31 @@ function setState(s){
   $('endScreen').classList.toggle('hidden', s!=='end');
   $('storyScreen').classList.toggle('hidden', s!=='story');
   $('readerScreen').classList.toggle('hidden', s!=='reader');
+  $('campaignScreen').classList.toggle('hidden', s!=='campaign');
   $('hud').classList.toggle('on', s==='play');
   $('rotate').classList.toggle('armed', s==='play');
   if(s==='menu') updateStoryBadge();
+}
+
+// ---------- Аян дайны дэлгэц ----------
+function buildLevels(){
+  const wrap = $('levels');
+  wrap.innerHTML = '';
+  LEVELS.forEach((L, i)=>{
+    const done = (save.campaign||0) > i;
+    const unlocked = (save.campaign||0) >= i;   // одоогийн ба өмнөх түвшнүүд
+    const row = document.createElement('div');
+    row.className = 'lvRow' + (unlocked? '':' locked') + (done? ' cleared':'');
+    const tag = done ? '✅' : (unlocked ? '⚔️' : '🔒');
+    row.innerHTML = '<div class="lvNum">'+(i+1)+'</div>'
+      + '<div class="lvBody"><div class="lvTitle">'+(unlocked? L.title : '???')+'</div>'
+      + '<div class="lvDesc">'+(unlocked? (L.desc+'  ·  '+L.src) : 'Өмнөх түвшинг дуусгаж нээнэ')+'</div></div>'
+      + '<div class="lvTag">'+tag+'</div>';
+    if(unlocked) row.addEventListener('click', ()=>{
+      Snd.init(); campaignLevel = i; buildCards(); buildDiffs(); setState('select');
+    });
+    wrap.appendChild(row);
+  });
 }
 
 // ---------- түүхийн дэлгэц ----------
@@ -555,7 +638,7 @@ function openChapter(i){
 function spawnWave(){
   waveNum++;
   const hp = 300 + waveNum*14, dmg = 27 + waveNum*1.5;
-  const D = DIFFS[selDiff];
+  const D = matchDiff;
   for(let t=0; t<2; t++){
     const gate = t? eGate : pGate;
     const dir = t? -1 : 1;
@@ -810,19 +893,35 @@ $('btnS2').addEventListener('touchstart', e=>{ e.preventDefault(); e.stopPropaga
 $('btnS1').addEventListener('mousedown', e=>{ e.stopPropagation(); useSkill(0); });
 $('btnS2').addEventListener('mousedown', e=>{ e.stopPropagation(); useSkill(1); });
 
-// Довтлох товч — дайсны баатрыг тэргүүн ээлжид онилно
-function forceAttack(){
-  if(state!=='play' || !player || player.dead || player.stun>0 || player.dash) return;
-  if(player.atkT > 0) return;
-  let t = null;
+// Довтлох товч (ML маяг): дарж байх зуур хамгийн ойрын дайсныг мөшгин довтолно.
+// Баатрыг тэргүүн ээлжид онино; хол байвал ойртож очно.
+let attackHeld = false;
+function attackTarget(){
+  // 1) хүрээн доторх дайсны баатар
+  let hero = null, hd = 1e9;
   for(const e of units){
-    if(!e.dead && e.team!==0 && e.type==='hero' && dist(player,e) <= player.range + e.r){ t = e; break; }
+    if(e.dead || e.team===0 || e.type!=='hero') continue;
+    const d = dist(player,e) - e.r;
+    if(d < hd){ hd = d; hero = e; }
   }
-  if(!t) t = findTarget(player, player.range, false);
-  if(t) attack(player, t);
+  if(hero && hd <= player.range) return hero;
+  // 2) хүрээн доторх хамгийн ойрын дайсан
+  const near = findTarget(player, player.range, false);
+  if(near) return near;
+  // 3) хүрээнээс гадуур ч гэсэн хамгийн ойрын баатар (түүн уруу очно)
+  return hero;
 }
-$('btnAtk').addEventListener('touchstart', e=>{ e.preventDefault(); e.stopPropagation(); Snd.init(); forceAttack(); }, {passive:false});
-$('btnAtk').addEventListener('mousedown', e=>{ e.stopPropagation(); forceAttack(); });
+function pressAttack(){
+  if(state!=='play') return;
+  attackHeld = true;
+  $('btnAtk').classList.add('held');
+}
+function releaseAttack(){ attackHeld = false; $('btnAtk').classList.remove('held'); }
+$('btnAtk').addEventListener('touchstart', e=>{ e.preventDefault(); e.stopPropagation(); Snd.init(); pressAttack(); }, {passive:false});
+$('btnAtk').addEventListener('touchend', e=>{ e.preventDefault(); releaseAttack(); }, {passive:false});
+$('btnAtk').addEventListener('touchcancel', e=>{ releaseAttack(); }, {passive:false});
+$('btnAtk').addEventListener('mousedown', e=>{ e.stopPropagation(); pressAttack(); });
+window.addEventListener('mouseup', ()=>{ if(attackHeld) releaseAttack(); });
 
 // Тулаанаас гарах
 $('exitBtn').addEventListener('click', ()=>{ if(state==='play'){ joyEnd(); setState('menu'); } });
@@ -969,7 +1068,8 @@ function update(dt){
     if(keys['a']||keys['arrowleft']) mx -= 1;
     if(keys['d']||keys['arrowright']) mx += 1;
     const m = Math.hypot(mx,my);
-    if(m > 0.15 && player.stun<=0 && !player.dash){
+    const moving = m > 0.15 && player.stun<=0 && !player.dash;
+    if(moving){
       const sp = player.speed * (player.hasteT>0?1.35:1);
       player.x += mx/m * sp * dt * Math.min(m,1);
       player.y += my/m * sp * dt * Math.min(m,1);
@@ -991,10 +1091,31 @@ function update(dt){
       d.t -= dt;
       if(d.t <= 0) player.dash = null;
     }
-    // auto attack
-    if(player.atkT <= 0 && player.stun<=0 && !player.dash){
-      const t = findTarget(player, player.range, false);
-      if(t) attack(player, t);
+    // Довтолгоо (ML маяг):
+    //  · Довтлох товч дарж байвал: дайсныг мөшгин довтолно (баатрыг эрхэмлэнэ)
+    //  · Жойстикээр хөдөлж байвал: автоматаар довтлохгүй (зөвхөн байрлал солино)
+    //  · Зогсож байвал: хүрээн доторх дайсныг автоматаар цохино
+    if(player.stun<=0 && !player.dash){
+      if(attackHeld){
+        const t = attackTarget();
+        if(t){
+          const d = dist(player,t) - t.r;
+          if(d <= player.range){
+            player.face = t.x>=player.x?1:-1;
+            if(player.atkT<=0) attack(player, t);
+          } else if(!moving){
+            // хүрээнээс гадуур — дайсан уруу ойртоно
+            const dx=t.x-player.x, dy=t.y-player.y, dd=Math.hypot(dx,dy)||1;
+            const sp = player.speed*(player.hasteT>0?1.35:1);
+            player.x = clamp(player.x + dx/dd*sp*dt, 30, WORLD_W-30);
+            player.y = clamp(player.y + dy/dd*sp*dt, GROUND_TOP, GROUND_BOT);
+            player.face = dx>0?1:-1;
+          }
+        }
+      } else if(!moving && player.atkT<=0){
+        const t = findTarget(player, player.range, false);
+        if(t) attack(player, t);
+      }
     }
     // regen near own gate
     if(dist(player, pGate) < 240) player.hp = Math.min(player.maxHp, player.hp + player.maxHp*0.05*dt);
@@ -1508,10 +1629,28 @@ function endMatch(win){
 
   // шагнал: тулааны алт + түвшин + ялалтын урамшуулал, хэцүү байдлаар үржүүлнэ
   const chBefore = new Set(chaptersUnlocked().map(c => c.id));
-  const earned = Math.round((matchGold + player.level*5 + (win? 80 : 20)) * DIFFS[selDiff].gold);
-  save.gold += earned;
+  const inCampaign = campaignLevel !== null;
+  let earned = Math.round((matchGold + player.level*5 + (win? 80 : 20)) * matchDiff.gold);
   save.matches = (save.matches||0) + 1;
   if(win) save.wins = (save.wins||0) + 1;
+
+  // Аян дайн: анх удаа даван туулбал түвшин ахьж, бонус алт өгнө
+  let campaignLine = '';
+  if(inCampaign && win){
+    const L = LEVELS[campaignLevel];
+    const firstClear = (save.campaign||0) === campaignLevel;
+    if(firstClear){
+      save.campaign = campaignLevel + 1;
+      earned += L.reward;
+      campaignLine = '<br><span style="color:#8ce87a">⚔️ '+(campaignLevel+1)+'-р түвшин анх удаа дуусгав! +'+L.reward+' 🪙 бонус</span>';
+      if(campaignLevel+1 < LEVELS.length)
+        campaignLine += '<br><span style="font-size:12px;color:#8a7550">Дараагийн түвшин нээгдлээ: '+LEVELS[campaignLevel+1].title+'</span>';
+      else
+        campaignLine += '<br><span style="color:#ffd873">🏆 Аян дайныг бүрэн дуусгав! Их Монгол Улс мандтугай!</span>';
+    }
+  }
+
+  save.gold += earned;
   const heroId = player.hero.id;
   let masteryLine = '';
   if(win && masteryOf(heroId) < 5){
@@ -1534,9 +1673,10 @@ function endMatch(win){
     : '';
 
   const t = $('endTitle');
-  const common = 'Алалт: <b>'+kills+'</b> · Түвшин: <b>'+player.level+'</b> · Хугацаа: <b>'+mins+':'+String(secs).padStart(2,'0')+'</b> · Хэцүү байдал: <b>'+DIFFS[selDiff].name+'</b>'
+  const modeLabel = inCampaign ? (campaignLevel+1)+'-р түвшин' : DIFFS[selDiff].name;
+  const common = 'Алалт: <b>'+kills+'</b> · Түвшин: <b>'+player.level+'</b> · Хугацаа: <b>'+mins+':'+String(secs).padStart(2,'0')+'</b> · '+modeLabel
     + '<br>🪙 Олсон алт: <b id="goldCount" style="color:#ffd873">+0</b> · Нийт: <b style="color:#ffd873">'+save.gold+'</b>'
-    + masteryLine + chapterLine + unlockHint;
+    + campaignLine + masteryLine + chapterLine + unlockHint;
   if(win){
     t.textContent = 'ЯЛАЛТ!'; t.className = 'win';
     $('endStats').innerHTML = 'Мөнх тэнгэрийн хүчин дор дайсны хаалга нурлаа!<br>'+common;
@@ -1563,6 +1703,12 @@ function endMatch(win){
 // ---------- hero select UI ----------
 function buildDiffs(){
   const row = $('diffRow');
+  // Аян дайны түвшинд хүндрэл тогтмол — сонголт нуух, оронд нь түвшнийг харуулна
+  if(campaignLevel !== null){
+    const L = LEVELS[campaignLevel];
+    row.innerHTML = '<span class="diffLabel">⚔️ '+(campaignLevel+1)+'-р түвшин: <b style="color:#e8b64c">'+L.title+'</b></span>';
+    return;
+  }
   row.innerHTML = '<span class="diffLabel">Хэцүү байдал:</span>';
   DIFFS.forEach((d, i)=>{
     const pill = document.createElement('button');
@@ -1614,7 +1760,9 @@ function buildCards(){
   });
 }
 
-$('playBtn').addEventListener('click', ()=>{ Snd.init(); buildCards(); buildDiffs(); setState('select'); });
+$('playBtn').addEventListener('click', ()=>{ Snd.init(); campaignLevel = null; buildCards(); buildDiffs(); setState('select'); });
+$('campaignBtn').addEventListener('click', ()=>{ Snd.init(); buildLevels(); setState('campaign'); });
+$('campaignBackBtn').addEventListener('click', ()=>{ setState('menu'); });
 $('startBtn').addEventListener('click', ()=>{ Snd.init(); startMatch(); });
 $('againBtn').addEventListener('click', ()=>{ startMatch(); });
 $('changeBtn').addEventListener('click', ()=>{ buildCards(); buildDiffs(); setState('select'); });
@@ -1658,8 +1806,12 @@ window.GAME = {
   startQuick(i, d){ selHero = i||0; if(d!==undefined) selDiff = d; startMatch(); },
   setDiff(d){ selDiff = d; },
   skipToWave(n){ waveNum = n - 1; nextWaveT = 0.1; },
-  resetSave(){ save = {gold:0, unlocked:['temuujin','zev'], mastery:{}, matches:0, wins:0, readChapters:[]}; persistSave(); },
+  resetSave(){ save = {gold:0, unlocked:['temuujin','zev'], mastery:{}, matches:0, wins:0, readChapters:[], campaign:0}; persistSave(); },
   get chapters(){ return CHAPTERS.map(c => ({id:c.id, unlocked:reqMet(c.req)})); },
+  get campaignProgress(){ return save.campaign||0; },
+  get attackHeld(){ return attackHeld; },
+  setAttackHeld(v){ attackHeld = !!v; },
+  startCampaign(i, hero){ campaignLevel = i; selHero = hero||0; startMatch(); },
   useSkill
 };
 </script>

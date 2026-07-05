@@ -71,4 +71,19 @@ enum Progress {
         arr.append(id)
         UserDefaults.standard.set(arr, forKey: readChaptersKey)
     }
+
+    // MARK: - Аян дайны ахиц (дуусгасан түвшний тоо)
+
+    private static let campaignKey = "im_campaign"
+
+    /// Дуусгасан аяны түвшний тоо (= дараагийн нээлттэй түвшний индекс)
+    static var campaign: Int { UserDefaults.standard.integer(forKey: campaignKey) }
+
+    /// Тухайн түвшин анх удаа дуусвал ахиулаад true буцаана
+    @discardableResult
+    static func clearCampaignLevel(_ index: Int) -> Bool {
+        guard index == campaign else { return false }   // зөвхөн дараалсан түвшин
+        UserDefaults.standard.set(index + 1, forKey: campaignKey)
+        return true
+    }
 }

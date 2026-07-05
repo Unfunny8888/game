@@ -13,6 +13,17 @@ final class HeroSelectScene: SKScene {
     private var built = false
     private var content: SKNode?
 
+    /// nil = энгийн тулаан; утга = аян дайны түвшин
+    private let campaignLevel: Int?
+
+    init(size: CGSize, campaignLevel: Int? = nil) {
+        self.campaignLevel = campaignLevel
+        super.init(size: size)
+        scaleMode = .resizeFill
+    }
+
+    required init?(coder aDecoder: NSCoder) { fatalError("init(coder:) is not supported") }
+
     override func didMove(to view: SKView) {
         view.isMultipleTouchEnabled = true
         built = true
@@ -136,25 +147,34 @@ final class HeroSelectScene: SKScene {
         c.addChild(info)
         infoLabel = info
 
-        // хэцүү байдал
-        let diffTitle = UIFactory.label("Хэцүү байдал:", font: Fonts.demi, size: 11,
-                                        color: SKColor(red: 0.60, green: 0.52, blue: 0.38, alpha: 1))
-        diffTitle.position = CGPoint(x: cx - 190, y: size.height * 0.195)
-        c.addChild(diffTitle)
+        if let level = campaignLevel {
+            // Аян дайны түвшинд хүндрэл тогтмол — түвшнийг харуулна
+            let L = GameData.campaign[level]
+            let camp = UIFactory.label("⚔️ \(level + 1)-р түвшин: \(L.title)", font: Fonts.bold, size: 13,
+                                       color: Palette.gold)
+            camp.position = CGPoint(x: cx, y: size.height * 0.195)
+            c.addChild(camp)
+        } else {
+            // хэцүү байдал
+            let diffTitle = UIFactory.label("Хэцүү байдал:", font: Fonts.demi, size: 11,
+                                            color: SKColor(red: 0.60, green: 0.52, blue: 0.38, alpha: 1))
+            diffTitle.position = CGPoint(x: cx - 190, y: size.height * 0.195)
+            c.addChild(diffTitle)
 
-        let pillW: CGFloat = 96
-        for (i, d) in GameData.difficulties.enumerated() {
-            let pill = SKShapeNode(rectOf: CGSize(width: pillW, height: 30), cornerRadius: 15)
-            pill.name = "diff\(i)"
-            pill.position = CGPoint(x: cx - 60 + CGFloat(i) * (pillW + 12), y: size.height * 0.195)
-            c.addChild(pill)
-            diffNodes.append(pill)
+            let pillW: CGFloat = 96
+            for (i, d) in GameData.difficulties.enumerated() {
+                let pill = SKShapeNode(rectOf: CGSize(width: pillW, height: 30), cornerRadius: 15)
+                pill.name = "diff\(i)"
+                pill.position = CGPoint(x: cx - 60 + CGFloat(i) * (pillW + 12), y: size.height * 0.195)
+                c.addChild(pill)
+                diffNodes.append(pill)
 
-            let l = UIFactory.label(d.name, font: Fonts.bold, size: 12)
-            l.position = pill.position
-            l.name = pill.name
-            c.addChild(l)
-            diffLabels.append(l)
+                let l = UIFactory.label(d.name, font: Fonts.bold, size: 12)
+                l.position = pill.position
+                l.name = pill.name
+                c.addChild(l)
+                diffLabels.append(l)
+            }
         }
 
         let start = UIFactory.button(text: "ТУЛААНД МОРД", name: "start", width: 240, height: 46)
@@ -195,7 +215,8 @@ final class HeroSelectScene: SKScene {
         if name == "start", let view = view {
             Haptics.skill()
             Audio.shared.play("tap")
-            let battle = BattleScene(size: size, heroIndex: selIndex, difficultyIndex: selDiff)
+            let battle = BattleScene(size: size, heroIndex: selIndex, difficultyIndex: selDiff,
+                                     campaignLevel: campaignLevel)
             view.presentScene(battle, transition: .fade(withDuration: 0.6))
             return
         }
