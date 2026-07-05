@@ -21,6 +21,8 @@
   .screen, .cards { touch-action:pan-x pan-y; }
   .screen.hidden { display:none; }
   .ornament { color:#c9973f; letter-spacing:6px; font-size:13px; margin-bottom:8px; }
+  .soyombo { width:clamp(48px, 10vw, 68px); height:auto; display:block; margin:0 auto 2px;
+             filter:drop-shadow(0 2px 7px rgba(0,0,0,.55)) drop-shadow(0 0 10px rgba(232,182,76,.25)); }
   h1.title { font-size:clamp(34px, 9vw, 64px); letter-spacing:8px; color:#e8b64c; text-shadow:0 2px 0 #7a521a, 0 6px 22px rgba(232,182,76,.35); font-weight:800; }
   .subtitle { font-size:clamp(14px, 3.5vw, 20px); letter-spacing:4px; color:#d8c298; margin-top:6px; }
   .tagline { font-size:12px; color:#9a8560; margin-top:14px; max-width:520px; line-height:1.6; padding:0 24px; }
@@ -182,6 +184,43 @@
 <div id="menuScreen" class="screen">
   <div class="vscript left">ᠮᠥᠩᠬᠡ ᠲᠩᠷᠢ</div>
   <div class="vscript right">ᠶᠡᠬᠡ ᠮᠣᠩᠭᠣᠯ ᠤᠯᠤᠰ</div>
+  <svg class="soyombo" viewBox="0 0 100 172" aria-label="Соёмбо">
+    <defs>
+      <mask id="moonM"><circle cx="50" cy="60" r="11" fill="#fff"/><circle cx="50" cy="52.5" r="10" fill="#000"/></mask>
+      <mask id="yyM">
+        <circle cx="50" cy="112" r="14" fill="#fff"/>
+        <rect x="50" y="98" width="14" height="28" fill="#000"/>
+        <circle cx="50" cy="105" r="7" fill="#fff"/>
+        <circle cx="50" cy="119" r="7" fill="#000"/>
+        <circle cx="50" cy="105" r="2.7" fill="#000"/>
+        <circle cx="50" cy="119" r="2.7" fill="#fff"/>
+      </mask>
+    </defs>
+    <g fill="#e8b64c">
+      <!-- fire: three tongues -->
+      <rect x="41" y="30" width="18" height="4" rx="2"/>
+      <path d="M50 32 L44.5 12 L50 2 L55.5 12 Z"/>
+      <path d="M40 32 L36 18 L44 22 Z"/>
+      <path d="M60 32 L64 18 L56 22 Z"/>
+      <!-- sun -->
+      <circle cx="50" cy="44" r="7"/>
+      <!-- moon crescent (masked) -->
+      <circle cx="50" cy="60" r="11" mask="url(#moonM)"/>
+      <!-- upper triangle -->
+      <path d="M35 72 L65 72 L50 88 Z"/>
+      <!-- upper bar -->
+      <rect x="30" y="92" width="40" height="6" rx="2"/>
+      <!-- yin-yang -->
+      <circle cx="50" cy="112" r="14" mask="url(#yyM)"/>
+      <!-- lower bar -->
+      <rect x="30" y="126" width="40" height="6" rx="2"/>
+      <!-- lower triangle -->
+      <path d="M35 136 L65 136 L50 152 Z"/>
+      <!-- two pillars -->
+      <rect x="20" y="72" width="6" height="80" rx="3"/>
+      <rect x="74" y="72" width="6" height="80" rx="3"/>
+    </g>
+  </svg>
   <div class="ornament">⁂ ᠊᠊᠊᠊᠊᠊ ⁂</div>
   <h1 class="title">ИХ МОНГОЛ</h1>
   <div class="subtitle">ТУЛААНЫ ТАЛБАР</div>

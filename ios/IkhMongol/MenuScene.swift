@@ -38,19 +38,24 @@ final class MenuScene: SKScene {
 
         let cx = size.width / 2
 
+        // Соёмбо сүлд
+        let emblem = makeSoyombo(height: min(140, size.height * 0.17))
+        emblem.position = CGPoint(x: cx, y: size.height * 0.855)
+        c.addChild(emblem)
+
         let ornament = UIFactory.label("⁂ ᠊᠊᠊᠊᠊᠊᠊᠊᠊᠊ ⁂", font: Fonts.demi, size: 13,
                                        color: SKColor(red: 0.79, green: 0.59, blue: 0.25, alpha: 1))
-        ornament.position = CGPoint(x: cx, y: size.height * 0.86)
+        ornament.position = CGPoint(x: cx, y: size.height * 0.71)
         c.addChild(ornament)
 
         let title = UIFactory.label("ИХ МОНГОЛ", font: Fonts.heavy,
                                     size: min(54, size.width * 0.085), color: Palette.gold)
-        title.position = CGPoint(x: cx, y: size.height * 0.70)
+        title.position = CGPoint(x: cx, y: size.height * 0.615)
         c.addChild(title)
 
         let subtitle = UIFactory.label("ТУЛААНЫ ТАЛБАР", font: Fonts.bold, size: 17,
                                        color: SKColor(red: 0.85, green: 0.76, blue: 0.60, alpha: 1))
-        subtitle.position = CGPoint(x: cx, y: size.height * 0.585)
+        subtitle.position = CGPoint(x: cx, y: size.height * 0.535)
         c.addChild(subtitle)
 
         let tagline = UIFactory.multiline(
@@ -58,7 +63,7 @@ final class MenuScene: SKScene {
             font: Fonts.demi, size: 12,
             color: SKColor(red: 0.60, green: 0.52, blue: 0.38, alpha: 1),
             width: size.width * 0.8)
-        tagline.position = CGPoint(x: cx, y: size.height * 0.47)
+        tagline.position = CGPoint(x: cx, y: size.height * 0.45)
         c.addChild(tagline)
 
         let campaign = UIFactory.button(text: "⚔️ АЯН ДАЙН", name: "campaign")
@@ -82,6 +87,76 @@ final class MenuScene: SKScene {
         let codex = UIFactory.button(text: "📚 НЭВТЭРХИЙ ТОЛЬ", name: "codex", width: 200, height: 40, primary: false)
         codex.position = CGPoint(x: cx + 110, y: size.height * 0.09)
         c.addChild(codex)
+    }
+
+    /// Соёмбо сүлдийг SpriteKit хэлбэрээр байгуулна (гал·нар·сар·гурвалжин·баганууд·хос загас).
+    private func makeSoyombo(height: CGFloat) -> SKNode {
+        let root = SKNode()
+        let node = SKNode()
+        root.addChild(node)
+        let gold = SKColor(red: 0.91, green: 0.72, blue: 0.31, alpha: 1)
+        let panel = SKColor(red: 0.12, green: 0.08, blue: 0.035, alpha: 1)
+
+        // арын медальон (сийлбэрийг цэвэр болгоно)
+        let plaque = SKShapeNode(rectOf: CGSize(width: 96, height: 176), cornerRadius: 20)
+        plaque.fillColor = panel
+        plaque.strokeColor = SKColor(red: 0.43, green: 0.31, blue: 0.13, alpha: 1)
+        plaque.lineWidth = 3
+        node.addChild(plaque)
+
+        func poly(_ pts: [CGPoint], _ col: SKColor) {
+            let p = UIBezierPath()
+            p.move(to: pts[0]); for q in pts.dropFirst() { p.addLine(to: q) }; p.close()
+            let s = SKShapeNode(path: p.cgPath); s.fillColor = col; s.strokeColor = .clear
+            node.addChild(s)
+        }
+        func disc(_ x: CGFloat, _ y: CGFloat, _ r: CGFloat, _ col: SKColor) {
+            let s = SKShapeNode(circleOfRadius: r); s.fillColor = col; s.strokeColor = .clear
+            s.position = CGPoint(x: x, y: y); node.addChild(s)
+        }
+        func barRect(_ y: CGFloat, _ half: CGFloat, _ h: CGFloat) {
+            let s = SKShapeNode(rectOf: CGSize(width: half * 2, height: h), cornerRadius: 2)
+            s.fillColor = gold; s.strokeColor = .clear; s.position = CGPoint(x: 0, y: y)
+            node.addChild(s)
+        }
+
+        // 1. гал — гурван дөл (y дээшээ)
+        barRect(53, 9, 4)
+        poly([CGPoint(x: 0, y: 54), CGPoint(x: -5.5, y: 74), CGPoint(x: 0, y: 84), CGPoint(x: 5.5, y: 74)], gold)
+        poly([CGPoint(x: -10, y: 54), CGPoint(x: -14, y: 68), CGPoint(x: -6, y: 64)], gold)
+        poly([CGPoint(x: 10, y: 54), CGPoint(x: 14, y: 68), CGPoint(x: 6, y: 64)], gold)
+        // 2. сар — хавирган (доор нь эхэлж зурж, дараа нь нар дээр нь)
+        disc(0, 26, 11, gold)
+        disc(0, 33.5, 10, panel)
+        // 3. нар
+        disc(0, 42, 7, gold)
+        // 4. дээд гурвалжин (доош)
+        poly([CGPoint(x: -15, y: 14), CGPoint(x: 15, y: 14), CGPoint(x: 0, y: -2)], gold)
+        // 5. дээд хэвтээ баганა
+        barRect(-9, 20, 6)
+        // 6. хос загас (yin-yang)
+        let yy: CGFloat = -26, R: CGFloat = 14
+        disc(0, yy, R, gold)
+        let rhalf = SKShapeNode(rectOf: CGSize(width: R, height: R * 2)); rhalf.fillColor = panel
+        rhalf.strokeColor = .clear; rhalf.position = CGPoint(x: R / 2, y: yy); node.addChild(rhalf)
+        disc(0, yy + R / 2, R / 2, gold)
+        disc(0, yy - R / 2, R / 2, panel)
+        disc(0, yy + R / 2, 2.6, panel)
+        disc(0, yy - R / 2, 2.6, gold)
+        // 7. доод хэвтээ баганя
+        barRect(-43, 20, 6)
+        // 8. доод гурвалжин (доош)
+        poly([CGPoint(x: -15, y: -50), CGPoint(x: 15, y: -50), CGPoint(x: 0, y: -66)], gold)
+        // 9. хоёр босоо багана (хана)
+        for sgn: CGFloat in [-1, 1] {
+            let s = SKShapeNode(rectOf: CGSize(width: 6, height: 80), cornerRadius: 3)
+            s.fillColor = gold; s.strokeColor = .clear
+            s.position = CGPoint(x: sgn * 27, y: -26); node.addChild(s)
+        }
+
+        // 150 нэгж өндөртэй загварыг зорьсон өндөрт тааруулна
+        root.setScale(height / 150)
+        return root
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
