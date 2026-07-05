@@ -38,6 +38,7 @@ struct HeroDef {
     let desc: String
     let s1: SkillDef
     let s2: SkillDef
+    var cost: Int = 0          // 0 = үнэгүй; бусад нь алтаар нээгдэнэ
 }
 
 struct DifficultyDef {
@@ -47,6 +48,7 @@ struct DifficultyDef {
     let minionDmg: CGFloat
     let heroHp: CGFloat
     let heroDmg: CGFloat
+    let goldMult: CGFloat      // тулааны шагналын үржүүлэгч
 }
 
 enum GameData {
@@ -90,7 +92,8 @@ enum GameData {
             s1: SkillDef(name: "Шуурган довтолгоо", short: "Довтлох", icon: "💨", cd: 7,
                          desc: "Урагш ухасхийж, дайрсан дайснаа зогсооно."),
             s2: SkillDef(name: "Төмөр бамбай", short: "Бамбай", icon: "🛡", cd: 13,
-                         desc: "Түр зуур хохирлыг шингээх бамбай авна.")
+                         desc: "Түр зуур хохирлыг шингээх бамбай авна."),
+            cost: 150
         ),
         HeroDef(
             id: "mukhulai",
@@ -103,7 +106,8 @@ enum GameData {
             s1: SkillDef(name: "Газар доргилт", short: "Доргилт", icon: "💥", cd: 7,
                          desc: "Ойр орчмын дайснуудыг цохиж, хэсэг зогсооно."),
             s2: SkillDef(name: "Тугийн уриа", short: "Уриа", icon: "🚩", cd: 15,
-                         desc: "Түр хугацаанд довтолгооны хүчээ ихээхэн нэмнэ.")
+                         desc: "Түр хугацаанд довтолгооны хүчээ ихээхэн нэмнэ."),
+            cost: 300
         ),
         HeroDef(
             id: "boorchi",
@@ -116,7 +120,8 @@ enum GameData {
             s1: SkillDef(name: "Шуурхай цохилт", short: "Цохилт", icon: "⚡", cd: 6,
                          desc: "Хамгийн ойрын дайсныг гурван удаа даран цохино."),
             s2: SkillDef(name: "Салхины хөл", short: "Салхи", icon: "🌬", cd: 12,
-                         desc: "Хурдаа эрс нэмж, гайхшралаас чөлөөлөгдөнө.")
+                         desc: "Хурдаа эрс нэмж, гайхшралаас чөлөөлөгдөнө."),
+            cost: 500
         ),
         HeroDef(
             id: "khasar",
@@ -129,18 +134,19 @@ enum GameData {
             s1: SkillDef(name: "Гурван сум", short: "3 сум", icon: "☄️", cd: 6,
                          desc: "Ойрын гурван дайсан руу зэрэг сум харвана."),
             s2: SkillDef(name: "Тэнгэрийн нум", short: "Нум", icon: "🌠", cd: 13,
-                         desc: "Түр хугацаанд харвах хурдаа хоёр дахин нэмнэ.")
+                         desc: "Түр хугацаанд харвах хурдаа хоёр дахин нэмнэ."),
+            cost: 750
         )
     ]
 
     /// Хэцүү байдлын түвшингүүд — дайсны хүчийг үржүүлнэ
     static let difficulties: [DifficultyDef] = [
         DifficultyDef(name: "Хялбар", desc: "Шинэ тоглогчдод",
-                      minionHp: 0.80, minionDmg: 0.80, heroHp: 0.85, heroDmg: 0.85),
+                      minionHp: 0.80, minionDmg: 0.80, heroHp: 0.85, heroDmg: 0.85, goldMult: 0.8),
         DifficultyDef(name: "Дунд", desc: "Жинхэнэ тулаан",
-                      minionHp: 1.00, minionDmg: 1.00, heroHp: 1.00, heroDmg: 1.00),
+                      minionHp: 1.00, minionDmg: 1.00, heroHp: 1.00, heroDmg: 1.00, goldMult: 1.0),
         DifficultyDef(name: "Хэцүү", desc: "Зөвхөн баатруудад",
-                      minionHp: 1.28, minionDmg: 1.22, heroHp: 1.25, heroDmg: 1.18)
+                      minionHp: 1.28, minionDmg: 1.22, heroHp: 1.25, heroDmg: 1.18, goldMult: 1.4)
     ]
 
     /// Дайсны удирдагч — Хорезмын хунтайж

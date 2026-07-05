@@ -58,11 +58,24 @@ final class EndScene: SKScene {
         let mins = stats.seconds / 60
         let secs = stats.seconds % 60
         let diffName = GameData.difficulties[stats.difficultyIndex].name
-        let statsText = "\(flavour)\nАлалт: \(stats.kills)  ·  Түвшин: \(stats.level)  ·  Хугацаа: \(mins):\(String(format: "%02d", secs))  ·  Хэцүү байдал: \(diffName)"
-        let statsL = UIFactory.multiline(statsText, font: Fonts.demi, size: 14,
+        var statsText = "\(flavour)\nАлалт: \(stats.kills)  ·  Түвшин: \(stats.level)  ·  Хугацаа: \(mins):\(String(format: "%02d", secs))  ·  Хэцүү байдал: \(diffName)"
+        statsText += "\n🪙 Олсон алт: +\(stats.goldEarned)  ·  Нийт: \(stats.totalGold)"
+        if stats.gainedStar {
+            let hero = GameData.heroes[stats.heroIndex]
+            let stars = String(repeating: "★", count: stats.masteryStars)
+                + String(repeating: "☆", count: 5 - stats.masteryStars)
+            statsText += "\n\(hero.name) мастери: \(stars) (+3% хүч)"
+        }
+        if let next = GameData.heroes.first(where: { !Progress.isUnlocked($0.id) }) {
+            let hint = Progress.gold >= next.cost
+                ? "нээх боломжтой!"
+                : "дахин \(next.cost - Progress.gold) алт"
+            statsText += "\nДараагийн баатар \(next.name): 🪙 \(next.cost) (\(hint))"
+        }
+        let statsL = UIFactory.multiline(statsText, font: Fonts.demi, size: 13,
                                          color: SKColor(red: 0.85, green: 0.76, blue: 0.60, alpha: 1),
                                          width: size.width * 0.85)
-        statsL.position = CGPoint(x: cx, y: size.height * 0.48)
+        statsL.position = CGPoint(x: cx, y: size.height * 0.44)
         c.addChild(statsL)
 
         let again = UIFactory.button(text: "ДАХИН ТУЛАЛДАХ", name: "again", width: 250, height: 52)

@@ -7,6 +7,7 @@ final class Unit: SKNode {
     let team: Team
     let radius: CGFloat
     let displayName: String
+    let isBoss: Bool
 
     var maxHp: CGFloat
     var hp: CGFloat
@@ -56,11 +57,12 @@ final class Unit: SKNode {
     init(kind: UnitKind, team: Team, displayName: String = "",
          radius: CGFloat, hp: CGFloat, dmg: CGFloat = 0, range: CGFloat = 0,
          atkCd: CGFloat = 1, moveSpeed: CGFloat = 0, aggro: CGFloat = 270,
-         archer: Bool = false, heroDef: HeroDef? = nil) {
+         archer: Bool = false, boss: Bool = false, heroDef: HeroDef? = nil) {
 
         self.kind = kind
         self.team = team
         self.displayName = displayName
+        self.isBoss = boss
         self.radius = radius
         self.maxHp = hp
         self.hp = hp
@@ -237,17 +239,22 @@ final class Unit: SKNode {
         stunLabel = stunL
 
         // амийн зурвас
-        barWidth = isHero ? 52 : 36
-        let barY = r * 2.05 + (isHero ? 12 : 4)
-        addBars(width: barWidth, height: isHero ? 7 : 5, y: barY)
+        let big = isHero || isBoss
+        barWidth = big ? 52 : 36
+        let barY = r * 2.05 + (big ? 12 : 4)
+        addBars(width: barWidth, height: big ? 7 : 5, y: barY)
 
-        if isHero {
+        if big {
             let nameL = SKLabelNode(text: displayName)
             nameL.fontName = Fonts.bold
             nameL.fontSize = 15
-            nameL.fontColor = team == .mongol
-                ? SKColor(red: 0.81, green: 0.91, blue: 1.0, alpha: 1)
-                : SKColor(red: 1.0, green: 0.82, blue: 0.78, alpha: 1)
+            if isBoss {
+                nameL.fontColor = SKColor(red: 1.0, green: 0.85, blue: 0.45, alpha: 1)
+            } else {
+                nameL.fontColor = team == .mongol
+                    ? SKColor(red: 0.81, green: 0.91, blue: 1.0, alpha: 1)
+                    : SKColor(red: 1.0, green: 0.82, blue: 0.78, alpha: 1)
+            }
             nameL.position = CGPoint(x: 0, y: barY + 12)
             addChild(nameL)
         }

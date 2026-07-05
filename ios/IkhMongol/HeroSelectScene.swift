@@ -9,6 +9,7 @@ final class HeroSelectScene: SKScene {
     private var diffNodes: [SKShapeNode] = []
     private var diffLabels: [SKLabelNode] = []
     private var infoLabel: SKLabelNode?
+    private var goldLabel: SKLabelNode?
     private var built = false
     private var content: SKNode?
 
@@ -45,8 +46,14 @@ final class HeroSelectScene: SKScene {
         let cx = size.width / 2
 
         let title = UIFactory.label("БААТРАА СОНГО", font: Fonts.heavy, size: 20, color: Palette.gold)
-        title.position = CGPoint(x: cx, y: size.height - 26)
+        title.position = CGPoint(x: cx - 90, y: size.height - 26)
         c.addChild(title)
+
+        let gold = UIFactory.label("🪙 \(Progress.gold) алт", font: Fonts.bold, size: 14,
+                                   color: SKColor(red: 1.0, green: 0.85, blue: 0.45, alpha: 1))
+        gold.position = CGPoint(x: cx + 120, y: size.height - 26)
+        c.addChild(gold)
+        goldLabel = gold
 
         // 3×2 картын сүлжээ (авсаархан)
         let cardW = min(196, (size.width - 90) / 3)
@@ -60,6 +67,7 @@ final class HeroSelectScene: SKScene {
         for (i, hero) in GameData.heroes.enumerated() {
             let col = CGFloat(i % 3)
             let rowY = i < 3 ? row1Y : row2Y
+            let unlocked = Progress.isUnlocked(hero.id)
 
             let card = SKShapeNode(rectOf: CGSize(width: cardW, height: cardH), cornerRadius: 10)
             card.fillColor = SKColor(red: 0.16, green: 0.11, blue: 0.05, alpha: 0.96)
@@ -67,6 +75,7 @@ final class HeroSelectScene: SKScene {
             card.lineWidth = 2
             card.name = "card\(i)"
             card.position = CGPoint(x: startX + col * (cardW + gapX), y: rowY)
+            card.alpha = unlocked ? 1 : 0.55
             c.addChild(card)
             cardNodes.append(card)
 
@@ -78,7 +87,7 @@ final class HeroSelectScene: SKScene {
             iconBg.name = card.name
             card.addChild(iconBg)
 
-            let icon = SKLabelNode(text: hero.icon)
+            let icon = SKLabelNode(text: unlocked ? hero.icon : "🔒")
             icon.fontSize = cardH * 0.38
             icon.verticalAlignmentMode = .center
             icon.position = iconBg.position
@@ -88,16 +97,30 @@ final class HeroSelectScene: SKScene {
             let nameL = UIFactory.label(hero.name, font: Fonts.bold, size: 12,
                                         color: SKColor(red: 0.94, green: 0.87, blue: 0.68, alpha: 1))
             nameL.horizontalAlignmentMode = .left
-            nameL.position = CGPoint(x: -cardW / 2 + cardH * 0.85, y: cardH * 0.14)
+            nameL.position = CGPoint(x: -cardW / 2 + cardH * 0.85, y: cardH * 0.20)
             nameL.name = card.name
             card.addChild(nameL)
 
             let roleL = UIFactory.label(hero.role, font: Fonts.demi, size: 9,
                                         color: SKColor(red: 0.79, green: 0.59, blue: 0.25, alpha: 1))
             roleL.horizontalAlignmentMode = .left
-            roleL.position = CGPoint(x: -cardW / 2 + cardH * 0.85, y: -cardH * 0.20)
+            roleL.position = CGPoint(x: -cardW / 2 + cardH * 0.85, y: -cardH * 0.08)
             roleL.name = card.name
             card.addChild(roleL)
+
+            // мастерийн од эсвэл нээх үнэ
+            let m = Progress.mastery(hero.id)
+            let bottomText = unlocked
+                ? (m > 0 ? String(repeating: "★", count: m) + String(repeating: "☆", count: 5 - m) : "")
+                : "🪙 \(hero.cost) — нээх"
+            if !bottomText.isEmpty {
+                let bottomL = UIFactory.label(bottomText, font: Fonts.bold, size: 9,
+                                              color: SKColor(red: 1.0, green: 0.85, blue: 0.45, alpha: 1))
+                bottomL.horizontalAlignmentMode = .left
+                bottomL.position = CGPoint(x: -cardW / 2 + cardH * 0.85, y: -cardH * 0.34)
+                bottomL.name = card.name
+                card.addChild(bottomL)
+            }
         }
 
         // сонгосон баатрын мэдээлэл
@@ -137,6 +160,7 @@ final class HeroSelectScene: SKScene {
     }
 
     private func refreshSelection() {
+        if !Progress.isUnlocked(GameData.heroes[selIndex].id) { selIndex = 0 }
         for (i, card) in cardNodes.enumerated() {
             let selected = i == selIndex
             card.strokeColor = selected
@@ -170,10 +194,30 @@ final class HeroSelectScene: SKScene {
             return
         }
         for i in 0..<GameData.heroes.count where name == "card\(i)" {
-            selIndex = i
-            Haptics.hit()
-            Audio.shared.play("tap")
-            refreshSelection()
+            let hero = GameData.heroes[i]
+            if Progress.isUnlocked(hero.id) {
+                selIndex = i
+                Haptics.hit()
+                Audio.shared.play("tap")
+                refreshSelection()
+            } else if Progress.unlock(hero.id, cost: hero.cost) {
+                selIndex = i
+                Haptics.levelUp()
+                Audio.shared.play("level", volume: 0.8)
+                buildUI()   // картуудыг шинэчилж, нээгдсэнийг харуулна
+            } else {
+                Haptics.crash()
+                Audio.shared.play("hit", volume: 0.6)
+                goldLabel?.text = "Дахин \(hero.cost - Progress.gold) алт хэрэгтэй!"
+                goldLabel?.fontColor = SKColor(red: 1.0, green: 0.42, blue: 0.34, alpha: 1)
+                goldLabel?.run(.sequence([
+                    .wait(forDuration: 1.4),
+                    .run { [weak self] in
+                        self?.goldLabel?.text = "🪙 \(Progress.gold) алт"
+                        self?.goldLabel?.fontColor = SKColor(red: 1.0, green: 0.85, blue: 0.45, alpha: 1)
+                    }
+                ]))
+            }
             return
         }
         for i in 0..<GameData.difficulties.count where name == "diff\(i)" {

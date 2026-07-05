@@ -173,6 +173,10 @@ final class BattleScene: SKScene {
     private var nextWave: CGFloat = 2.5
     private var kills = 0
     private var matchTime: CGFloat = 0
+    private var matchGold = 0
+    private var combo = 0
+    private var comboT: CGFloat = 0
+    private var shakeT: CGFloat = 0
     private var ended = false
     private var built = false
     private var worldScale: CGFloat = 1
@@ -197,6 +201,7 @@ final class BattleScene: SKScene {
     private var respawnLabel: SKLabelNode!
     private var muteButton: SKNode!
     private var muteIcon: SKLabelNode!
+    private var lowHpFrame: SKShapeNode!
     private var announceQueue: [String] = []
     private var announceBusy = false
 
@@ -340,11 +345,18 @@ final class BattleScene: SKScene {
             units.append(s)
         }
 
-        // тоглогчийн баатар
+        // тоглогчийн баатар — мастерийн од бүр +3% амь, хүч
         let def = GameData.heroes[heroIndex]
         player = Unit(kind: .hero, team: .mongol, displayName: def.name,
                       radius: 20, hp: def.hp, dmg: def.dmg, range: def.range,
                       atkCd: def.atkCd, moveSpeed: def.speed, aggro: 320, heroDef: def)
+        let mastery = Progress.mastery(def.id)
+        if mastery > 0 {
+            player.maxHp = (def.hp * (1 + 0.03 * CGFloat(mastery))).rounded()
+            player.hp = player.maxHp
+            player.dmg = (def.dmg * (1 + 0.03 * CGFloat(mastery))).rounded()
+            player.updateBars()
+        }
         player.position = CGPoint(x: World.pGateX + 130, y: World.laneY)
         world.addChild(player)
         units.append(player)
@@ -574,6 +586,16 @@ final class BattleScene: SKScene {
         hud.addChild(b1)
         hud.addChild(b2)
 
+        // амь багасахад анхааруулах улаан хүрээ
+        lowHpFrame = SKShapeNode()
+        lowHpFrame.strokeColor = SKColor(red: 0.78, green: 0.12, blue: 0.08, alpha: 1)
+        lowHpFrame.lineWidth = 10
+        lowHpFrame.glowWidth = 18
+        lowHpFrame.fillColor = .clear
+        lowHpFrame.isHidden = true
+        lowHpFrame.zPosition = 850
+        hud.addChild(lowHpFrame)
+
         // дууны товч
         muteButton = SKNode()
         let muteBg = SKShapeNode(circleOfRadius: 18)
@@ -628,6 +650,10 @@ final class BattleScene: SKScene {
         respawnDim.size = size
         respawnDim.position = CGPoint(x: size.width / 2, y: size.height / 2)
         respawnLabel.position = CGPoint(x: size.width / 2, y: size.height / 2)
+
+        lowHpFrame.path = UIBezierPath(
+            roundedRect: CGRect(x: 4, y: 4, width: size.width - 8, height: size.height - 8),
+            cornerRadius: 12).cgPath
     }
 
     // MARK: - Давалгаа
@@ -660,7 +686,32 @@ final class BattleScene: SKScene {
                 units.append(m)
             }
         }
+        // 5 давалгаа тутамд аварга дайчин
+        if waveNum % 5 == 0 {
+            let bhp = (1100 + CGFloat(waveNum) * 45) * diff.minionHp
+            let b = Unit(kind: .minion, team: .khwarezm, displayName: "Аварга дайчин",
+                         radius: 26, hp: bhp,
+                         dmg: (55 + CGFloat(waveNum) * 2) * diff.minionDmg,
+                         range: 52, atkCd: 1.2, moveSpeed: 78, aggro: 320, boss: true)
+            b.position = CGPoint(x: eGate.position.x - 90, y: World.laneY)
+            b.face = -1
+            world.addChild(b)
+            units.append(b)
+            announce("Аварга дайчин ирлээ!")
+        }
+
         if waveNum == 1 { announce("Цэргүүд хөдөллөө!") }
+    }
+
+    /// Цуврал алалт — богино хугацаанд олон албал урамшуулна
+    private func registerPlayerKill() {
+        combo = comboT > 0 ? combo + 1 : 1
+        comboT = 2.5
+        if combo >= 3 {
+            giveXP(CGFloat(combo * 4))
+            floater("Цуврал x\(combo)!", at: player.position, dy: player.radius + 34,
+                    color: SKColor(red: 1.0, green: 0.85, blue: 0.45, alpha: 1))
+        }
     }
 
     // MARK: - Байлдааны туслахууд
@@ -705,8 +756,26 @@ final class BattleScene: SKScene {
 
         switch u.kind {
         case .minion:
-            if byPlayer { giveXP(26) }
-            else if let s = source, s.team == .mongol { giveXP(10) }
+            if u.isBoss {
+                shakeT = max(shakeT, 0.45)
+                announce("Аварга дайчин уналаа!")
+                Audio.shared.play("crash", volume: 0.9)
+                if byPlayer {
+                    giveXP(140)
+                    matchGold += 25
+                    floater("+25 🪙", at: u.position, dy: 40,
+                            color: SKColor(red: 1.0, green: 0.85, blue: 0.45, alpha: 1))
+                    registerPlayerKill()
+                }
+            } else if byPlayer {
+                giveXP(26)
+                matchGold += 2
+                floater("+2 🪙", at: u.position, dy: 34,
+                        color: SKColor(red: 1.0, green: 0.85, blue: 0.45, alpha: 1))
+                registerPlayerKill()
+            } else if let s = source, s.team == .mongol {
+                giveXP(10)
+            }
             u.removeFromParent()
 
         case .hero:
@@ -716,6 +785,9 @@ final class BattleScene: SKScene {
             if u === aiHero {
                 kills += 1
                 giveXP(140)
+                matchGold += 15
+                floater("+15 🪙", at: u.position, dy: 40,
+                        color: SKColor(red: 1.0, green: 0.85, blue: 0.45, alpha: 1))
                 announce("Дайсны баатрыг унагалаа!")
                 u.respawnT = 9 + min(matchTime / 60, 8)
             } else {
@@ -726,13 +798,15 @@ final class BattleScene: SKScene {
         case .tower:
             Haptics.crash()
             Audio.shared.play("crash", volume: 1)
+            shakeT = max(shakeT, 0.55)
             announce(u.team == .khwarezm ? "Дайсны цамхаг нурлаа!" : "Манай цамхаг нурлаа!")
-            if u.team == .khwarezm && byPlayer { giveXP(160) }
+            if u.team == .khwarezm && byPlayer { giveXP(160); matchGold += 20 }
             u.removeFromParent()
 
         case .gate:
             Haptics.crash()
             Audio.shared.play("crash", volume: 1)
+            shakeT = max(shakeT, 0.7)
             endMatch(win: u.team == .khwarezm)
         }
     }
@@ -1037,6 +1111,11 @@ final class BattleScene: SKScene {
 
         matchTime += dt
 
+        // цуврал ба чичиргээ буурах
+        comboT = max(0, comboT - dt)
+        if comboT <= 0 { combo = 0 }
+        shakeT = max(0, shakeT - dt)
+
         // давалгаа
         nextWave -= dt
         if nextWave <= 0 {
@@ -1329,7 +1408,12 @@ final class BattleScene: SKScene {
         let viewWWorld = size.width / worldScale
         let target = clampF(player.position.x - viewWWorld / 2, 0, max(0, World.width - viewWWorld))
         camX += (target - camX) * min(1, dt * 6)
-        world.position = CGPoint(x: -camX * worldScale, y: 0)
+        var sx: CGFloat = 0, sy: CGFloat = 0
+        if shakeT > 0 {
+            sx = CGFloat.random(in: -1...1) * 10 * shakeT * worldScale
+            sy = CGFloat.random(in: -1...1) * 7 * shakeT * worldScale
+        }
+        world.position = CGPoint(x: -camX * worldScale + sx, y: sy)
         farHills?.position = CGPoint(x: -camX * worldScale * 0.25, y: 0)
         nearHills?.position = CGPoint(x: -camX * worldScale * 0.45, y: 0)
     }
@@ -1338,7 +1422,10 @@ final class BattleScene: SKScene {
         hpFillHUD.xScale = clampF(player.hp / player.maxHp, 0, 1)
         xpFillHUD.xScale = clampF(player.xp / World.xpNeed(player.level), 0, 1)
         lvlLabel.text = "\(player.level)"
-        killLabel.text = "Алалт: \(kills)  ·  Давалгаа: \(waveNum)"
+        killLabel.text = "Алалт: \(kills) · Давалгаа: \(waveNum) · 🪙 +\(matchGold)"
+        let lowHp = !player.isDead && player.hp < player.maxHp * 0.3
+        lowHpFrame.isHidden = !lowHp
+        if lowHp { lowHpFrame.alpha = 0.45 + 0.3 * sinF(matchTime * 6) }
         if skillButtons.count == 2 {
             skillButtons[0].setCooldown(player.s1T)
             skillButtons[1].setCooldown(player.s2T)
@@ -1436,9 +1523,23 @@ final class BattleScene: SKScene {
         ended = true
         if win { Haptics.victory() } else { Haptics.defeat() }
         Audio.shared.play(win ? "win" : "lose", volume: 0.9)
+
+        // шагнал: тулааны алт + түвшин + ялалтын урамшуулал, хэцүү байдлаар үржүүлнэ
+        let heroId = GameData.heroes[heroIndex].id
+        let earned = Int(((CGFloat(matchGold) + CGFloat(player.level) * 5 + (win ? 80 : 20))
+                          * diff.goldMult).rounded())
+        Progress.gold += earned
+        var gainedStar = false
+        if win && Progress.mastery(heroId) < 5 {
+            Progress.addMasteryStar(heroId)
+            gainedStar = true
+        }
+
         let stats = MatchStats(win: win, kills: kills, level: player.level,
                                seconds: Int(matchTime), heroIndex: heroIndex,
-                               difficultyIndex: difficultyIndex)
+                               difficultyIndex: difficultyIndex,
+                               goldEarned: earned, totalGold: Progress.gold,
+                               masteryStars: Progress.mastery(heroId), gainedStar: gainedStar)
         run(.sequence([
             .wait(forDuration: 0.9),
             .run { [weak self] in
@@ -1524,4 +1625,8 @@ struct MatchStats {
     let seconds: Int
     let heroIndex: Int
     let difficultyIndex: Int
+    let goldEarned: Int
+    let totalGold: Int
+    let masteryStars: Int
+    let gainedStar: Bool
 }

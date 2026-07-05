@@ -92,6 +92,21 @@
   #endStats { margin-top:14px; font-size:15px; color:#d8c298; line-height:1.9; }
   .endBtns { display:flex; gap:14px; margin-top:10px; flex-wrap:wrap; justify-content:center; }
 
+  /* амь багасахад анхааруулах улаан хүрээ */
+  #lowHp { position:fixed; inset:0; z-index:15; pointer-events:none; opacity:0;
+    box-shadow:inset 0 0 90px 20px rgba(200,30,20,.55); transition:opacity .3s; }
+  #lowHp.on { opacity:1; animation:lowPulse 1s ease-in-out infinite; }
+  @keyframes lowPulse { 0%,100% { opacity:.45; } 50% { opacity:1; } }
+
+  /* алтны самбар ба түгжээтэй картууд */
+  #goldBar { margin-top:10px; font-size:14px; font-weight:700; color:#ffd873;
+    background:rgba(0,0,0,.35); padding:5px 18px; border-radius:14px; border:1px solid rgba(232,182,76,.4); }
+  #goldBar.flash { animation:goldFlash .5s; }
+  @keyframes goldFlash { 0%,100% { color:#ffd873; } 50% { color:#ff6b57; } }
+  .card.locked { opacity:.55; filter:grayscale(.4); }
+  .card .lockTag { font-size:12px; font-weight:800; color:#ffd873; margin-top:6px; }
+  .card .stars { font-size:11px; color:#ffd873; letter-spacing:2px; margin-top:2px; }
+
   /* rotate overlay */
   #rotate { position:fixed; inset:0; z-index:50; background:#120d07; color:#f0e2c4; display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:14px; }
   #rotate .phone { font-size:52px; animation:rot 1.6s ease-in-out infinite; }
@@ -117,6 +132,7 @@
 <!-- ================= HERO SELECT ================= -->
 <div id="selectScreen" class="screen hidden">
   <h2>БААТРАА СОНГО</h2>
+  <div id="goldBar">🪙 0 алт</div>
   <div class="cards" id="cards"></div>
   <div id="diffRow"><span class="diffLabel">Хэцүү байдал:</span></div>
   <button class="btn" id="startBtn">ТУЛААНД МОРД</button>
@@ -161,6 +177,8 @@
     <button class="btn secondary" id="changeBtn">БААТАР СОЛИХ</button>
   </div>
 </div>
+
+<div id="lowHp"></div>
 
 <!-- ================= ROTATE ================= -->
 <div id="rotate">
@@ -279,11 +297,27 @@ let selHero = 0;
 
 // ---------- хэцүү байдал ----------
 const DIFFS = [
-  { name:'Хялбар', desc:'Шинэ тоглогчдод',   mHp:0.80, mDmg:0.80, hHp:0.85, hDmg:0.85 },
-  { name:'Дунд',   desc:'Жинхэнэ тулаан',    mHp:1.00, mDmg:1.00, hHp:1.00, hDmg:1.00 },
-  { name:'Хэцүү',  desc:'Зөвхөн баатруудад', mHp:1.28, mDmg:1.22, hHp:1.25, hDmg:1.18 }
+  { name:'Хялбар', desc:'Шинэ тоглогчдод',   mHp:0.80, mDmg:0.80, hHp:0.85, hDmg:0.85, gold:0.8 },
+  { name:'Дунд',   desc:'Жинхэнэ тулаан',    mHp:1.00, mDmg:1.00, hHp:1.00, hDmg:1.00, gold:1.0 },
+  { name:'Хэцүү',  desc:'Зөвхөн баатруудад', mHp:1.28, mDmg:1.22, hHp:1.25, hDmg:1.18, gold:1.4 }
 ];
 let selDiff = 1;
+
+// ---------- байнгын хадгалалт: алт, нээлт, мастери ----------
+const SAVE_KEY = 'ikhmongol_save';
+const HERO_COST = { chinggis:0, zev:0, subedei:150, mukhulai:300, boorchi:500, khasar:750 };
+function loadSave(){
+  try{
+    const s = JSON.parse(localStorage.getItem(SAVE_KEY));
+    if(s && typeof s === 'object')
+      return Object.assign({gold:0, unlocked:['chinggis','zev'], mastery:{}}, s);
+  }catch(e){}
+  return { gold:0, unlocked:['chinggis','zev'], mastery:{} };
+}
+let save = loadSave();
+function persistSave(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }catch(e){} }
+const isUnlocked = id => save.unlocked.includes(id);
+const masteryOf = id => save.mastery[id] || 0;
 
 // ---------- game state ----------
 let state = 'menu';           // menu | select | play | end
@@ -291,6 +325,7 @@ let units = [], projectiles = [], particles = [], floaters = [], zones = [], str
 let player = null, aiHero = null, pGate=null, eGate=null;
 let camX = 0, gameT = 0, waveNum = 0, nextWaveT = 0, kills = 0, matchStart = 0;
 let announceQ = [], announceT = 0;
+let matchGold = 0, combo = 0, comboT = 0, shakeT = 0;
 
 function announce(txt, dur){
   announceQ.push({txt, dur: dur||2.2});
@@ -302,7 +337,7 @@ function makeUnit(o){
     type:'minion', team:0, x:0, y:0, r:15,
     hp:100, maxHp:100, dmg:10, range:42, aggro:270,
     atkCd:1, atkT:0, speed:120, face:1, stun:0,
-    shield:0, shieldT:0, hasteT:0, rageT:0, frenzyT:0, dead:false,
+    shield:0, shieldT:0, hasteT:0, rageT:0, frenzyT:0, dead:false, boss:false,
     isStruct:false, hero:null, name:'', color:'', archer:false,
     respawnT:0, level:1, xp:0, dash:null
   }, o);
@@ -321,6 +356,7 @@ function heroUnit(def, team, x){
 function startMatch(){
   units = []; projectiles = []; particles = []; floaters = []; zones = []; strikes = [];
   gameT = 0; waveNum = 0; nextWaveT = 2.5; kills = 0; announceQ = []; announceT = 0;
+  matchGold = 0; combo = 0; comboT = 0; shakeT = 0;
   matchStart = performance.now();
 
   pGate = makeUnit({ type:'gate', team:0, x:P_GATE_X, y:LANE_Y, r:52, hp:2000, maxHp:2000, isStruct:true, name:'Их хаалга' });
@@ -331,6 +367,13 @@ function startMatch(){
 
   const def = HEROES[selHero];
   player = heroUnit(def, 0, P_GATE_X + 130);
+  // мастери: од бүр +3% амь, хүч
+  const mastery = masteryOf(def.id);
+  if(mastery > 0){
+    player.maxHp = Math.round(def.hp * (1 + 0.03*mastery));
+    player.hp = player.maxHp;
+    player.dmg = Math.round(def.dmg * (1 + 0.03*mastery));
+  }
   units.push(player);
 
   // enemy AI hero — Jalal ad-Din of Khwarezm (хэцүү байдлаар тохируулна)
@@ -386,7 +429,29 @@ function spawnWave(){
       }));
     }
   }
+  // 5 давалгаа тутамд аварга дайчин
+  if(waveNum % 5 === 0){
+    const bhp = (1100 + waveNum*45) * D.mHp;
+    units.push(makeUnit({
+      type:'minion', team:1, boss:true, name:'Аварга дайчин',
+      x: eGate.x - 90, y: LANE_Y, r:26,
+      hp:bhp, maxHp:bhp, dmg:(55 + waveNum*2)*D.mDmg,
+      range:52, atkCd:1.2, speed:78, aggro:320
+    }));
+    announce('Аварга дайчин ирлээ!');
+  }
   if(waveNum===1) announce('Цэргүүд хөдөллөө!');
+}
+
+// цуврал алалт — богино хугацаанд олон албал урамшуулна
+function registerPlayerKill(){
+  combo = comboT > 0 ? combo + 1 : 1;
+  comboT = 2.5;
+  if(combo >= 3){
+    giveXP(combo * 4);
+    addFloater(player.x, player.y - player.r*2.8, 'Цуврал x'+combo+'!', '#ffd873');
+    Snd.beep(400 + combo*60, .1, 'square', .05);
+  }
 }
 
 // ---------- combat ----------
@@ -419,14 +484,22 @@ function killUnit(u, source){
   burst(u.x, u.y, u.team? '#c85a4a':'#e8b64c', 14);
   const byPlayer = source && (source===player || (source.owner===player));
   if(u.type==='minion'){
-    if(byPlayer){ giveXP(26); }
+    if(u.boss){
+      shakeT = Math.max(shakeT, 0.45);
+      announce('Аварга дайчин уналаа!');
+      if(byPlayer){ giveXP(140); matchGold += 25; addFloater(u.x, u.y-40, '+25 🪙', '#ffd873'); registerPlayerKill(); }
+    } else if(byPlayer){
+      giveXP(26); matchGold += 2; registerPlayerKill();
+      addFloater(u.x, u.y-34, '+2 🪙', '#ffd873');
+    }
     else if(source && source.team===0){ giveXP(10); } // assist xp for lane presence
   }
   if(u.type==='hero'){
     Snd.crash();
     if(u===aiHero){
-      kills++; giveXP(140);
+      kills++; giveXP(140); matchGold += 15;
       announce('Дайсны баатрыг унагалаа!');
+      addFloater(u.x, u.y-40, '+15 🪙', '#ffd873');
       u.respawnT = 9 + Math.min(gameT/60, 8);
     } else {
       announce('Та унасан байна...');
@@ -435,11 +508,13 @@ function killUnit(u, source){
   }
   if(u.type==='tower'){
     Snd.crash();
+    shakeT = Math.max(shakeT, 0.55);
     announce(u.team? 'Дайсны цамхаг нурлаа!' : 'Манай цамхаг нурлаа!');
-    if(u.team && byPlayer) giveXP(160);
+    if(u.team && byPlayer){ giveXP(160); matchGold += 20; }
   }
   if(u.type==='gate'){
     Snd.crash();
+    shakeT = Math.max(shakeT, 0.7);
     endMatch(u.team===1);
   }
 }
@@ -884,6 +959,11 @@ function update(dt){
     if(f.life<=0) floaters.splice(i,1);
   }
 
+  // цуврал ба чичиргээ буурах
+  comboT = Math.max(0, comboT - dt);
+  if(comboT <= 0) combo = 0;
+  shakeT = Math.max(0, shakeT - dt);
+
   // announcements
   if(announceT > 0){
     announceT -= dt;
@@ -909,7 +989,8 @@ function updateHUD(){
   $('hpFill').style.width = Math.max(0, player.hp/player.maxHp*100) + '%';
   $('xpFill').style.width = clamp(player.xp / xpNeed(player.level) * 100, 0, 100) + '%';
   $('lvlBadge').textContent = player.level;
-  $('killLabel').textContent = 'Алалт: ' + kills + '  ·  Давалгаа: ' + waveNum;
+  $('killLabel').textContent = 'Алалт: ' + kills + ' · Давалгаа: ' + waveNum + ' · 🪙 +' + matchGold;
+  $('lowHp').classList.toggle('on', !player.dead && player.hp < player.maxHp*0.3);
   const def = player.hero;
   const s = [[player.s1T, def.s1.cd, 's1'], [player.s2T, def.s2.cd, 's2']];
   for(const [t, cd, id] of s){
@@ -965,7 +1046,9 @@ function render(){
   ctx.fillRect(0, LANE_Y-90, vw, 180);
 
   ctx.save();
-  ctx.translate(-camX, 0);
+  const shx = shakeT>0 ? (Math.random()*2-1)*10*shakeT : 0;
+  const shy = shakeT>0 ? (Math.random()*2-1)*7*shakeT : 0;
+  ctx.translate(-camX + shx, shy);
 
   // decorations
   for(const d of deco){
@@ -1183,11 +1266,11 @@ function drawUnit(u){
     ctx.fillRect(u.x-bw/2, by-3, bw*clamp(u.shield/u.maxHp,0,1), 2.5);
   }
 
-  // hero name
-  if(isHero){
+  // hero/boss name
+  if(isHero || u.boss){
     ctx.font = '700 13px -apple-system, sans-serif'; ctx.textAlign = 'center';
     ctx.fillStyle = '#000'; ctx.fillText(u.name, u.x+1, by-7+1);
-    ctx.fillStyle = u.team===0? '#cfe8ff' : '#ffd0c8';
+    ctx.fillStyle = u.boss? '#ffd873' : (u.team===0? '#cfe8ff' : '#ffd0c8');
     ctx.fillText(u.name, u.x, by-7);
   }
 }
@@ -1247,8 +1330,29 @@ function endMatch(win){
   setState('end');
   const mins = Math.floor((performance.now()-matchStart)/60000);
   const secs = Math.floor(((performance.now()-matchStart)/1000) % 60);
+
+  // шагнал: тулааны алт + түвшин + ялалтын урамшуулал, хэцүү байдлаар үржүүлнэ
+  const earned = Math.round((matchGold + player.level*5 + (win? 80 : 20)) * DIFFS[selDiff].gold);
+  save.gold += earned;
+  const heroId = player.hero.id;
+  let masteryLine = '';
+  if(win && masteryOf(heroId) < 5){
+    save.mastery[heroId] = masteryOf(heroId) + 1;
+    const m = save.mastery[heroId];
+    masteryLine = '<br>'+player.hero.name+' мастери: <b style="color:#ffd873">'+'★'.repeat(m)+'☆'.repeat(5-m)+'</b> (+3% хүч)';
+  }
+  persistSave();
+
+  // дараагийн нээх баатрын сануулга
+  const nextLocked = HEROES.find(h => !isUnlocked(h.id));
+  const unlockHint = nextLocked
+    ? '<br><span style="font-size:12px;color:#8a7550">Дараагийн баатар '+nextLocked.name+': 🪙 '+HERO_COST[nextLocked.id]+' ('+(save.gold >= HERO_COST[nextLocked.id] ? 'нээх боломжтой!' : 'дахин '+(HERO_COST[nextLocked.id]-save.gold)+' алт')+')</span>'
+    : '';
+
   const t = $('endTitle');
-  const common = 'Алалт: <b>'+kills+'</b> · Түвшин: <b>'+player.level+'</b> · Хугацаа: <b>'+mins+':'+String(secs).padStart(2,'0')+'</b> · Хэцүү байдал: <b>'+DIFFS[selDiff].name+'</b>';
+  const common = 'Алалт: <b>'+kills+'</b> · Түвшин: <b>'+player.level+'</b> · Хугацаа: <b>'+mins+':'+String(secs).padStart(2,'0')+'</b> · Хэцүү байдал: <b>'+DIFFS[selDiff].name+'</b>'
+    + '<br>🪙 Олсон алт: <b id="goldCount" style="color:#ffd873">+0</b> · Нийт: <b style="color:#ffd873">'+save.gold+'</b>'
+    + masteryLine + unlockHint;
   if(win){
     t.textContent = 'ЯЛАЛТ!'; t.className = 'win';
     $('endStats').innerHTML = 'Мөнх тэнгэрийн хүчин дор дайсны хаалга нурлаа!<br>'+common;
@@ -1258,6 +1362,17 @@ function endMatch(win){
     $('endStats').innerHTML = 'Их хаалга нурсан ч дайн дуусаагүй...<br>'+common;
     Snd.lose();
   }
+
+  // алт тоолох анимаци
+  const el = $('goldCount');
+  const t0 = performance.now();
+  (function tick(){
+    if(!el.isConnected) return;
+    const p = Math.min(1, (performance.now()-t0)/900);
+    el.textContent = '+' + Math.round(earned * (1-Math.pow(1-p,3)));
+    if(p < 1) requestAnimationFrame(tick);
+  })();
+
   joyEnd();
 }
 
@@ -1276,17 +1391,41 @@ function buildDiffs(){
 }
 
 function buildCards(){
+  if(!isUnlocked(HEROES[selHero].id)) selHero = 0;
+  $('goldBar').textContent = '🪙 ' + save.gold + ' алт';
   const wrap = $('cards');
   wrap.innerHTML = '';
   HEROES.forEach((h, i)=>{
+    const unlocked = isUnlocked(h.id);
+    const m = masteryOf(h.id);
     const c = document.createElement('div');
-    c.className = 'card' + (i===selHero? ' sel':'');
-    c.innerHTML = '<div class="icon">'+h.icon+'</div>'
+    c.className = 'card' + (i===selHero? ' sel':'') + (unlocked? '':' locked');
+    c.innerHTML = '<div class="icon">'+(unlocked? h.icon : '🔒')+'</div>'
       + '<div class="hname">'+h.name+'</div>'
       + '<div class="hrole">'+h.role+'</div>'
+      + (unlocked && m>0 ? '<div class="stars">'+'★'.repeat(m)+'☆'.repeat(5-m)+'</div>' : '')
       + '<div class="hdesc">'+h.desc+'</div>'
-      + '<div class="hskill"><b>'+h.s1.icon+' '+h.s1.name+':</b> '+h.s1.desc+'<br><b>'+h.s2.icon+' '+h.s2.name+':</b> '+h.s2.desc+'</div>';
-    c.addEventListener('click', ()=>{ selHero = i; buildCards(); Snd.init(); Snd.beep(500,.06,'sine',.04); });
+      + (unlocked
+        ? '<div class="hskill"><b>'+h.s1.icon+' '+h.s1.name+':</b> '+h.s1.desc+'<br><b>'+h.s2.icon+' '+h.s2.name+':</b> '+h.s2.desc+'</div>'
+        : '<div class="lockTag">🪙 '+HERO_COST[h.id]+' алтаар нээх</div>');
+    c.addEventListener('click', ()=>{
+      Snd.init();
+      if(isUnlocked(h.id)){
+        selHero = i; buildCards(); Snd.beep(500,.06,'sine',.04);
+      } else if(save.gold >= HERO_COST[h.id]){
+        save.gold -= HERO_COST[h.id];
+        save.unlocked.push(h.id);
+        persistSave();
+        selHero = i; buildCards();
+        Snd.level();
+      } else {
+        $('goldBar').classList.remove('flash');
+        void $('goldBar').offsetWidth; // рестарт анимаци
+        $('goldBar').classList.add('flash');
+        $('goldBar').textContent = '🪙 Алт хүрэлцэхгүй! Дахин '+(HERO_COST[h.id]-save.gold)+' хэрэгтэй';
+        Snd.beep(180,.15,'square',.05);
+      }
+    });
     wrap.appendChild(c);
   });
 }
@@ -1323,8 +1462,13 @@ window.GAME = {
   get units(){ return units; },
   get player(){ return player; },
   get waveNum(){ return waveNum; },
+  get save(){ return save; },
+  get matchGold(){ return matchGold; },
+  get combo(){ return combo; },
   startQuick(i, d){ selHero = i||0; if(d!==undefined) selDiff = d; startMatch(); },
   setDiff(d){ selDiff = d; },
+  skipToWave(n){ waveNum = n - 1; nextWaveT = 0.1; },
+  resetSave(){ save = {gold:0, unlocked:['chinggis','zev'], mastery:{}}; persistSave(); },
   useSkill
 };
 </script>
