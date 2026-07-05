@@ -14,8 +14,11 @@
   #game { position:fixed; inset:0; width:100%; height:100%; display:block; }
 
   /* ---------- Screens ---------- */
-  .screen { position:fixed; inset:0; z-index:20; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  .screen { position:fixed; inset:0; z-index:20; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; overflow-y:auto;
     background:radial-gradient(ellipse at 50% 30%, #3a2a14 0%, #1c1309 55%, #0d0905 100%); color:#f0e2c4; text-align:center; padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+  .screen::before, .screen::after { content:''; margin:auto; flex-shrink:0; min-height:12px; }
+  .screen > * { flex-shrink:0; }
+  .screen, .cards { touch-action:pan-x pan-y; }
   .screen.hidden { display:none; }
   .ornament { color:#c9973f; letter-spacing:6px; font-size:13px; margin-bottom:8px; }
   h1.title { font-size:clamp(34px, 9vw, 64px); letter-spacing:8px; color:#e8b64c; text-shadow:0 2px 0 #7a521a, 0 6px 22px rgba(232,182,76,.35); font-weight:800; }
@@ -34,16 +37,21 @@
   /* ---------- Hero select ---------- */
   #selectScreen h2 { font-size:clamp(20px, 5vw, 30px); letter-spacing:4px; color:#e8b64c; margin-bottom:4px; }
   .cards { display:flex; gap:14px; margin-top:18px; padding:0 16px; max-width:100%; overflow-x:auto; }
-  .card { width:190px; min-width:160px; background:linear-gradient(180deg, rgba(60,44,22,.95), rgba(32,22,10,.95)); border:2px solid #6e5426; border-radius:14px; padding:14px 12px; cursor:pointer; transition:transform .12s, border-color .12s, box-shadow .12s; }
+  .card { width:172px; min-width:150px; background:linear-gradient(180deg, rgba(60,44,22,.95), rgba(32,22,10,.95)); border:2px solid #6e5426; border-radius:14px; padding:12px 10px; cursor:pointer; transition:transform .12s, border-color .12s, box-shadow .12s; flex-shrink:0; }
   .card.sel { border-color:#f2c96a; transform:translateY(-6px); box-shadow:0 10px 30px rgba(232,182,76,.25); }
   .card .icon { width:64px; height:64px; margin:0 auto 8px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:32px;
     background:radial-gradient(circle at 35% 30%, #7a5c28, #3a2a10); border:2px solid #a8813a; }
   .card .hname { font-size:16px; font-weight:800; color:#f0dfae; }
   .card .hrole { font-size:11px; color:#c9973f; letter-spacing:2px; margin:2px 0 8px; }
-  .card .hdesc { font-size:11px; color:#b8a37c; line-height:1.5; min-height:48px; }
+  .card .hdesc { font-size:11px; color:#b8a37c; line-height:1.5; min-height:40px; }
   .card .hskill { font-size:10.5px; color:#8fb573; margin-top:6px; line-height:1.45; text-align:left; }
   .card .hskill b { color:#cfe3a8; }
   .hint { font-size:11.5px; color:#8a7550; margin-top:16px; line-height:1.7; padding:0 24px; max-width:560px; }
+  #diffRow { display:flex; align-items:center; gap:10px; margin-top:14px; flex-wrap:wrap; justify-content:center; }
+  .diffLabel { font-size:12px; color:#8a7550; }
+  .diffPill { padding:7px 20px; border-radius:16px; font-size:13px; font-weight:700; color:#e8d9b5;
+    background:#332818; border:1.5px solid #6e5426; cursor:pointer; }
+  .diffPill.sel { background:linear-gradient(180deg,#f2c96a,#cf9a35); color:#241503; border-color:#6e4c12; }
 
   /* ---------- HUD ---------- */
   #hud { position:fixed; inset:0; z-index:10; pointer-events:none; display:none; }
@@ -110,6 +118,7 @@
 <div id="selectScreen" class="screen hidden">
   <h2>БААТРАА СОНГО</h2>
   <div class="cards" id="cards"></div>
+  <div id="diffRow"><span class="diffLabel">Хэцүү байдал:</span></div>
   <button class="btn" id="startBtn">ТУЛААНД МОРД</button>
   <div class="hint">Зорилго: дайсны <b>Их хаалга</b>-ыг нураах. Өөрийн хаалгаа алдвал ялагдана.<br>Цэргүүд давалгаа бүрд өөрөө хөдөлнө — та тэднийг дагаж дайр!</div>
 </div>
@@ -243,13 +252,42 @@ const HEROES = [
     desc:'Түүхэн дэх хамгийн агуу жанжны нэг. Бат бөх, довтолгооны мастер.',
     s1:{ name:'Шуурган довтолгоо', short:'Довтлох', icon:'💨', cd:7, desc:'Урагш ухасхийж, дайрсан дайснаа зогсооно.' },
     s2:{ name:'Төмөр бамбай', short:'Бамбай', icon:'🛡️', cd:13, desc:'Түр зуур хохирлыг шингээх бамбай авна.' }
+  },
+  {
+    id:'mukhulai', name:'Мухулай жанжин', role:'ЖАНЖИН', icon:'🪓', color:'#c98a4b',
+    hp:1050, dmg:60, range:72, speed:172, atkCd:0.9,
+    desc:'Чингис хааны итгэлт жанжин, зүүн гарын түмний ноён.',
+    s1:{ name:'Газар доргилт', short:'Доргилт', icon:'💥', cd:7, desc:'Ойр орчмын дайснуудыг цохиж, хэсэг зогсооно.' },
+    s2:{ name:'Тугийн уриа', short:'Уриа', icon:'🚩', cd:15, desc:'Түр хугацаанд довтолгооны хүчээ ихээхэн нэмнэ.' }
+  },
+  {
+    id:'boorchi', name:'Боорчи ноён', role:'ШАЛМАГ ДАЙЧИН', icon:'🗡️', color:'#7ac2b0',
+    hp:850, dmg:56, range:70, speed:200, atkCd:0.7,
+    desc:'Хааны анхны нөхөр, дөрвөн хүлгийн тэргүүн. Хурдан сэлэмчин.',
+    s1:{ name:'Шуурхай цохилт', short:'Цохилт', icon:'⚡', cd:6, desc:'Хамгийн ойрын дайсныг гурван удаа даран цохино.' },
+    s2:{ name:'Салхины хөл', short:'Салхи', icon:'🌬️', cd:12, desc:'Хурдаа эрс нэмж, гайхшралаас чөлөөлөгдөнө.' }
+  },
+  {
+    id:'khasar', name:'Хасар мэргэн', role:'ХАРВААЧ', icon:'🎯', color:'#b085d6',
+    hp:720, dmg:54, range:260, speed:185, atkCd:0.8,
+    desc:'Чингис хааны дүү, домогт хүчтэй мэргэн харваач.',
+    s1:{ name:'Гурван сум', short:'3 сум', icon:'☄️', cd:6, desc:'Ойрын гурван дайсан руу зэрэг сум харвана.' },
+    s2:{ name:'Тэнгэрийн нум', short:'Нум', icon:'🌠', cd:13, desc:'Түр хугацаанд харвах хурдаа хоёр дахин нэмнэ.' }
   }
 ];
 let selHero = 0;
 
+// ---------- хэцүү байдал ----------
+const DIFFS = [
+  { name:'Хялбар', desc:'Шинэ тоглогчдод',   mHp:0.80, mDmg:0.80, hHp:0.85, hDmg:0.85 },
+  { name:'Дунд',   desc:'Жинхэнэ тулаан',    mHp:1.00, mDmg:1.00, hHp:1.00, hDmg:1.00 },
+  { name:'Хэцүү',  desc:'Зөвхөн баатруудад', mHp:1.28, mDmg:1.22, hHp:1.25, hDmg:1.18 }
+];
+let selDiff = 1;
+
 // ---------- game state ----------
 let state = 'menu';           // menu | select | play | end
-let units = [], projectiles = [], particles = [], floaters = [], zones = [];
+let units = [], projectiles = [], particles = [], floaters = [], zones = [], strikes = [];
 let player = null, aiHero = null, pGate=null, eGate=null;
 let camX = 0, gameT = 0, waveNum = 0, nextWaveT = 0, kills = 0, matchStart = 0;
 let announceQ = [], announceT = 0;
@@ -264,7 +302,7 @@ function makeUnit(o){
     type:'minion', team:0, x:0, y:0, r:15,
     hp:100, maxHp:100, dmg:10, range:42, aggro:270,
     atkCd:1, atkT:0, speed:120, face:1, stun:0,
-    shield:0, shieldT:0, hasteT:0, dead:false,
+    shield:0, shieldT:0, hasteT:0, rageT:0, frenzyT:0, dead:false,
     isStruct:false, hero:null, name:'', color:'', archer:false,
     respawnT:0, level:1, xp:0, dash:null
   }, o);
@@ -281,7 +319,7 @@ function heroUnit(def, team, x){
 
 // ---------- setup match ----------
 function startMatch(){
-  units = []; projectiles = []; particles = []; floaters = []; zones = [];
+  units = []; projectiles = []; particles = []; floaters = []; zones = []; strikes = [];
   gameT = 0; waveNum = 0; nextWaveT = 2.5; kills = 0; announceQ = []; announceT = 0;
   matchStart = performance.now();
 
@@ -295,10 +333,11 @@ function startMatch(){
   player = heroUnit(def, 0, P_GATE_X + 130);
   units.push(player);
 
-  // enemy AI hero — Jalal ad-Din of Khwarezm
+  // enemy AI hero — Jalal ad-Din of Khwarezm (хэцүү байдлаар тохируулна)
   aiHero = heroUnit({
     id:'jalal', name:'Жалал ад-Дин', color:'#c85a4a',
-    hp:900, dmg:60, range:80, speed:172, atkCd:0.9,
+    hp:Math.round(900*DIFFS[selDiff].hHp), dmg:Math.round(60*DIFFS[selDiff].hDmg),
+    range:80, speed:172, atkCd:0.9,
     s1:{cd:7}, s2:{cd:15}
   }, 1, E_GATE_X - 130);
   units.push(aiHero);
@@ -327,17 +366,20 @@ function setState(s){
 function spawnWave(){
   waveNum++;
   const hp = 300 + waveNum*14, dmg = 27 + waveNum*1.5;
+  const D = DIFFS[selDiff];
   for(let t=0; t<2; t++){
     const gate = t? eGate : pGate;
     const dir = t? -1 : 1;
+    const mHp = t? hp*D.mHp : hp;
+    const mDmg = t? dmg*D.mDmg : dmg;
     for(let i=0;i<4;i++){
       const archer = (i===3);
       units.push(makeUnit({
         type:'minion', team:t, archer,
         x: gate.x + dir*(70+i*30),
         y: LANE_Y + (i-1.2)*58 + (Math.sin(waveNum*3+i*7)*18),
-        hp: archer? hp*0.72 : hp, maxHp: archer? hp*0.72 : hp,
-        dmg: archer? dmg*0.85 : dmg,
+        hp: archer? mHp*0.72 : mHp, maxHp: archer? mHp*0.72 : mHp,
+        dmg: archer? mDmg*0.85 : mDmg,
         range: archer? 175 : 42,
         atkCd: archer? 1.35 : 1.1,
         speed: 105, face: dir
@@ -403,16 +445,25 @@ function killUnit(u, source){
 }
 
 function attack(u, target){
-  u.atkT = u.atkCd;
+  u.atkT = u.atkCd * (u.frenzyT>0 ? 0.5 : 1);
   u.face = target.x >= u.x ? 1 : -1;
+  const dmg = u.dmg * (u.rageT>0 ? 1.45 : 1);
   if(u.range > 100){
     Snd.bow();
-    projectiles.push({ x:u.x, y:u.y-14, tgt:target, dmg:u.dmg, speed:520, team:u.team, owner:u, pierce:false, life:3 });
+    projectiles.push({ x:u.x, y:u.y-14, tgt:target, dmg, speed:520, team:u.team, owner:u, pierce:false, life:3 });
   } else {
     Snd.hit();
-    dealDamage(target, u.dmg, u);
+    dealDamage(target, dmg, u);
     slashArc(u.x + u.face*u.r, u.y, u.face, u.team? '#ff9d8a':'#ffe9a8');
   }
+}
+
+// хамгийн ойрын N дайсан (байгууламж тооцохгүй)
+function nearestEnemies(u, count, maxD){
+  return units
+    .filter(e => !e.dead && e.team!==u.team && !e.isStruct && dist(u,e)-e.r <= maxD)
+    .sort((a,b) => dist(u,a)-dist(u,b))
+    .slice(0, count);
 }
 
 // ---------- XP / level ----------
@@ -479,6 +530,44 @@ function useSkill(idx){
     } else {     // Төмөр бамбай — shield
       player.shield = 320 + lvl*45;
       player.shieldT = 5;
+    }
+  }
+  else if(def.id==='mukhulai'){
+    if(idx===0){ // Газар доргилт — AoE + stun
+      const R = 130;
+      ringFx(player.x, player.y, R, '#e8b56a');
+      for(const e of units) if(!e.dead && e.team!==player.team && dist(player,e) < R+e.r){
+        dealDamage(e, player.dmg*1.3 + lvl*7, player);
+        if(!e.isStruct) e.stun = Math.max(e.stun, 0.7);
+      }
+    } else {     // Тугийн уриа — довтолгооны хүч ×1.45
+      player.rageT = 5;
+      addFloater(player.x, player.y - player.r*2.4, 'Уриа!', '#ff9d4a');
+      ringFx(player.x, player.y, 90, '#ff9d4a');
+    }
+  }
+  else if(def.id==='boorchi'){
+    if(idx===0){ // Шуурхай цохилт — 3 даралт; бай алга бол cd буцаана
+      const t = findTarget(player, 150, true);
+      if(!t){ player[key] = 0; return; }
+      const hitDmg = player.dmg*0.7 + lvl*4;
+      for(let k=0;k<3;k++) strikes.push({ t:k*0.13, tgt:t, dmg:hitDmg, from:player });
+    } else {     // Салхины хөл — хурд + гайхшрал арилгана
+      player.hasteT = 4;
+      player.stun = 0;
+      addFloater(player.x, player.y - player.r*2.4, 'Салхи!', '#7ac2b0');
+    }
+  }
+  else if(def.id==='khasar'){
+    if(idx===0){ // Гурван сум — ойрын 3 дайсан; бай алга бол cd буцаана
+      const targets = nearestEnemies(player, 3, 420);
+      if(!targets.length){ player[key] = 0; return; }
+      for(const t of targets)
+        projectiles.push({ x:player.x, y:player.y-14, tgt:t, dmg:player.dmg*1.2+lvl*6,
+                           speed:520, team:0, owner:player, pierce:false, life:3 });
+    } else {     // Тэнгэрийн нум — харвах хурд ×2
+      player.frenzyT = 4;
+      addFloater(player.x, player.y - player.r*2.4, 'Тэнгэрийн нум!', '#b085d6');
     }
   }
   updateSkillHUD();
@@ -687,6 +776,8 @@ function update(dt){
     u.atkT = Math.max(0, u.atkT - dt);
     u.stun = Math.max(0, u.stun - dt);
     u.hasteT = Math.max(0, (u.hasteT||0) - dt);
+    u.rageT = Math.max(0, (u.rageT||0) - dt);
+    u.frenzyT = Math.max(0, (u.frenzyT||0) - dt);
     if(u.shieldT > 0){ u.shieldT -= dt; if(u.shieldT<=0) u.shield = 0; }
 
     if(u.type==='minion' && u.stun<=0){
@@ -750,6 +841,20 @@ function update(dt){
       } else {
         p.x += dx/d*step; p.y += dy/d*step;
       }
+    }
+  }
+
+  // хойшлуулсан цохилтууд (Боорчи)
+  for(let i=strikes.length-1;i>=0;i--){
+    const s = strikes[i];
+    s.t -= dt;
+    if(s.t <= 0){
+      if(s.tgt && !s.tgt.dead){
+        dealDamage(s.tgt, s.dmg, s.from);
+        slashArc(s.tgt.x, s.tgt.y, Math.random()<0.5?1:-1, '#7ac2b0');
+        Snd.hit();
+      }
+      strikes.splice(i,1);
     }
   }
 
@@ -1051,6 +1156,15 @@ function drawUnit(u){
     ctx.beginPath(); ctx.arc(u.x, u.y-R*0.3, R*1.6, 0, TAU); ctx.stroke();
     ctx.globalAlpha = 1;
   }
+  // buff rings: уриа (улбар шар), тэнгэрийн нум (ягаан)
+  if(u.rageT > 0){
+    ctx.strokeStyle = 'rgba(255,157,74,.75)'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.ellipse(u.x, u.y+R*0.75, R*1.45, R*0.62, 0, 0, TAU); ctx.stroke();
+  }
+  if(u.frenzyT > 0){
+    ctx.strokeStyle = 'rgba(176,133,214,.75)'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.ellipse(u.x, u.y+R*0.75, R*1.45, R*0.62, 0, 0, TAU); ctx.stroke();
+  }
   // stun stars
   if(u.stun > 0){
     ctx.fillStyle = '#ffe36a'; ctx.font = '700 14px sans-serif'; ctx.textAlign = 'center';
@@ -1134,19 +1248,33 @@ function endMatch(win){
   const mins = Math.floor((performance.now()-matchStart)/60000);
   const secs = Math.floor(((performance.now()-matchStart)/1000) % 60);
   const t = $('endTitle');
+  const common = 'Алалт: <b>'+kills+'</b> · Түвшин: <b>'+player.level+'</b> · Хугацаа: <b>'+mins+':'+String(secs).padStart(2,'0')+'</b> · Хэцүү байдал: <b>'+DIFFS[selDiff].name+'</b>';
   if(win){
     t.textContent = 'ЯЛАЛТ!'; t.className = 'win';
-    $('endStats').innerHTML = 'Мөнх тэнгэрийн хүчин дор дайсны хаалга нурлаа!<br>Алалт: <b>'+kills+'</b> · Түвшин: <b>'+player.level+'</b> · Хугацаа: <b>'+mins+':'+String(secs).padStart(2,'0')+'</b>';
+    $('endStats').innerHTML = 'Мөнх тэнгэрийн хүчин дор дайсны хаалга нурлаа!<br>'+common;
     Snd.win();
   } else {
     t.textContent = 'ЯЛАГДАЛ'; t.className = 'lose';
-    $('endStats').innerHTML = 'Их хаалга нурсан ч дайн дуусаагүй...<br>Алалт: <b>'+kills+'</b> · Түвшин: <b>'+player.level+'</b> · Хугацаа: <b>'+mins+':'+String(secs).padStart(2,'0')+'</b>';
+    $('endStats').innerHTML = 'Их хаалга нурсан ч дайн дуусаагүй...<br>'+common;
     Snd.lose();
   }
   joyEnd();
 }
 
 // ---------- hero select UI ----------
+function buildDiffs(){
+  const row = $('diffRow');
+  row.innerHTML = '<span class="diffLabel">Хэцүү байдал:</span>';
+  DIFFS.forEach((d, i)=>{
+    const pill = document.createElement('button');
+    pill.className = 'diffPill' + (i===selDiff? ' sel':'');
+    pill.textContent = d.name;
+    pill.title = d.desc;
+    pill.addEventListener('click', ()=>{ selDiff = i; buildDiffs(); Snd.init(); Snd.beep(430,.05,'sine',.04); });
+    row.appendChild(pill);
+  });
+}
+
 function buildCards(){
   const wrap = $('cards');
   wrap.innerHTML = '';
@@ -1163,10 +1291,10 @@ function buildCards(){
   });
 }
 
-$('playBtn').addEventListener('click', ()=>{ Snd.init(); buildCards(); setState('select'); });
+$('playBtn').addEventListener('click', ()=>{ Snd.init(); buildCards(); buildDiffs(); setState('select'); });
 $('startBtn').addEventListener('click', ()=>{ Snd.init(); startMatch(); });
 $('againBtn').addEventListener('click', ()=>{ startMatch(); });
-$('changeBtn').addEventListener('click', ()=>{ buildCards(); setState('select'); });
+$('changeBtn').addEventListener('click', ()=>{ buildCards(); buildDiffs(); setState('select'); });
 
 // ---------- main loop ----------
 let lastT = performance.now();
@@ -1195,7 +1323,8 @@ window.GAME = {
   get units(){ return units; },
   get player(){ return player; },
   get waveNum(){ return waveNum; },
-  startQuick(i){ selHero = i||0; startMatch(); },
+  startQuick(i, d){ selHero = i||0; if(d!==undefined) selDiff = d; startMatch(); },
+  setDiff(d){ selDiff = d; },
   useSkill
 };
 </script>

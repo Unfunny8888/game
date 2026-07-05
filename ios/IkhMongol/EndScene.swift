@@ -57,7 +57,8 @@ final class EndScene: SKScene {
             : "Их хаалга нурсан ч дайн дуусаагүй..."
         let mins = stats.seconds / 60
         let secs = stats.seconds % 60
-        let statsText = "\(flavour)\nАлалт: \(stats.kills)  ·  Түвшин: \(stats.level)  ·  Хугацаа: \(mins):\(String(format: "%02d", secs))"
+        let diffName = GameData.difficulties[stats.difficultyIndex].name
+        let statsText = "\(flavour)\nАлалт: \(stats.kills)  ·  Түвшин: \(stats.level)  ·  Хугацаа: \(mins):\(String(format: "%02d", secs))  ·  Хэцүү байдал: \(diffName)"
         let statsL = UIFactory.multiline(statsText, font: Fonts.demi, size: 14,
                                          color: SKColor(red: 0.85, green: 0.76, blue: 0.60, alpha: 1),
                                          width: size.width * 0.85)
@@ -79,10 +80,13 @@ final class EndScene: SKScene {
 
         if name == "again" {
             Haptics.skill()
-            let battle = BattleScene(size: size, heroIndex: stats.heroIndex)
+            Audio.shared.play("tap")
+            let battle = BattleScene(size: size, heroIndex: stats.heroIndex,
+                                     difficultyIndex: stats.difficultyIndex)
             view.presentScene(battle, transition: .fade(withDuration: 0.5))
         } else if name == "change" {
             Haptics.hit()
+            Audio.shared.play("tap")
             let select = HeroSelectScene(size: size)
             select.scaleMode = .resizeFill
             view.presentScene(select, transition: .fade(withDuration: 0.4))

@@ -40,6 +40,15 @@ struct HeroDef {
     let s2: SkillDef
 }
 
+struct DifficultyDef {
+    let name: String
+    let desc: String
+    let minionHp: CGFloat
+    let minionDmg: CGFloat
+    let heroHp: CGFloat
+    let heroDmg: CGFloat
+}
+
 enum GameData {
 
     /// Тоглогчийн сонгож болох баатрууд
@@ -82,7 +91,56 @@ enum GameData {
                          desc: "Урагш ухасхийж, дайрсан дайснаа зогсооно."),
             s2: SkillDef(name: "Төмөр бамбай", short: "Бамбай", icon: "🛡", cd: 13,
                          desc: "Түр зуур хохирлыг шингээх бамбай авна.")
+        ),
+        HeroDef(
+            id: "mukhulai",
+            name: "Мухулай жанжин",
+            role: "ЖАНЖИН",
+            icon: "🪓",
+            color: SKColor(red: 0.79, green: 0.54, blue: 0.29, alpha: 1),
+            hp: 1050, dmg: 60, range: 72, speed: 172, atkCd: 0.9,
+            desc: "Чингис хааны итгэлт жанжин, зүүн гарын түмний ноён.",
+            s1: SkillDef(name: "Газар доргилт", short: "Доргилт", icon: "💥", cd: 7,
+                         desc: "Ойр орчмын дайснуудыг цохиж, хэсэг зогсооно."),
+            s2: SkillDef(name: "Тугийн уриа", short: "Уриа", icon: "🚩", cd: 15,
+                         desc: "Түр хугацаанд довтолгооны хүчээ ихээхэн нэмнэ.")
+        ),
+        HeroDef(
+            id: "boorchi",
+            name: "Боорчи ноён",
+            role: "ШАЛМАГ ДАЙЧИН",
+            icon: "🗡",
+            color: SKColor(red: 0.48, green: 0.76, blue: 0.69, alpha: 1),
+            hp: 850, dmg: 56, range: 70, speed: 200, atkCd: 0.7,
+            desc: "Хааны анхны нөхөр, дөрвөн хүлгийн тэргүүн. Хурдан сэлэмчин.",
+            s1: SkillDef(name: "Шуурхай цохилт", short: "Цохилт", icon: "⚡", cd: 6,
+                         desc: "Хамгийн ойрын дайсныг гурван удаа даран цохино."),
+            s2: SkillDef(name: "Салхины хөл", short: "Салхи", icon: "🌬", cd: 12,
+                         desc: "Хурдаа эрс нэмж, гайхшралаас чөлөөлөгдөнө.")
+        ),
+        HeroDef(
+            id: "khasar",
+            name: "Хасар мэргэн",
+            role: "ХАРВААЧ",
+            icon: "🎯",
+            color: SKColor(red: 0.69, green: 0.52, blue: 0.84, alpha: 1),
+            hp: 720, dmg: 54, range: 260, speed: 185, atkCd: 0.8,
+            desc: "Чингис хааны дүү, домогт хүчтэй мэргэн харваач.",
+            s1: SkillDef(name: "Гурван сум", short: "3 сум", icon: "☄️", cd: 6,
+                         desc: "Ойрын гурван дайсан руу зэрэг сум харвана."),
+            s2: SkillDef(name: "Тэнгэрийн нум", short: "Нум", icon: "🌠", cd: 13,
+                         desc: "Түр хугацаанд харвах хурдаа хоёр дахин нэмнэ.")
         )
+    ]
+
+    /// Хэцүү байдлын түвшингүүд — дайсны хүчийг үржүүлнэ
+    static let difficulties: [DifficultyDef] = [
+        DifficultyDef(name: "Хялбар", desc: "Шинэ тоглогчдод",
+                      minionHp: 0.80, minionDmg: 0.80, heroHp: 0.85, heroDmg: 0.85),
+        DifficultyDef(name: "Дунд", desc: "Жинхэнэ тулаан",
+                      minionHp: 1.00, minionDmg: 1.00, heroHp: 1.00, heroDmg: 1.00),
+        DifficultyDef(name: "Хэцүү", desc: "Зөвхөн баатруудад",
+                      minionHp: 1.28, minionDmg: 1.22, heroHp: 1.25, heroDmg: 1.18)
     ]
 
     /// Дайсны удирдагч — Хорезмын хунтайж

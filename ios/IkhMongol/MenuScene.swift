@@ -9,6 +9,8 @@ final class MenuScene: SKScene {
     override func didMove(to view: SKView) {
         view.isMultipleTouchEnabled = true
         built = true
+        Audio.shared.preload()
+        Audio.shared.startMusic()
         buildUI()
     }
 
@@ -77,6 +79,7 @@ final class MenuScene: SKScene {
         let name = UIFactory.nodeName(at: t.location(in: self), in: self)
         if name == "play", let view = view {
             Haptics.skill()
+            Audio.shared.play("tap")
             let select = HeroSelectScene(size: size)
             select.scaleMode = .resizeFill
             view.presentScene(select, transition: .fade(withDuration: 0.4))

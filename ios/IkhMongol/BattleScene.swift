@@ -128,9 +128,19 @@ final class SkillButton: SKNode {
 
 // MARK: - Тулааны гол үзэгдэл
 
+/// Хойшлуулсан цохилт (Боорчийн шуурхай цохилтод)
+private struct DelayedStrike {
+    var t: CGFloat
+    weak var target: Unit?
+    let dmg: CGFloat
+    weak var from: Unit?
+}
+
 final class BattleScene: SKScene {
 
     private let heroIndex: Int
+    private let difficultyIndex: Int
+    private var diff: DifficultyDef { GameData.difficulties[difficultyIndex] }
 
     // давхаргууд
     private let world = SKNode()
@@ -144,6 +154,7 @@ final class BattleScene: SKScene {
     private var units: [Unit] = []
     private var projectiles: [Projectile] = []
     private var zones: [Zone] = []
+    private var strikes: [DelayedStrike] = []
     private var player: Unit!
     private var aiHero: Unit!
     private var pGate: Unit!
@@ -184,6 +195,8 @@ final class BattleScene: SKScene {
     private var skillButtons: [SkillButton] = []
     private var respawnDim: SKSpriteNode!
     private var respawnLabel: SKLabelNode!
+    private var muteButton: SKNode!
+    private var muteIcon: SKLabelNode!
     private var announceQueue: [String] = []
     private var announceBusy = false
 
@@ -191,8 +204,9 @@ final class BattleScene: SKScene {
 
     // MARK: - Инициализаци
 
-    init(size: CGSize, heroIndex: Int) {
+    init(size: CGSize, heroIndex: Int, difficultyIndex: Int) {
         self.heroIndex = heroIndex
+        self.difficultyIndex = min(max(difficultyIndex, 0), GameData.difficulties.count - 1)
         super.init(size: size)
         scaleMode = .resizeFill
         backgroundColor = Palette.night
@@ -209,6 +223,9 @@ final class BattleScene: SKScene {
         buildHUD()
         built = true
         layout()
+
+        Audio.shared.preload()
+        Audio.shared.startMusic()
 
         announce("Тулаан эхэллээ!")
         announce("Дайсны их хаалгыг нураа!")
@@ -332,10 +349,11 @@ final class BattleScene: SKScene {
         world.addChild(player)
         units.append(player)
 
-        // дайсны баатар (AI)
+        // дайсны баатар (AI) — хэцүү байдлаар хүчийг тохируулна
         let jd = GameData.jalal
         aiHero = Unit(kind: .hero, team: .khwarezm, displayName: jd.name,
-                      radius: 20, hp: jd.hp, dmg: jd.dmg, range: jd.range,
+                      radius: 20, hp: (jd.hp * diff.heroHp).rounded(),
+                      dmg: (jd.dmg * diff.heroDmg).rounded(), range: jd.range,
                       atkCd: jd.atkCd, moveSpeed: jd.speed, aggro: 320, heroDef: jd)
         aiHero.position = CGPoint(x: World.eGateX - 130, y: World.laneY)
         world.addChild(aiHero)
@@ -556,6 +574,19 @@ final class BattleScene: SKScene {
         hud.addChild(b1)
         hud.addChild(b2)
 
+        // дууны товч
+        muteButton = SKNode()
+        let muteBg = SKShapeNode(circleOfRadius: 18)
+        muteBg.fillColor = SKColor(white: 0, alpha: 0.4)
+        muteBg.strokeColor = Palette.gold.withAlphaComponent(0.5)
+        muteBg.lineWidth = 1.5
+        muteButton.addChild(muteBg)
+        muteIcon = SKLabelNode(text: Audio.shared.muted ? "🔇" : "🔊")
+        muteIcon.fontSize = 17
+        muteIcon.verticalAlignmentMode = .center
+        muteButton.addChild(muteIcon)
+        hud.addChild(muteButton)
+
         // амилалтын бүрхүүл
         respawnDim = SKSpriteNode(color: SKColor(red: 0.16, green: 0.04, blue: 0.04, alpha: 0.45), size: size)
         respawnDim.isHidden = true
@@ -584,6 +615,7 @@ final class BattleScene: SKScene {
 
         topbar.position = CGPoint(x: 12 + insets.left, y: size.height - 8 - insets.top)
         killLabel.position = CGPoint(x: size.width / 2, y: size.height - 24 - insets.top)
+        muteButton.position = CGPoint(x: size.width - 30 - insets.right, y: size.height - 28 - insets.top)
         announceLabel.position = CGPoint(x: size.width / 2, y: size.height * 0.68)
 
         let bx = size.width - 60 - insets.right
@@ -608,12 +640,14 @@ final class BattleScene: SKScene {
         for team in [Team.mongol, Team.khwarezm] {
             let gate: Unit = team == .mongol ? pGate : eGate
             let dir: CGFloat = team == .mongol ? 1 : -1
+            let mHp = team == .khwarezm ? hp * diff.minionHp : hp
+            let mDmg = team == .khwarezm ? dmg * diff.minionDmg : dmg
             for i in 0..<4 {
                 let archer = i == 3
                 let m = Unit(kind: .minion, team: team,
                              radius: 15,
-                             hp: archer ? hp * 0.72 : hp,
-                             dmg: archer ? dmg * 0.85 : dmg,
+                             hp: archer ? mHp * 0.72 : mHp,
+                             dmg: archer ? mDmg * 0.85 : mDmg,
                              range: archer ? 175 : 42,
                              atkCd: archer ? 1.35 : 1.1,
                              moveSpeed: 105,
@@ -677,6 +711,7 @@ final class BattleScene: SKScene {
 
         case .hero:
             Haptics.crash()
+            Audio.shared.play("crash", volume: 0.8)
             u.isHidden = true
             if u === aiHero {
                 kills += 1
@@ -690,34 +725,50 @@ final class BattleScene: SKScene {
 
         case .tower:
             Haptics.crash()
+            Audio.shared.play("crash", volume: 1)
             announce(u.team == .khwarezm ? "Дайсны цамхаг нурлаа!" : "Манай цамхаг нурлаа!")
             if u.team == .khwarezm && byPlayer { giveXP(160) }
             u.removeFromParent()
 
         case .gate:
             Haptics.crash()
+            Audio.shared.play("crash", volume: 1)
             endMatch(win: u.team == .khwarezm)
         }
     }
 
     private func performAttack(_ u: Unit, on target: Unit) {
-        u.atkT = u.atkCd
+        u.atkT = u.atkCd * (u.frenzyT > 0 ? 0.5 : 1)
         u.face = target.position.x >= u.position.x ? 1 : -1
+        let dmg = u.dmg * (u.rageT > 0 ? 1.45 : 1)
         if u.range > 100 {
+            Audio.shared.play("bow", volume: 0.35)
             let p = Projectile(from: CGPoint(x: u.position.x, y: u.position.y + 14),
-                               dmg: u.dmg, team: u.team, owner: u, pierce: false, life: 3,
+                               dmg: dmg, team: u.team, owner: u, pierce: false, life: 3,
                                big: u.kind == .tower)
             p.target = target
             world.addChild(p.node)
             projectiles.append(p)
         } else {
-            dealDamage(to: target, amount: u.dmg, from: u)
+            Audio.shared.play("hit", volume: 0.4)
+            dealDamage(to: target, amount: dmg, from: u)
             slashFx(at: CGPoint(x: u.position.x + u.face * u.radius, y: u.position.y), face: u.face,
                     color: u.team == .khwarezm
                         ? SKColor(red: 1.0, green: 0.62, blue: 0.54, alpha: 1)
                         : SKColor(red: 1.0, green: 0.91, blue: 0.66, alpha: 1))
             if u === player || target === player { Haptics.hit() }
         }
+    }
+
+    /// Хамгийн ойрын N дайсныг олох (байгууламж оруулахгүй)
+    private func nearestEnemies(of u: Unit, count: Int, maxDist: CGFloat) -> [Unit] {
+        let candidates = units.filter {
+            !$0.isDead && $0.team != u.team && $0.kind != .tower && $0.kind != .gate
+                && u.position.distance(to: $0.position) - $0.radius <= maxDist
+        }
+        return Array(candidates.sorted {
+            u.position.distance(to: $0.position) < u.position.distance(to: $1.position)
+        }.prefix(count))
     }
 
     private func moveUnit(_ u: Unit, toward point: CGPoint, dt: CGFloat) {
@@ -748,6 +799,7 @@ final class BattleScene: SKScene {
             burst(at: player.position, color: Palette.xpBlue, count: 22)
             announce("Түвшин \(player.level) боллоо!")
             Haptics.levelUp()
+            Audio.shared.play("level", volume: 0.7)
             need = World.xpNeed(player.level)
         }
     }
@@ -760,6 +812,7 @@ final class BattleScene: SKScene {
         if idx == 0 { guard player.s1T <= 0 else { return }; player.s1T = cd }
         else        { guard player.s2T <= 0 else { return }; player.s2T = cd }
         Haptics.skill()
+        Audio.shared.play("skill", volume: 0.6)
         let lvl = CGFloat(player.level)
 
         switch def.id {
@@ -776,6 +829,7 @@ final class BattleScene: SKScene {
                 }
             } else {
                 // Тэнгэрийн ивээл — эдгэрэлт + хурд
+                Audio.shared.play("heal", volume: 0.7)
                 player.hp = min(player.maxHp, player.hp + player.maxHp * 0.3)
                 player.hasteT = 3.5
                 player.updateBars()
@@ -842,7 +896,89 @@ final class BattleScene: SKScene {
                 player.shieldT = 5
             }
 
+        case "mukhulai":
+            if idx == 0 {
+                // Газар доргилт — тойрсон цохилт + зогсоолт
+                let radius: CGFloat = 130
+                ringFx(at: player.position, radius: radius,
+                       color: SKColor(red: 0.91, green: 0.71, blue: 0.42, alpha: 1))
+                for e in units where !e.isDead && e.team != player.team {
+                    if player.position.distance(to: e.position) < radius + e.radius {
+                        dealDamage(to: e, amount: player.dmg * 1.3 + lvl * 7, from: player)
+                        if e.kind != .tower && e.kind != .gate { e.stun = max(e.stun, 0.7) }
+                    }
+                }
+            } else {
+                // Тугийн уриа — довтолгооны хүч нэмэгдэнэ
+                player.rageT = 5
+                floater("Уриа!", at: player.position, dy: player.radius + 26,
+                        color: SKColor(red: 1.0, green: 0.62, blue: 0.29, alpha: 1))
+                ringFx(at: player.position, radius: 90,
+                       color: SKColor(red: 1.0, green: 0.62, blue: 0.29, alpha: 1))
+            }
+
+        case "boorchi":
+            if idx == 0 {
+                // Шуурхай цохилт — гурван даралт; бай олдохгүй бол cd буцаана
+                guard let t = findTarget(for: player, maxDist: 150, unitsOnly: true) else {
+                    player.s1T = 0
+                    return
+                }
+                let hitDmg = player.dmg * 0.7 + lvl * 4
+                for k in 0..<3 {
+                    strikes.append(DelayedStrike(t: CGFloat(k) * 0.13, target: t,
+                                                 dmg: hitDmg, from: player))
+                }
+            } else {
+                // Салхины хөл — хурд + гайхшрал арилгана
+                player.hasteT = 4
+                player.stun = 0
+                floater("Салхи!", at: player.position, dy: player.radius + 26,
+                        color: SKColor(red: 0.48, green: 0.76, blue: 0.69, alpha: 1))
+            }
+
+        case "khasar":
+            if idx == 0 {
+                // Гурван сум — ойрын 3 дайсан руу; бай олдохгүй бол cd буцаана
+                let targets = nearestEnemies(of: player, count: 3, maxDist: 420)
+                guard !targets.isEmpty else {
+                    player.s1T = 0
+                    return
+                }
+                for t in targets {
+                    let p = Projectile(from: CGPoint(x: player.position.x, y: player.position.y + 14),
+                                       dmg: player.dmg * 1.2 + lvl * 6, team: .mongol,
+                                       owner: player, pierce: false, life: 3)
+                    p.target = t
+                    world.addChild(p.node)
+                    projectiles.append(p)
+                }
+            } else {
+                // Тэнгэрийн нум — харвах хурд ×2
+                player.frenzyT = 4
+                floater("Тэнгэрийн нум!", at: player.position, dy: player.radius + 26,
+                        color: SKColor(red: 0.69, green: 0.52, blue: 0.84, alpha: 1))
+            }
+
         default: break
+        }
+    }
+
+    private func processStrikes(dt: CGFloat) {
+        var idx = strikes.count - 1
+        while idx >= 0 {
+            strikes[idx].t -= dt
+            if strikes[idx].t <= 0 {
+                let s = strikes[idx]
+                if let t = s.target, !t.isDead {
+                    dealDamage(to: t, amount: s.dmg, from: s.from)
+                    slashFx(at: t.position, face: CGFloat(Bool.random() ? 1 : -1),
+                            color: SKColor(red: 0.48, green: 0.76, blue: 0.69, alpha: 1))
+                    Audio.shared.play("hit", volume: 0.4)
+                }
+                strikes.remove(at: idx)
+            }
+            idx -= 1
         }
     }
 
@@ -922,6 +1058,7 @@ final class BattleScene: SKScene {
         applySeparation()
         updateProjectiles(dt: dt)
         updateZones(dt: dt)
+        processStrikes(dt: dt)
         processAnnouncements()
         updateCamera(dt: dt)
         updateHUD()
@@ -1027,6 +1164,8 @@ final class BattleScene: SKScene {
             u.atkT = max(0, u.atkT - dt)
             u.stun = max(0, u.stun - dt)
             u.hasteT = max(0, u.hasteT - dt)
+            u.rageT = max(0, u.rageT - dt)
+            u.frenzyT = max(0, u.frenzyT - dt)
             if u.shieldT > 0 {
                 u.shieldT -= dt
                 if u.shieldT <= 0 { u.shield = 0 }
@@ -1176,6 +1315,7 @@ final class BattleScene: SKScene {
                     }
                 }
                 Haptics.hit()
+                Audio.shared.play("hit", volume: 0.7)
                 z.node.removeFromParent()
                 zones.remove(at: idx)
             }
@@ -1295,8 +1435,10 @@ final class BattleScene: SKScene {
         guard !ended else { return }
         ended = true
         if win { Haptics.victory() } else { Haptics.defeat() }
+        Audio.shared.play(win ? "win" : "lose", volume: 0.9)
         let stats = MatchStats(win: win, kills: kills, level: player.level,
-                               seconds: Int(matchTime), heroIndex: heroIndex)
+                               seconds: Int(matchTime), heroIndex: heroIndex,
+                               difficultyIndex: difficultyIndex)
         run(.sequence([
             .wait(forDuration: 0.9),
             .run { [weak self] in
@@ -1313,6 +1455,13 @@ final class BattleScene: SKScene {
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         for t in touches {
             let p = t.location(in: self)
+
+            // дууны товч
+            if p.distance(to: muteButton.position) <= 26 {
+                Audio.shared.muted.toggle()
+                muteIcon.text = Audio.shared.muted ? "🔇" : "🔊"
+                continue
+            }
 
             // чадварын товч
             var handled = false
@@ -1374,4 +1523,5 @@ struct MatchStats {
     let level: Int
     let seconds: Int
     let heroIndex: Int
+    let difficultyIndex: Int
 }

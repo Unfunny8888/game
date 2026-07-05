@@ -32,6 +32,8 @@ final class Unit: SKNode {
     }
     var shieldT: CGFloat = 0
     var hasteT: CGFloat = 0
+    var rageT: CGFloat = 0      // Тугийн уриа — довтолгооны хүч ×1.45
+    var frenzyT: CGFloat = 0    // Тэнгэрийн нум — харвах хурд ×2
     var isDead = false
     var respawnT: CGFloat = 0
 
