@@ -730,7 +730,7 @@ let matchDiff = DIFFS[1];   // идэвхтэй тулааны хүндрэл (�
 function startMatch(){
   units = []; projectiles = []; particles = []; floaters = []; zones = []; strikes = [];
   gameT = 0; waveNum = 0; nextWaveT = 2.5; kills = 0; announceQ = []; announceT = 0;
-  matchGold = 0; combo = 0; comboT = 0; shakeT = 0;
+  matchGold = 0; combo = 0; comboT = 0; shakeT = 0; enemyCamps = [];
   matchStart = performance.now();
 
   // Аян дайны түвшин эсвэл энгийн хүндрэлээс тулааны параметрийг тодорхойлно
@@ -785,6 +785,8 @@ function startMatch(){
   if(inCampaign){
     setupObjective(LEVELS[campaignLevel].obj);
     events = (LEVELS[campaignLevel].events || []).map(e => Object.assign({fired:false}, e));
+    setupCamps();          // аяны горим: давалгааны оронд тарсан дайсны бууц
+    nextWaveT = Infinity;  // марш давалгаа унтраана — задгай талбарын адал явдал
   }
 
   setState('play');
@@ -796,6 +798,49 @@ function startMatch(){
     announce('Тулаан эхэллээ!');
     announce('Дайсны их хаалгыг нураа!');
   }
+}
+
+// Аяны горим — задгай талбарт тарсан дайсны бууц (марш давалгааны оронд).
+// Бууц бүр өөрийн байрандаа хамгаалж, тоглогч ойртоход л дайрна (WoW/GTA маягийн эрэл).
+let enemyCamps = [];
+function setupCamps(){
+  enemyCamps = [];
+  const D = matchDiff;
+  const startX = 640, endX = E_GATE_X - 300;
+  const nCamps = 5;
+  const band = GROUND_BOT - GROUND_TOP - 120;
+  for(let c=0; c<nCamps; c++){
+    const t = nCamps>1 ? c/(nCamps-1) : 0;
+    const cx = startX + t*(endX-startX);
+    const cy = GROUND_TOP + 60 + ((c*163+70) % band);
+    const grunts = 3 + (c%2);
+    const lvl = campaignLevel||0;
+    const hp = (300 + lvl*46) * D.mHp;
+    const dmg = (25 + lvl*3.4) * D.mDmg;
+    enemyCamps.push({ x:cx, y:cy, cleared:false });
+    for(let i=0;i<grunts;i++){
+      const archer = (i===grunts-1);
+      const ox = (i-(grunts-1)/2)*40, oy = ((i%2)? 1:-1)*26;
+      const gx = cx+ox, gy = clamp(cy+oy, GROUND_TOP, GROUND_BOT);
+      units.push(makeUnit({
+        type:'minion', team:1, archer, guard:true, campId:c,
+        homeX:gx, homeY:gy, x:gx, y:gy,
+        hp: archer? hp*0.7:hp, maxHp: archer? hp*0.7:hp,
+        dmg: archer? dmg*0.85:dmg,
+        range: archer? 175:44, atkCd: archer?1.35:1.1,
+        speed: 94, aggro: 205, face:-1
+      }));
+    }
+  }
+  // Сүүлийн бууцанд аварга дайчин (жижиг босс)
+  const lvl = campaignLevel||0;
+  const bhp = (900 + lvl*90) * D.mHp;
+  units.push(makeUnit({
+    type:'minion', team:1, boss:true, name:'Хуарангийн ахлагч', r:26,
+    guard:true, campId:nCamps-1,
+    homeX:endX, homeY:LANE_Y, x:endX, y:LANE_Y,
+    hp:bhp, maxHp:bhp, dmg:(48+lvl*3)*D.mDmg, range:52, atkCd:1.2, speed:74, aggro:260
+  }));
 }
 
 // Даалгаврын төрлөөс хамааран объектуудыг байрлуулна
@@ -1501,6 +1546,9 @@ function updateAI(dt){
     } else {
       moveUnit(u, tgt.x, tgt.y, dt);
     }
+  } else if(campaignLevel !== null){
+    // аяны горим: командлагч дайсны хаалгыг хамгаална (задгай талбарын босс)
+    moveUnit(u, eGate.x - 150, LANE_Y, dt);
   } else if(front){
     // follow behind own minion wave
     moveUnit(u, front.x + 70, front.y, dt);
@@ -1623,8 +1671,11 @@ function update(dt){
   for(const u of units){ if(!u.dead){ u._px = u.x; u._py = u.y; } }
 
   // waves
-  nextWaveT -= dt;
-  if(nextWaveT <= 0){ spawnWave(); nextWaveT = 17; }
+  // Марш давалгаа зөвхөн энгийн тулаанд (аяны горим бол задгай талбарын бууц)
+  if(campaignLevel === null){
+    nextWaveT -= dt;
+    if(nextWaveT <= 0){ spawnWave(); nextWaveT = 17; }
+  }
 
   // player input movement
   if(player && !player.dead){
@@ -1723,6 +1774,9 @@ function update(dt){
         const d = dist(u,t);
         if(d <= u.range + t.r){ if(u.atkT<=0) attack(u,t); }
         else moveUnit(u, t.x, t.y, dt);
+      } else if(u.guard){
+        // хуарандаа буцаж хамгаална (задгай талбарын бууц)
+        if(Math.hypot(u.homeX-u.x, u.homeY-u.y) > 10) moveUnit(u, u.homeX, u.homeY, dt);
       } else {
         const goalX = u.team? P_GATE_X : E_GATE_X;
         moveUnit(u, goalX, LANE_Y + Math.sin(u.x*0.01)*70, dt);
@@ -1930,6 +1984,27 @@ function setupDeco(theme){
   }
 }
 setupDeco('steppe');
+
+// Идэвхтэй даалгаврын байршил — WoW маягийн замын сум заана
+function objectiveTarget(){
+  if(escapeZone && !escapeZone.reached) return { x:escapeZone.x, y:escapeZone.y, label:'ГАРЦ' };
+  if(rescuee && !rescuee.dead && !rescuee.freed) return { x:rescuee.x, y:rescuee.y, label:'Бөртэ' };
+  const pk = pickups.find(p=>!p.got);
+  if(pk) return { x:pk.x, y:pk.y, label:'Морь' };
+  if(obj && obj.type==='slay' && aiHero && !aiHero.dead) return { x:aiHero.x, y:aiHero.y, label:matchDiff.eName };
+  // үлдсэн дайсны бууц руу — дараа нь хаалга руу чиглүүлнэ
+  if(campaignLevel !== null){
+    let near=null, nd=1e9;
+    for(const u of units){
+      if(u.dead || u.team!==1 || u.isStruct || !u.guard) continue;
+      const d = player? Math.abs(u.x-player.x) : 0;
+      if(d < nd){ nd=d; near=u; }
+    }
+    if(near) return { x:near.x, y:near.y, label:'Дайсны бууц' };
+  }
+  if(eGate && !eGate.dead) return { x:eGate.x, y:eGate.y, label:'Дайсны хаалга' };
+  return null;
+}
 
 // уур амьсгалын өнгө — тулааны газраар ялгаатай
 const SKIES = {
@@ -2151,6 +2226,41 @@ function render(){
   vig.addColorStop(0,'rgba(0,0,0,0)'); vig.addColorStop(1,'rgba(0,0,0,.34)');
   ctx.fillStyle = vig; ctx.fillRect(0,0,vw,VIEW_H);
 
+  // ---- Даалгаврын замын сум (WoW/GTA маягийн зорилгын заагч) ----
+  if(state==='play' && player && !player.dead){
+    const tgt = objectiveTarget();
+    if(tgt){
+      const sx = tgt.x - camX;           // дэлгэцийн байрлал (босоо камер байхгүй)
+      const sy = tgt.y;
+      const distM = Math.round(Math.abs(tgt.x - player.x)/10);
+      const onScreen = sx > 40 && sx < vw-40 && sy > 120 && sy < VIEW_H-60;
+      ctx.textAlign = 'center';
+      if(onScreen){
+        // зорилгын дээр гялалзах алмаз тэмдэг
+        const my = sy - 78 - Math.sin(gameT*3)*6;
+        ctx.fillStyle = 'rgba(255,214,90,.95)'; ctx.strokeStyle = 'rgba(90,60,10,.9)'; ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(sx, my+16); ctx.lineTo(sx-11, my); ctx.lineTo(sx, my-16); ctx.lineTo(sx+11, my); ctx.closePath();
+        ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#3a2a08'; ctx.font = '800 12px -apple-system, sans-serif';
+        ctx.fillText('!', sx, my+4);
+        drawQuestLabel(sx, my - 26, tgt.label + ' · ' + distM + 'м');
+      } else {
+        // дэлгэцээс гадуур — ирмэг рүү сум заана
+        const dir = sx <= vw/2 ? -1 : 1;
+        const ex = dir<0 ? 52 : vw-52;
+        const ey = clamp(sy, 130, VIEW_H-110);
+        ctx.save(); ctx.translate(ex, ey);
+        ctx.fillStyle = 'rgba(255,214,90,.96)'; ctx.strokeStyle = 'rgba(90,60,10,.9)'; ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(dir*20, 0); ctx.lineTo(-dir*12, -13); ctx.lineTo(-dir*4, 0); ctx.lineTo(-dir*12, 13); ctx.closePath();
+        ctx.fill(); ctx.stroke();
+        ctx.restore();
+        drawQuestLabel(ex, ey - 26, tgt.label + ' · ' + distM + 'м →');
+      }
+    }
+  }
+
   // respawn overlay
   if(player && player.dead){
     ctx.fillStyle = 'rgba(40,10,10,.45)'; ctx.fillRect(0,0,vw,VIEW_H);
@@ -2159,6 +2269,18 @@ function render(){
   }
 }
 
+// Даалгаврын шошго — бага зэрэг бараан дэвсгэртэй алтан текст
+function drawQuestLabel(cx, cy, txt){
+  ctx.font = '800 12px -apple-system, sans-serif'; ctx.textAlign = 'center';
+  const w = ctx.measureText(txt).width + 16;
+  ctx.fillStyle = 'rgba(20,14,6,.7)';
+  ctx.beginPath();
+  if(ctx.roundRect) ctx.roundRect(cx-w/2, cy-11, w, 20, 6); else ctx.rect(cx-w/2, cy-11, w, 20);
+  ctx.fill();
+  ctx.fillStyle = '#ffe08a'; ctx.textBaseline = 'middle';
+  ctx.fillText(txt, cx, cy);
+  ctx.textBaseline = 'alphabetic';
+}
 function drawCloud(x, y, s){
   ctx.beginPath();
   ctx.ellipse(x, y, 34*s, 14*s, 0, 0, TAU);
