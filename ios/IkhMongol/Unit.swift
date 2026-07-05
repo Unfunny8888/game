@@ -41,6 +41,10 @@ final class Unit: SKNode {
     var respawnT: CGFloat = 0
     var netId: Int32 = 0        // PvP горимд нэгжийг таних дугаар
 
+    // Аяны горим — задгай талбарын бууц: байрандаа хамгаалж, ойртоход дайрна
+    var isGuard = false
+    var homePos: CGPoint = .zero
+
     // Ухасхийлт (Сүбээдэй) — нэгж бүрд тусдаа
     var dashT: CGFloat = 0
     var dashVX: CGFloat = 0

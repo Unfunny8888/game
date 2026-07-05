@@ -234,6 +234,13 @@ final class BattleScene: SKScene {
     private var objBanner: SKLabelNode?
     private var objBannerBg: SKShapeNode?
 
+    // Даалгаврын замын заагч (WoW/GTA маягийн зорилгын сум)
+    private var questMarker: SKNode?
+    private var questDiamond: SKShapeNode?
+    private var questArrow: SKShapeNode?
+    private var questLabel: SKLabelNode?
+    private var questLabelBg: SKShapeNode?
+
     // Дайсны хүчний үржүүлэгчид — аян дайн эсвэл сонгосон хүндрэлээс
     private var effMinionHp: CGFloat { camp?.minionMul ?? diff.minionHp }
     private var effMinionDmg: CGFloat { camp?.minionMul ?? diff.minionDmg }
@@ -273,6 +280,7 @@ final class BattleScene: SKScene {
         if let level = campaignLevel {
             let L = GameData.campaign[level]
             setupObjective(L.objective)
+            setupCamps(level: level)                 // задгай талбарын дайсны бууц
             pendingEvents = L.events
             Audio.shared.play("horn", volume: 0.7)   // дайны эвэр бүрээ — аян эхлэв
             announce("\(level + 1)-р түвшин: \(L.title)")
@@ -1133,6 +1141,53 @@ final class BattleScene: SKScene {
 
     // MARK: - Давалгаа
 
+    /// Аяны горим — задгай талбарт тарсан дайсны бууц (марш давалгааны оронд).
+    /// Бууц бүр байрандаа хамгаалж, тоглогч ойртоход л дайрна (WoW/GTA маягийн эрэл).
+    private func setupCamps(level: Int) {
+        let startX: CGFloat = 640, endX = World.eGateX - 300
+        let nCamps = 5
+        let band = Int(World.groundTop - World.groundBottom - 120)
+        for c in 0..<nCamps {
+            let t = nCamps > 1 ? CGFloat(c) / CGFloat(nCamps - 1) : 0
+            let cx = startX + t * (endX - startX)
+            let cy = World.groundBottom + 60 + CGFloat((c * 163 + 70) % max(1, band))
+            let grunts = 3 + (c % 2)
+            let hp = (300 + CGFloat(level) * 46) * effMinionHp
+            let dmg = (25 + CGFloat(level) * 3.4) * effMinionDmg
+            for i in 0..<grunts {
+                let archer = i == grunts - 1
+                let ox = (CGFloat(i) - CGFloat(grunts - 1) / 2) * 40
+                let oy = CGFloat(i % 2 == 0 ? -1 : 1) * 26
+                let gx = cx + ox
+                let gy = clampF(cy + oy, World.groundBottom, World.groundTop)
+                let m = Unit(kind: .minion, team: .khwarezm, radius: 15,
+                             hp: archer ? hp * 0.7 : hp,
+                             dmg: archer ? dmg * 0.85 : dmg,
+                             range: archer ? 175 : 44,
+                             atkCd: archer ? 1.35 : 1.1,
+                             moveSpeed: 94, aggro: 205, archer: archer)
+                m.isGuard = true
+                m.homePos = CGPoint(x: gx, y: gy)
+                m.position = m.homePos
+                m.face = -1
+                world.addChild(m)
+                track(m)
+            }
+        }
+        // сүүлийн бууцны аварга дайчин (жижиг босс)
+        let bhp = (900 + CGFloat(level) * 90) * effMinionHp
+        let b = Unit(kind: .minion, team: .khwarezm, displayName: "Хуарангийн ахлагч",
+                     radius: 26, hp: bhp,
+                     dmg: (48 + CGFloat(level) * 3) * effMinionDmg,
+                     range: 52, atkCd: 1.2, moveSpeed: 74, aggro: 260, boss: true)
+        b.isGuard = true
+        b.homePos = CGPoint(x: endX, y: World.laneY)
+        b.position = b.homePos
+        b.face = -1
+        world.addChild(b)
+        track(b)
+    }
+
     private func spawnWave() {
         waveNum += 1
         let hp = 300 + CGFloat(waveNum) * 14
@@ -1671,6 +1726,9 @@ final class BattleScene: SKScene {
             } else {
                 moveUnit(u, toward: tgt.position, dt: dt)
             }
+        } else if isCampaign {
+            // аяны горим: командлагч дайсны хаалгыг хамгаална (задгай талбарын босс)
+            moveUnit(u, toward: CGPoint(x: eGate.position.x - 150, y: World.laneY), dt: dt)
         } else if let front = front {
             moveUnit(u, toward: CGPoint(x: front.position.x + 70, y: front.position.y), dt: dt)
         } else {
@@ -1791,11 +1849,13 @@ final class BattleScene: SKScene {
             }
         }
 
-        // давалгаа
-        nextWave -= dt
-        if nextWave <= 0 {
-            spawnWave()
-            nextWave = World.waveInterval
+        // Марш давалгаа зөвхөн энгийн тулаанд (аяны горим бол задгай талбарын бууц)
+        if !isCampaign {
+            nextWave -= dt
+            if nextWave <= 0 {
+                spawnWave()
+                nextWave = World.waveInterval
+            }
         }
 
         updatePlayer(dt: dt)
@@ -1972,6 +2032,11 @@ final class BattleScene: SKScene {
                         if u.atkT <= 0 { performAttack(u, on: t) }
                     } else {
                         moveUnit(u, toward: t.position, dt: dt)
+                    }
+                } else if u.isGuard {
+                    // хуарандаа буцаж хамгаална (задгай талбарын бууц)
+                    if u.position.distance(to: u.homePos) > 10 {
+                        moveUnit(u, toward: u.homePos, dt: dt)
                     }
                 } else {
                     let goalX: CGFloat = u.team == .khwarezm ? World.pGateX : World.eGateX
@@ -2165,6 +2230,120 @@ final class BattleScene: SKScene {
             skillButtons[0].setCooldown(player.s1T)
             skillButtons[1].setCooldown(player.s2T)
         }
+
+        updateQuestMarker()
+    }
+
+    // MARK: - Даалгаврын замын заагч
+
+    private func objectiveWorldTarget() -> (pos: CGPoint, label: String)? {
+        if let z = escapeZone, z.parent != nil { return (z.position, "ГАРЦ") }
+        if let r = rescuee, !r.isDead, !rescueeFreed { return (r.position, "Бөртэ") }
+        if let pk = pickups.first(where: { $0.parent != nil }) { return (pk.position, "Морь") }
+        if case .slay(_, _)? = objective, !aiHero.isDead { return (aiHero.position, aiHero.displayName) }
+        // үлдсэн дайсны бууц руу — дараа нь хаалга руу чиглүүлнэ
+        var near: Unit?
+        var nd: CGFloat = .greatestFiniteMagnitude
+        for u in units where !u.isDead && u.team == .khwarezm && u.kind == .minion && u.isGuard {
+            let d = abs(u.position.x - player.position.x)
+            if d < nd { nd = d; near = u }
+        }
+        if let n = near { return (n.position, "Дайсны бууц") }
+        if !eGate.isDead { return (eGate.position, "Дайсны хаалга") }
+        return nil
+    }
+
+    private func ensureQuestMarker() {
+        guard questMarker == nil else { return }
+        let node = SKNode()
+        node.zPosition = 900
+        hud.addChild(node)
+        questMarker = node
+
+        let dia = SKShapeNode(path: {
+            let p = UIBezierPath()
+            p.move(to: CGPoint(x: 0, y: 16)); p.addLine(to: CGPoint(x: 11, y: 0))
+            p.addLine(to: CGPoint(x: 0, y: -16)); p.addLine(to: CGPoint(x: -11, y: 0)); p.close()
+            return p.cgPath
+        }())
+        dia.fillColor = SKColor(red: 1.0, green: 0.84, blue: 0.35, alpha: 0.96)
+        dia.strokeColor = SKColor(red: 0.35, green: 0.24, blue: 0.04, alpha: 0.9)
+        dia.lineWidth = 2
+        node.addChild(dia)
+        questDiamond = dia
+        let bang = UIFactory.label("!", font: Fonts.heavy, size: 13,
+                                   color: SKColor(red: 0.23, green: 0.16, blue: 0.03, alpha: 1))
+        bang.verticalAlignmentMode = .center
+        dia.addChild(bang)
+
+        let arrow = SKShapeNode(path: {
+            let p = UIBezierPath()
+            p.move(to: CGPoint(x: 20, y: 0)); p.addLine(to: CGPoint(x: -12, y: -13))
+            p.addLine(to: CGPoint(x: -4, y: 0)); p.addLine(to: CGPoint(x: -12, y: 13)); p.close()
+            return p.cgPath
+        }())
+        arrow.fillColor = SKColor(red: 1.0, green: 0.84, blue: 0.35, alpha: 0.96)
+        arrow.strokeColor = SKColor(red: 0.35, green: 0.24, blue: 0.04, alpha: 0.9)
+        arrow.lineWidth = 2
+        arrow.isHidden = true
+        node.addChild(arrow)
+        questArrow = arrow
+
+        let bg = SKShapeNode(rectOf: CGSize(width: 120, height: 20), cornerRadius: 6)
+        bg.fillColor = SKColor(white: 0.07, alpha: 0.7)
+        bg.strokeColor = .clear
+        node.addChild(bg)
+        questLabelBg = bg
+        let lbl = UIFactory.label("", font: Fonts.bold, size: 12,
+                                  color: SKColor(red: 1.0, green: 0.88, blue: 0.54, alpha: 1))
+        lbl.verticalAlignmentMode = .center
+        node.addChild(lbl)
+        questLabel = lbl
+    }
+
+    private func updateQuestMarker() {
+        // зөвхөн аяны горимд
+        guard isCampaign, !player.isDead, let target = objectiveWorldTarget() else {
+            questMarker?.isHidden = true
+            return
+        }
+        ensureQuestMarker()
+        questMarker?.isHidden = false
+
+        let screenX = target.pos.x * worldScale + world.position.x
+        let screenY = target.pos.y * worldScale + world.position.y
+        let distM = Int(abs(target.pos.x - player.position.x) / 10)
+        let onScreen = screenX > 40 && screenX < size.width - 40
+            && screenY > 70 && screenY < size.height - 90
+
+        if onScreen {
+            let my = screenY + 66 + sinF(matchTime * 3) * 5
+            questDiamond?.isHidden = false
+            questArrow?.isHidden = true
+            questDiamond?.position = CGPoint(x: screenX, y: my)
+            questLabel?.text = "\(target.label) · \(distM)м"
+            positionQuestLabel(x: screenX, y: my + 22)
+        } else {
+            let dir: CGFloat = screenX <= size.width / 2 ? -1 : 1
+            let ex = dir < 0 ? 46 + insets.left : size.width - 46 - insets.right
+            let ey = clampF(screenY, 110 + insets.bottom, size.height - 100 - insets.top)
+            questDiamond?.isHidden = true
+            questArrow?.isHidden = false
+            questArrow?.position = CGPoint(x: ex, y: ey)
+            questArrow?.xScale = dir
+            questLabel?.text = "\(target.label) · \(distM)м"
+            positionQuestLabel(x: ex, y: ey + 24)
+        }
+    }
+
+    private func positionQuestLabel(x: CGFloat, y: CGFloat) {
+        guard let lbl = questLabel, let bg = questLabelBg else { return }
+        let w = lbl.frame.width + 16
+        bg.path = CGPath(roundedRect: CGRect(x: -w / 2, y: -10, width: w, height: 20),
+                         cornerWidth: 6, cornerHeight: 6, transform: nil)
+        let cx = clampF(x, w / 2 + 6, size.width - w / 2 - 6)
+        bg.position = CGPoint(x: cx, y: y)
+        lbl.position = CGPoint(x: cx, y: y)
     }
 
     // MARK: - Зарлал ба эффект
