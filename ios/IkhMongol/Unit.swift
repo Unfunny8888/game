@@ -8,6 +8,8 @@ final class Unit: SKNode {
     let radius: CGFloat
     let displayName: String
     let isBoss: Bool
+    var isNpc = false          // аврах NPC (Бөртэ) — дагадаг, дайсан онилно
+    var freed = false          // NPC чөлөөлөгдсөн эсэх
 
     var maxHp: CGFloat
     var hp: CGFloat

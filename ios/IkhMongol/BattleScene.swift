@@ -219,6 +219,19 @@ final class BattleScene: SKScene {
     private var isCampaign: Bool { campaignLevel != nil }
     private var camp: CampaignLevel? { campaignLevel.map { GameData.campaign[$0] } }
 
+    // Аяны даалгаврын байдал
+    private var objective: Objective?
+    private var objDone = false
+    private var commanderKills = 0
+    private var surviveT: CGFloat = 0
+    private var escapeZone: SKShapeNode?
+    private var escapePos = CGPoint.zero
+    private var pickups: [SKNode] = []        // цуглуулах морьд
+    private var rescuee: Unit?
+    private var rescueeFreed = false
+    private var objBanner: SKLabelNode?
+    private var objBannerBg: SKShapeNode?
+
     // Дайсны хүчний үржүүлэгчид — аян дайн эсвэл сонгосон хүндрэлээс
     private var effMinionHp: CGFloat { camp?.minionMul ?? diff.minionHp }
     private var effMinionDmg: CGFloat { camp?.minionMul ?? diff.minionDmg }
@@ -257,8 +270,9 @@ final class BattleScene: SKScene {
 
         if let level = campaignLevel {
             let L = GameData.campaign[level]
+            setupObjective(L.objective)
             announce("\(level + 1)-р түвшин: \(L.title)")
-            announce(L.desc)
+            announce("🎯 \(L.objective.label)")
         } else {
             announce("Тулаан эхэллээ!")
             announce("Дайсны их хаалгыг нураа!")
@@ -416,6 +430,154 @@ final class BattleScene: SKScene {
         u.netId = nextNetId
         nextNetId += 1
         units.append(u)
+    }
+
+    // MARK: - Аяны даалгавар
+
+    private func setupObjective(_ o: Objective) {
+        objective = o
+        switch o {
+        case .reach:
+            escapePos = CGPoint(x: World.eGateX - 40, y: World.laneY)
+            let zone = SKShapeNode(ellipseOf: CGSize(width: 180, height: 90))
+            zone.strokeColor = SKColor(red: 0.47, green: 0.90, blue: 0.47, alpha: 1)
+            zone.lineWidth = 4
+            zone.fillColor = SKColor(red: 0.47, green: 0.90, blue: 0.47, alpha: 0.13)
+            zone.position = escapePos
+            zone.zPosition = 10
+            let flag = SKLabelNode(text: "⚑")
+            flag.fontSize = 26
+            flag.position = CGPoint(x: 0, y: 40)
+            zone.addChild(flag)
+            let lbl = UIFactory.label("ГАРЦ", font: Fonts.bold, size: 12,
+                                      color: SKColor(red: 0.81, green: 0.91, blue: 0.66, alpha: 1))
+            zone.addChild(lbl)
+            world.addChild(zone)
+            escapeZone = zone
+
+        case .collect(let count, _):
+            for i in 0..<count {
+                let t = CGFloat(i) / CGFloat(count - 1)
+                let x = World.pTowerX + 120 + t * (World.eTowerX - World.pTowerX - 120)
+                let y = World.laneY + (i % 2 == 0 ? -1 : 1) * (50 + CGFloat((i * 13) % 70))
+                let node = SKNode()
+                node.position = CGPoint(x: x, y: y)
+                node.zPosition = zFor(y: y)
+                let ring = SKShapeNode(circleOfRadius: 18)
+                ring.strokeColor = SKColor(red: 1.0, green: 0.86, blue: 0.47, alpha: 0.6)
+                ring.lineWidth = 2
+                ring.fillColor = .clear
+                node.addChild(ring)
+                let horse = SKLabelNode(text: "🐎")
+                horse.fontSize = 26
+                horse.verticalAlignmentMode = .center
+                node.addChild(horse)
+                horse.run(.repeatForever(.sequence([
+                    .moveBy(x: 0, y: 6, duration: 0.6),
+                    .moveBy(x: 0, y: -6, duration: 0.6)
+                ])))
+                world.addChild(node)
+                pickups.append(node)
+            }
+
+        case .rescue:
+            let r = Unit(kind: .minion, team: .mongol, displayName: "Бөртэ",
+                         radius: 16, hp: 900, moveSpeed: 210)
+            r.isNpc = true
+            r.position = CGPoint(x: World.eGateX - 40, y: World.laneY - 40)
+            // энгийн ялгаатай дүрс
+            r.removeAllChildren()
+            let marker = SKLabelNode(text: "🙍‍♀️")
+            marker.fontSize = 30
+            marker.verticalAlignmentMode = .center
+            r.addChild(marker)
+            let ring = SKShapeNode(circleOfRadius: 20)
+            ring.strokeColor = SKColor(red: 0.55, green: 0.91, blue: 0.48, alpha: 0.9)
+            ring.lineWidth = 2.5
+            ring.fillColor = .clear
+            ring.position = CGPoint(x: 0, y: -4)
+            r.addChild(ring)
+            let nameL = UIFactory.label("Бөртэ", font: Fonts.bold, size: 12,
+                                        color: SKColor(red: 0.81, green: 0.91, blue: 0.66, alpha: 1))
+            nameL.position = CGPoint(x: 0, y: 30)
+            r.addChild(nameL)
+            r.zPosition = zFor(y: r.position.y)
+            world.addChild(r)     // харагдана, гэхдээ чөлөөлөгдөх хүртэл units-д ороогүй
+            rescuee = r
+
+        case .survive(let secs, _):
+            surviveT = secs
+
+        case .slay, .gate:
+            break
+        }
+    }
+
+    /// Даалгаврын явцыг шинэчилнэ
+    private func updateObjective(dt: CGFloat) {
+        guard let o = objective, !objDone, !player.isDead else { return }
+        switch o {
+        case .reach:
+            if player.position.distance(to: escapePos) < 90 { objComplete() }
+
+        case .collect(let count, _):
+            for node in pickups where node.parent != nil {
+                if player.position.distance(to: node.position) < 40 {
+                    node.removeFromParent()
+                    Audio.shared.play("heal", volume: 0.6)
+                    matchGold += 5
+                    floater("🐎 +5 🪙", at: node.position, dy: 20,
+                            color: SKColor(red: 1.0, green: 0.85, blue: 0.45, alpha: 1))
+                    let got = pickups.filter { $0.parent == nil }.count
+                    announce("Морь олдлоо! (\(got)/\(count))")
+                    if got >= count { objComplete() }
+                }
+            }
+
+        case .rescue:
+            guard let r = rescuee, !r.isDead else { return }
+            if !r.freed {
+                if player.position.distance(to: r.position) < 60 {
+                    r.freed = true
+                    rescueeFreed = true
+                    r.aggro = 0
+                    track(r)          // одоо дайсан онилж болно
+                    Audio.shared.play("level", volume: 0.7)
+                    announce("Бөртэ чөлөөлөгдлөө! Гэртээ дагуулан аваач!")
+                }
+            } else {
+                let dx = player.position.x - r.position.x
+                let dy = player.position.y - r.position.y
+                let d = vecLen(dx, dy)
+                if d > 55 {
+                    r.position.x = clampF(r.position.x + dx / d * r.moveSpeed * dt, 30, World.width - 30)
+                    r.position.y = clampF(r.position.y + dy / d * r.moveSpeed * dt,
+                                          World.groundBottom, World.groundTop)
+                    r.face = dx > 0 ? 1 : -1
+                }
+                r.zPosition = zFor(y: r.position.y)
+                if r.position.distance(to: pGate.position) < 200 { objComplete() }
+            }
+
+        case .survive:
+            surviveT -= dt
+            if surviveT <= 0 { objComplete() }
+
+        case .slay, .gate:
+            break
+        }
+    }
+
+    private func objComplete() {
+        guard !objDone else { return }
+        objDone = true
+        Audio.shared.play("win", volume: 0.7)
+        Haptics.victory()
+        announce("🎯 Даалгавар биелэв!")
+        run(.sequence([.wait(forDuration: 0.9), .run { [weak self] in
+            guard let self = self, !self.ended else { return }
+            self.endMatch(win: true)
+        }]))
     }
 
     private func addDecorations() {
@@ -618,6 +780,20 @@ final class BattleScene: SKScene {
         killLabel = UIFactory.label("Алалт: 0  ·  Давалгаа: 0", font: Fonts.demi, size: 13)
         hud.addChild(killLabel)
 
+        // даалгаврын самбар (аяны горимд)
+        let bannerBg = SKShapeNode(rectOf: CGSize(width: 320, height: 26), cornerRadius: 13)
+        bannerBg.fillColor = SKColor(red: 0.08, green: 0.16, blue: 0.06, alpha: 0.55)
+        bannerBg.strokeColor = SKColor(red: 0.55, green: 0.91, blue: 0.48, alpha: 0.5)
+        bannerBg.lineWidth = 1
+        bannerBg.isHidden = true
+        hud.addChild(bannerBg)
+        objBannerBg = bannerBg
+        let banner = UIFactory.label("", font: Fonts.bold, size: 13,
+                                     color: SKColor(red: 0.55, green: 0.91, blue: 0.48, alpha: 1))
+        banner.isHidden = true
+        hud.addChild(banner)
+        objBanner = banner
+
         // зарлал
         announceLabel = UIFactory.label("", font: Fonts.heavy, size: 24, color: Palette.goldLight)
         announceLabel.alpha = 0
@@ -708,6 +884,8 @@ final class BattleScene: SKScene {
 
         topbar.position = CGPoint(x: 12 + insets.left, y: size.height - 8 - insets.top)
         killLabel.position = CGPoint(x: size.width / 2, y: size.height - 24 - insets.top)
+        objBannerBg?.position = CGPoint(x: size.width / 2, y: size.height - 52 - insets.top)
+        objBanner?.position = CGPoint(x: size.width / 2, y: size.height - 52 - insets.top)
         muteButton.position = CGPoint(x: size.width - 30 - insets.right, y: size.height - 28 - insets.top)
         exitButton.position = CGPoint(x: size.width - 76 - insets.right, y: size.height - 28 - insets.top)
         announceLabel.position = CGPoint(x: size.width / 2, y: size.height * 0.68)
@@ -829,6 +1007,15 @@ final class BattleScene: SKScene {
         burst(at: u.position, color: u.team == .khwarezm ? Palette.enemyRed : Palette.gold, count: 14)
         let byPlayer = source === player
 
+        // Аврах NPC (Бөртэ) алагдвал даалгавар бүтэлгүйтнэ
+        if u.isNpc {
+            Audio.shared.play("crash", volume: 0.9)
+            announce("Бөртэ алагдлаа...")
+            u.removeFromParent()
+            if !objDone { endMatch(win: false) }
+            return
+        }
+
         switch u.kind {
         case .minion:
             if u.isBoss {
@@ -865,9 +1052,17 @@ final class BattleScene: SKScene {
                 matchGold += 15
                 floater("+15 🪙", at: u.position, dy: 40,
                         color: SKColor(red: 1.0, green: 0.85, blue: 0.45, alpha: 1))
-                announce("Дайсны баатрыг унагалаа!")
+                // Командлагчийг дийлэх даалгавар
+                if case .slay(let count, _)? = objective {
+                    commanderKills += 1
+                    if commanderKills >= count { objComplete(); return }
+                    announce("\(enemyHeroName)-г дийллээ! (\(commanderKills)/\(count))")
+                    u.respawnT = 4.5
+                } else {
+                    announce("Дайсны баатрыг унагалаа!")
+                    u.respawnT = isPvp ? 6 + CGFloat(u.level) * 1.2 : 9 + min(matchTime / 60, 8)
+                }
                 netAnnounce("Та унасан байна...")
-                u.respawnT = isPvp ? 6 + CGFloat(u.level) * 1.2 : 9 + min(matchTime / 60, 8)
             } else {
                 if isPvp, let s = source, s === aiHero {
                     guestKills += 1
@@ -875,6 +1070,16 @@ final class BattleScene: SKScene {
                 }
                 announce("Та унасан байна...")
                 netAnnounce("Дайсны баатрыг унагалаа!")
+                // Зарим даалгаварт үхэл = бүтэлгүйтэл
+                if let o = objective {
+                    switch o {
+                    case .reach, .collect, .rescue:
+                        u.isHidden = true
+                        if !objDone { endMatch(win: false) }
+                        return
+                    default: break
+                    }
+                }
                 u.respawnT = 6 + CGFloat(player.level) * 1.2
             }
 
@@ -892,7 +1097,21 @@ final class BattleScene: SKScene {
             Haptics.crash()
             Audio.shared.play("crash", volume: 1)
             shakeT = max(shakeT, 0.7)
-            endMatch(win: u.team == .khwarezm)
+            if u.team == .mongol {
+                // Манай хаалга унах нь зөвхөн хамгаалах даалгаварт ялагдал
+                let guardMode: Bool
+                switch objective {
+                case .none, .some(.gate), .some(.slay), .some(.survive): guardMode = true
+                default: guardMode = false
+                }
+                if guardMode && !objDone { endMatch(win: false) }
+            } else {
+                // дайсны хаалга: зөвхөн 'gate' даалгаварт эсвэл энгийн тулаанд ялалт
+                switch objective {
+                case .none, .some(.gate): objComplete()
+                default: break
+                }
+            }
         }
     }
 
@@ -1323,6 +1542,8 @@ final class BattleScene: SKScene {
         if comboT <= 0 { combo = 0 }
         shakeT = max(0, shakeT - dt)
 
+        if objective != nil && !objDone { updateObjective(dt: dt) }
+
         // давалгаа
         nextWave -= dt
         if nextWave <= 0 {
@@ -1497,7 +1718,7 @@ final class BattleScene: SKScene {
                 u.dashT -= dt
             }
 
-            if u.kind == .minion && u.stun <= 0 {
+            if u.kind == .minion && !u.isNpc && u.stun <= 0 {
                 if let t = findTarget(for: u, maxDist: u.aggro, unitsOnly: false) {
                     let d = u.position.distance(to: t.position)
                     if d <= u.range + t.radius {
@@ -1673,6 +1894,26 @@ final class BattleScene: SKScene {
         let lowHp = !player.isDead && player.hp < player.maxHp * 0.3
         lowHpFrame.isHidden = !lowHp
         if lowHp { lowHpFrame.alpha = 0.45 + 0.3 * sinF(matchTime * 6) }
+
+        // даалгаврын самбар
+        if let o = objective {
+            var txt = "🎯 " + o.label
+            switch o {
+            case .collect(let count, _):
+                let got = pickups.filter { $0.parent == nil }.count
+                txt += "  (\(got)/\(count))"
+            case .slay(let count, _):
+                txt += "  (\(commanderKills)/\(count))"
+            case .survive:
+                txt += "  (\(max(0, Int(surviveT.rounded(.up))))с)"
+            case .rescue:
+                if rescueeFreed { txt = "🎯 Бөртэг гэртээ хүргэ →" }
+            default: break
+            }
+            objBanner?.text = txt
+            objBanner?.isHidden = false
+            objBannerBg?.isHidden = false
+        }
         if skillButtons.count == 2 {
             skillButtons[0].setCooldown(player.s1T)
             skillButtons[1].setCooldown(player.s2T)

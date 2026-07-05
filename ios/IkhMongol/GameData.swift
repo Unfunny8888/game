@@ -294,6 +294,24 @@ extension GameData {
 
 // MARK: - Аян дайн — Нууц товчооны замаар 8 түвшин
 
+/// Аяны даалгаврын төрөл — түвшин болгонд өөр зорилго (GTA маягийн эрхэм зорилго)
+enum Objective {
+    case reach(label: String)              // тэмдэглэсэн цэг уруу гүйж хүрэх
+    case collect(count: Int, label: String) // тарсан объектуудыг цуглуулах
+    case rescue(label: String)             // NPC-д хүрч, гэртээ дагуулан авчрах
+    case slay(count: Int, label: String)   // командлагчийг N удаа дийлэх
+    case survive(secs: CGFloat, label: String) // тодорхой хугацаанд тэсэх
+    case gate(label: String)               // дайсны их хаалгыг нураах (сонгодог)
+
+    var label: String {
+        switch self {
+        case .reach(let l), .rescue(let l), .gate(let l): return l
+        case .collect(_, let l), .slay(_, let l): return l
+        case .survive(_, let l): return l
+        }
+    }
+}
+
 struct CampaignLevel {
     let title: String
     let src: String
@@ -302,33 +320,42 @@ struct CampaignLevel {
     let heroMul: CGFloat     // дайсны командлагчийн хүч
     let enemyName: String
     let reward: Int          // анх удаа даван туулбал өгөх бонус алт
+    let objective: Objective
 }
 
 extension GameData {
     static let campaign: [CampaignLevel] = [
         CampaignLevel(title: "Зугталт", src: "МНТ §79–87",
-                      desc: "Тайчиудын хавчлагаас зугтаж, анхны тулаанаа хий.",
-                      minionMul: 0.55, heroMul: 0.55, enemyName: "Тайчууд дайчин", reward: 80),
+                      desc: "Тайчиудаас зугтаж, баруун гарц уруу гүй.",
+                      minionMul: 0.55, heroMul: 0.55, enemyName: "Тайчууд дайчин", reward: 80,
+                      objective: .reach(label: "Тайчиудаас зугтаж, БАРУУН ГАРЦ уруу гүй")),
         CampaignLevel(title: "Найман шарга морь", src: "МНТ §90–93",
-                      desc: "Хулгайлагдсан адуугаа мөрдөж, буцааж ав.",
-                      minionMul: 0.70, heroMul: 0.70, enemyName: "Хулгайн ноён", reward: 100),
+                      desc: "Хулгайлагдсан 8 моримо цуглуулж буцааж ав.",
+                      minionMul: 0.70, heroMul: 0.70, enemyName: "Хулгайн ноён", reward: 100,
+                      objective: .collect(count: 8, label: "Хулгайлагдсан МОРИ цуглуул")),
         CampaignLevel(title: "Бөртэг аврах", src: "МНТ §104–113",
-                      desc: "Мэргэдийг бут цохиж, Бөртэ үжинг авар.",
-                      minionMul: 0.85, heroMul: 0.85, enemyName: "Тогтоа бэх", reward: 120),
+                      desc: "Мэргэдээс Бөртэд хүрч, гэр орондоо авчир.",
+                      minionMul: 0.85, heroMul: 0.85, enemyName: "Тогтоа бэх", reward: 120,
+                      objective: .rescue(label: "БӨРТЭД хүрч, гэртээ дагуулан авчир")),
         CampaignLevel(title: "Анд ба дайсан", src: "МНТ §128–129",
-                      desc: "Далан балжудад анд Жамухатай тулалд.",
-                      minionMul: 1.00, heroMul: 1.00, enemyName: "Жамуха", reward: 150),
+                      desc: "Далан балжудад анд Жамухаг гурван удаа дийл.",
+                      minionMul: 1.00, heroMul: 1.00, enemyName: "Жамуха", reward: 150,
+                      objective: .slay(count: 3, label: "ЖАМУХАГ дийл")),
         CampaignLevel(title: "Хэрэйдийн уналт", src: "МНТ §183–185",
-                      desc: "Ван ханы хүчийг эцэслэн буулга.",
-                      minionMul: 1.12, heroMul: 1.10, enemyName: "Ван хан", reward: 180),
+                      desc: "Ван ханы хүчийг хоёр удаа буулгаж дуусга.",
+                      minionMul: 1.12, heroMul: 1.10, enemyName: "Ван хан", reward: 180,
+                      objective: .slay(count: 2, label: "ВАН ХАНЫГ дийл")),
         CampaignLevel(title: "Найманы төгсгөл", src: "МНТ §189–196",
-                      desc: "Таян ханыг уулархаг нутагт нь дийл.",
-                      minionMul: 1.25, heroMul: 1.20, enemyName: "Таян хан", reward: 220),
+                      desc: "Таян ханы хаалгыг нурааж, Найманыг эзэл.",
+                      minionMul: 1.25, heroMul: 1.20, enemyName: "Таян хан", reward: 220,
+                      objective: .gate(label: "Таян ханы ИХ ХААЛГЫГ нураа")),
         CampaignLevel(title: "Хорезмын аян", src: "1219 он",
-                      desc: "Их баруун аян эхлэв — Шахын их цэргийг няцаа.",
-                      minionMul: 1.38, heroMul: 1.30, enemyName: "Мухаммед шах", reward: 260),
+                      desc: "Их баруун аян — Шахын довтолгоог 80 секунд тэсэж няц.",
+                      minionMul: 1.38, heroMul: 1.30, enemyName: "Мухаммед шах", reward: 260,
+                      objective: .survive(secs: 80, label: "Шахын довтолгоог ТЭСЭЖ ГАРАХ")),
         CampaignLevel(title: "Инду мөрний тулаан", src: "1221 он",
-                      desc: "Хамгийн зоригтой дайсантай сүүлчийн тулаан.",
-                      minionMul: 1.50, heroMul: 1.45, enemyName: "Жалал ад-Дин", reward: 300)
+                      desc: "Инду мөрөнд зоригт Жалал ад-Диныг эцэслэн дийл.",
+                      minionMul: 1.50, heroMul: 1.45, enemyName: "Жалал ад-Дин", reward: 300,
+                      objective: .slay(count: 1, label: "ЖАЛАЛ АД-ДИНЫГ эцэслэн дийл"))
     ]
 }

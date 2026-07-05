@@ -89,8 +89,9 @@ final class CampaignScene: SKScene {
             titleL.name = node.name
             node.addChild(titleL)
 
-            let descL = UIFactory.label(unlocked ? L.src : "Өмнөх түвшинг дуусга", font: Fonts.demi, size: 8.5,
-                                        color: SKColor(red: 0.54, green: 0.46, blue: 0.31, alpha: 1))
+            let descText = unlocked ? "🎯 \(L.objective.label)" : "Өмнөх түвшинг дуусга"
+            let descL = UIFactory.label(descText, font: Fonts.demi, size: 8,
+                                        color: SKColor(red: 0.54, green: 0.66, blue: 0.44, alpha: 1))
             descL.horizontalAlignmentMode = .left
             descL.position = CGPoint(x: -rowW / 2 + 38, y: -9)
             descL.name = node.name

@@ -66,6 +66,8 @@
   #xpFill { height:100%; width:0%; background:linear-gradient(90deg,#5aa0e8,#8ec8ff); border-radius:4px; }
   #heroLabel { font-size:10px; color:#f0e2c4; text-shadow:0 1px 2px #000; margin-bottom:2px; letter-spacing:1px; }
   #killLabel { position:absolute; top:calc(10px + env(safe-area-inset-top)); left:50%; transform:translateX(-50%); font-size:13px; color:#f0e2c4; text-shadow:0 1px 3px #000; letter-spacing:1px; background:rgba(0,0,0,.35); padding:4px 14px; border-radius:12px; border:1px solid rgba(232,182,76,.3); }
+  #objBanner { position:absolute; top:calc(38px + env(safe-area-inset-top)); left:50%; transform:translateX(-50%); font-size:13px; font-weight:700; color:#8ce87a; text-shadow:0 1px 3px #000; letter-spacing:.5px; background:rgba(20,40,15,.55); padding:5px 16px; border-radius:12px; border:1px solid rgba(140,232,122,.5); white-space:nowrap; display:none; }
+  #objBanner.on { display:block; }
   #muteBtn { position:absolute; top:calc(8px + env(safe-area-inset-top)); right:calc(12px + env(safe-area-inset-right)); width:40px; height:40px; border-radius:50%; background:rgba(0,0,0,.4); border:1px solid rgba(232,182,76,.4); color:#f0e2c4; font-size:18px; pointer-events:auto; display:flex; align-items:center; justify-content:center; }
   #exitBtn { position:absolute; top:calc(8px + env(safe-area-inset-top)); right:calc(60px + env(safe-area-inset-right)); width:40px; height:40px; border-radius:50%; background:rgba(0,0,0,.4); border:1px solid rgba(200,90,74,.55); color:#ffa398; font-size:17px; font-weight:700; pointer-events:auto; display:flex; align-items:center; justify-content:center; }
 
@@ -225,6 +227,7 @@
     </div>
   </div>
   <div id="killLabel">Алалт: 0</div>
+  <div id="objBanner"></div>
   <button id="muteBtn">🔊</button>
   <button id="exitBtn">✕</button>
   <div id="announce"></div>
@@ -447,21 +450,29 @@ const chaptersUnlocked = ()=> CHAPTERS.filter(c => reqMet(c.req));
 // ---------- Аян дайн — Нууц товчооны замаар 8 түвшин ----------
 const LEVELS = [
   { title:'Зугталт',              src:'МНТ §79–87',   mult:0.55, hero:null,                              reward:80,
-    desc:'Тайчиудын хавчлагаас зугтаж, анхны тулаанаа хий.' },
+    desc:'Тайчиудын хавчлагаас зугтаж, баруун гарц уруу гүй.',
+    obj:{ type:'reach', label:'Тайчиудаас зугтаж, БАРУУН ГАРЦ уруу гүй' } },
   { title:'Найман шарга морь',    src:'МНТ §90–93',   mult:0.70, hero:{ name:'Хулгайн ноён',  k:0.70 },  reward:100,
-    desc:'Хулгайлагдсан адуугаа мөрдөж, буцааж ав.' },
+    desc:'Хулгайлагдсан 8 моримо цуглуулж буцааж ав.',
+    obj:{ type:'collect', count:8, label:'Хулгайлагдсан МОРИ цуглуул' } },
   { title:'Бөртэг аврах',         src:'МНТ §104–113', mult:0.85, hero:{ name:'Тогтоа бэх',    k:0.85 },  reward:120,
-    desc:'Мэргэдийг бут цохиж, Бөртэ үжинг авар.' },
+    desc:'Мэргэдээс Бөртэд хүрч, гэр орондоо авчир.',
+    obj:{ type:'rescue', label:'БӨРТЭД хүрч, гэртээ дагуулан авчир' } },
   { title:'Анд ба дайсан',        src:'МНТ §128–129', mult:1.00, hero:{ name:'Жамуха',        k:1.00 },  reward:150,
-    desc:'Далан балжудад анд Жамухатай тулалд.' },
+    desc:'Далан балжудад анд Жамухаг гурван удаа дийл.',
+    obj:{ type:'slay', count:3, label:'ЖАМУХАГ дийл' } },
   { title:'Хэрэйдийн уналт',      src:'МНТ §183–185', mult:1.12, hero:{ name:'Ван хан',       k:1.10 },  reward:180,
-    desc:'Ван ханы хүчийг эцэслэн буулга.' },
+    desc:'Ван ханы хүчийг хоёр удаа буулгаж дуусга.',
+    obj:{ type:'slay', count:2, label:'ВАН ХАНЫГ дийл' } },
   { title:'Найманы төгсгөл',      src:'МНТ §189–196', mult:1.25, hero:{ name:'Таян хан',      k:1.20 },  reward:220,
-    desc:'Таян ханыг уулархаг нутагт нь дийл.' },
+    desc:'Таян ханы хаалгыг нурааж, Найманыг эзэл.',
+    obj:{ type:'gate', label:'Таян ханы ИХ ХААЛГЫГ нураа' } },
   { title:'Хорезмын аян',         src:'1219 он',      mult:1.38, hero:{ name:'Мухаммед шах',  k:1.30 },  reward:260,
-    desc:'Их баруун аян эхлэв — Шахын их цэргийг няцаа.' },
+    desc:'Их баруун аян — Шахын довтолгоог 80 секунд тэсэж няц.',
+    obj:{ type:'survive', secs:80, label:'Шахын довтолгоог ТЭСЭЖ ГАРАХ' } },
   { title:'Инду мөрний тулаан',   src:'1221 он',      mult:1.50, hero:{ name:'Жалал ад-Дин',  k:1.45 },  reward:300,
-    desc:'Хамгийн зоригтой дайсантай сүүлчийн тулаан.' }
+    desc:'Инду мөрөнд зоригт Жалал ад-Диныг эцэслэн дийл.',
+    obj:{ type:'slay', count:1, boss:true, label:'ЖАЛАЛ АД-ДИНЫГ эцэслэн дийл' } }
 ];
 let campaignLevel = null;   // null = энгийн тулаан
 
@@ -472,6 +483,15 @@ let player = null, aiHero = null, pGate=null, eGate=null;
 let camX = 0, gameT = 0, waveNum = 0, nextWaveT = 0, kills = 0, matchStart = 0;
 let announceQ = [], announceT = 0;
 let matchGold = 0, combo = 0, comboT = 0, shakeT = 0;
+
+// ---------- Аяны даалгаврын систем ----------
+let obj = null;          // идэвхтэй даалгавар { type, ... }
+let pickups = [];        // цуглуулах морьд
+let escapeZone = null;   // { x, y, r } зугтах/хүрэх бүс
+let rescuee = null;      // аврах NPC (Бөртэ)
+let commanderKills = 0;  // командлагч алсан тоо
+let surviveT = 0;        // тэсэх хугацаа
+let objDone = false;     // даалгавар биелсэн эсэх (win гарахаас сэргийлж)
 
 function announce(txt, dur){
   announceQ.push({txt, dur: dur||2.2});
@@ -549,14 +569,44 @@ function startMatch(){
   $('s1icon').textContent = def.s1.icon; $('s1name').textContent = def.s1.short;
   $('s2icon').textContent = def.s2.icon; $('s2name').textContent = def.s2.short;
 
+  // Даалгаврыг тохируулна
+  obj = null; pickups = []; escapeZone = null; rescuee = null;
+  commanderKills = 0; surviveT = 0; objDone = false;
+  if(inCampaign) setupObjective(LEVELS[campaignLevel].obj);
+
   setState('play');
   if(campaignLevel !== null){
     announce((campaignLevel+1) + '-р түвшин: ' + LEVELS[campaignLevel].title);
-    announce(LEVELS[campaignLevel].desc);
+    announce('🎯 ' + LEVELS[campaignLevel].obj.label);
   } else {
     announce('Тулаан эхэллээ!');
     announce('Дайсны их хаалгыг нураа!');
   }
+}
+
+// Даалгаврын төрлөөс хамааран объектуудыг байрлуулна
+function setupObjective(o){
+  obj = o;
+  if(o.type === 'reach'){
+    escapeZone = { x: E_GATE_X - 40, y: LANE_Y, r: 90, reached:false };
+  } else if(o.type === 'collect'){
+    // 8 морь замын дагуу тарааж байрлуулна
+    for(let i=0;i<o.count;i++){
+      const t = i/(o.count-1);
+      pickups.push({ x: P_TOWER_X + 120 + t*(E_TOWER_X - P_TOWER_X - 120),
+                     y: LANE_Y + (i%2? 1:-1)*(50 + (i*13)%70),
+                     got:false, bob: i*0.7 });
+    }
+  } else if(o.type === 'rescue'){
+    // Бөртэ дайсны хаалганы дэргэд хоригдож байна
+    rescuee = makeUnit({ type:'npc', team:0, x:E_GATE_X - 40, y:LANE_Y-40, r:16,
+                         hp:900, maxHp:900, speed:210, name:'Бөртэ' });
+    rescuee.freed = false;
+    // энгийн байдлаар units-д оруулахгүй (тусдаа зурна, дайсан онилохгүй хүртэл)
+  } else if(o.type === 'survive'){
+    surviveT = o.secs;
+  }
+  // slay/gate: тусгай объект хэрэггүй
 }
 
 function setState(s){
@@ -727,13 +777,30 @@ function killUnit(u, source){
     Snd.crash();
     if(u===aiHero){
       kills++; giveXP(140); matchGold += 15;
-      announce('Дайсны баатрыг унагалаа!');
       addFloater(u.x, u.y-40, '+15 🪙', '#ffd873');
-      u.respawnT = 9 + Math.min(gameT/60, 8);
+      // Командлагчийг дийлэх даалгавар
+      if(obj && obj.type==='slay'){
+        commanderKills++;
+        if(commanderKills >= obj.count){ objComplete(); return; }
+        announce(matchDiff.eName + '-г дийллээ! (' + commanderKills + '/' + obj.count + ')');
+        u.respawnT = 4.5;   // дуель хурдан үргэлжлэхийн тулд богино
+      } else {
+        announce('Дайсны баатрыг унагалаа!');
+        u.respawnT = 9 + Math.min(gameT/60, 8);
+      }
     } else {
       announce('Та унасан байна...');
+      // Зарим даалгаварт үхэл = бүтэлгүйтэл
+      if(obj && (obj.type==='reach' || obj.type==='collect' || obj.type==='rescue')){
+        endMatch(false); return;
+      }
       u.respawnT = 6 + player.level*1.2;
     }
+  }
+  if(u.type==='npc'){   // Бөртэ алагдвал даалгавар бүтэлгүйтнэ
+    Snd.crash();
+    announce('Бөртэ алагдлаа...');
+    endMatch(false); return;
   }
   if(u.type==='tower'){
     Snd.crash();
@@ -744,7 +811,73 @@ function killUnit(u, source){
   if(u.type==='gate'){
     Snd.crash();
     shakeT = Math.max(shakeT, 0.7);
-    endMatch(u.team===1);
+    if(u.team===0){
+      // Манай хаалга унах нь зөвхөн хамгаалах шинжтэй даалгаварт ялагдал болно
+      const guardModes = !obj || obj.type==='gate' || obj.type==='slay' || obj.type==='survive';
+      if(guardModes){ endMatch(false); }
+      return;
+    }
+    // дайсны хаалга: зөвхөн 'gate' даалгаварт эсвэл энгийн тулаанд ялалт
+    if(!obj || obj.type==='gate'){ objComplete(); }
+  }
+}
+
+// Даалгавар амжилттай биелэв
+function objComplete(){
+  if(objDone) return;
+  objDone = true;
+  Snd.win();
+  announce('🎯 Даалгавар биелэв!');
+  setTimeout(()=>{ if(state==='play') endMatch(true); }, 800);
+}
+
+// Даалгаврын явцыг шинэчилнэ
+function updateObjective(dt){
+  if(!player || player.dead) return;
+  if(obj.type === 'reach' && escapeZone){
+    if(dist(player, escapeZone) < escapeZone.r){
+      escapeZone.reached = true;
+      objComplete();
+    }
+  } else if(obj.type === 'collect'){
+    for(const p of pickups){
+      if(p.got) continue;
+      p.bob += dt;
+      if(Math.hypot(player.x-p.x, player.y-p.y) < 40){
+        p.got = true;
+        Snd.heal(); matchGold += 5;
+        addFloater(p.x, p.y-20, '🐎 +5 🪙', '#ffd873');
+        const got = pickups.filter(q=>q.got).length;
+        announce('Морь олдлоо! (' + got + '/' + obj.count + ')');
+        if(got >= obj.count) objComplete();
+      }
+    }
+  } else if(obj.type === 'rescue' && rescuee && !rescuee.dead){
+    if(!rescuee.freed){
+      // Бөртэд хүрч чөлөөлнө
+      if(Math.hypot(player.x-rescuee.x, player.y-rescuee.y) < 60){
+        rescuee.freed = true;
+        units.push(rescuee);   // одоо дайсан онилж болно
+        Snd.level();
+        announce('Бөртэ чөлөөлөгдлөө! Гэртээ дагуулан аваач!');
+      }
+    } else {
+      // Тоглогчийг дагана
+      const dx = player.x - rescuee.x, dy = player.y - rescuee.y;
+      const d = Math.hypot(dx,dy);
+      if(d > 55){
+        rescuee.x += dx/d * rescuee.speed * dt;
+        rescuee.y += dy/d * rescuee.speed * dt;
+        rescuee.face = dx>0?1:-1;
+      }
+      rescuee.x = clamp(rescuee.x, 30, WORLD_W-30);
+      rescuee.y = clamp(rescuee.y, GROUND_TOP, GROUND_BOT);
+      // Гэртээ (өөрийн хаалга) хүрвэл ялалт
+      if(dist(rescuee, pGate) < 200) objComplete();
+    }
+  } else if(obj.type === 'survive'){
+    surviveT -= dt;
+    if(surviveT <= 0) objComplete();
   }
 }
 
@@ -1260,6 +1393,8 @@ function update(dt){
   if(comboT <= 0) combo = 0;
   shakeT = Math.max(0, shakeT - dt);
 
+  if(obj && !objDone) updateObjective(dt);
+
   // announcements
   if(announceT > 0){
     announceT -= dt;
@@ -1287,6 +1422,20 @@ function updateHUD(){
   $('lvlBadge').textContent = player.level;
   $('killLabel').textContent = 'Алалт: ' + kills + ' · Давалгаа: ' + waveNum + ' · 🪙 +' + matchGold;
   $('lowHp').classList.toggle('on', !player.dead && player.hp < player.maxHp*0.3);
+
+  // Даалгаврын явцын самбар
+  const banner = $('objBanner');
+  if(obj){
+    let txt = '🎯 ' + obj.label;
+    if(obj.type==='collect') txt += '  (' + pickups.filter(p=>p.got).length + '/' + obj.count + ')';
+    else if(obj.type==='slay') txt += '  (' + commanderKills + '/' + obj.count + ')';
+    else if(obj.type==='survive') txt += '  (' + Math.max(0, Math.ceil(surviveT)) + 'с)';
+    else if(obj.type==='rescue' && rescuee) txt = rescuee.freed ? '🎯 Бөртэг гэртээ хүргэ →' : '🎯 ' + obj.label;
+    banner.textContent = txt;
+    banner.classList.add('on');
+  } else {
+    banner.classList.remove('on');
+  }
   const def = player.hero;
   const s = [[player.s1T, def.s1.cd, 's1'], [player.s2T, def.s2.cd, 's2']];
   for(const [t, cd, id] of s){
@@ -1363,6 +1512,41 @@ function render(){
     ctx.setLineDash([]);
     ctx.fillStyle = 'rgba(255,220,120,.12)';
     ctx.beginPath(); ctx.ellipse(z.x, z.y, z.r, z.r*0.5, 0, 0, TAU); ctx.fill();
+  }
+
+  // ---- Даалгаврын объектууд ----
+  if(escapeZone){
+    const pulse = 0.5 + 0.5*Math.sin(gameT*3);
+    ctx.strokeStyle = 'rgba(120,230,120,'+(0.6+0.4*pulse)+')'; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.ellipse(escapeZone.x, escapeZone.y, escapeZone.r, escapeZone.r*0.5, 0, 0, TAU); ctx.stroke();
+    ctx.fillStyle = 'rgba(120,230,120,.13)';
+    ctx.beginPath(); ctx.ellipse(escapeZone.x, escapeZone.y, escapeZone.r, escapeZone.r*0.5, 0, 0, TAU); ctx.fill();
+    // гарц туг + сум
+    ctx.fillStyle = '#8ce87a'; ctx.font='700 22px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('⚑', escapeZone.x, escapeZone.y - escapeZone.r*0.5 - 14 - pulse*6);
+    ctx.fillStyle = '#cfe8a8'; ctx.font='700 12px -apple-system, sans-serif';
+    ctx.fillText('ГАРЦ', escapeZone.x, escapeZone.y + 4);
+  }
+  for(const p of pickups){
+    if(p.got) continue;
+    const by = p.y - 6 - Math.sin(p.bob*3)*5;
+    ctx.fillStyle = 'rgba(0,0,0,.25)';
+    ctx.beginPath(); ctx.ellipse(p.x, p.y+8, 14, 5, 0, 0, TAU); ctx.fill();
+    ctx.font='26px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('🐎', p.x, by);
+    ctx.textBaseline='alphabetic';
+    // тусгаарлах гэрэл
+    ctx.strokeStyle='rgba(255,220,120,.5)'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(p.x, by, 18, 0, TAU); ctx.stroke();
+  }
+  if(rescuee && !rescuee.dead && !rescuee.freed){
+    // хоригдсон Бөртэ — тор
+    ctx.strokeStyle='rgba(200,120,80,.9)'; ctx.lineWidth=2;
+    for(let i=-2;i<=2;i++){ ctx.beginPath(); ctx.moveTo(rescuee.x+i*7, rescuee.y-24); ctx.lineTo(rescuee.x+i*7, rescuee.y+10); ctx.stroke(); }
+    ctx.font='20px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('🙍‍♀️', rescuee.x, rescuee.y);
+    ctx.fillStyle='#ffd0a8'; ctx.font='700 11px -apple-system';
+    ctx.fillText('Бөртэ', rescuee.x, rescuee.y-30);
   }
 
   // sort drawable entities by y
@@ -1479,6 +1663,26 @@ function drawUnit(u){
   const teamCol = u.team===0 ? '#58a6ff' : '#ff6b57';
 
   if(u.isStruct){ drawStruct(u, teamCol); return; }
+
+  // Дагаж яваа NPC (Бөртэ)
+  if(u.type==='npc'){
+    ctx.fillStyle = 'rgba(0,0,0,.3)';
+    ctx.beginPath(); ctx.ellipse(u.x, u.y+u.r*0.7, u.r*1.1, u.r*0.45, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#8ce87a'; ctx.lineWidth = 2.5; ctx.globalAlpha=.9;
+    ctx.beginPath(); ctx.ellipse(u.x, u.y+u.r*0.7, u.r*1.2, u.r*0.5, 0, 0, TAU); ctx.stroke();
+    ctx.globalAlpha=1;
+    ctx.font = (u.r*2)+'px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('🙍‍♀️', u.x, u.y-2);
+    ctx.textBaseline='alphabetic';
+    // амь зурвас
+    const bw=36, by=u.y-u.r*2.1;
+    ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillRect(u.x-bw/2, by, bw, 5);
+    ctx.fillStyle='#4fd06a'; ctx.fillRect(u.x-bw/2, by, bw*clamp(u.hp/u.maxHp,0,1), 5);
+    ctx.font='700 13px -apple-system, sans-serif';
+    ctx.fillStyle='#000'; ctx.fillText(u.name, u.x+1, by-5+1);
+    ctx.fillStyle='#cfe8a8'; ctx.fillText(u.name, u.x, by-5);
+    return;
+  }
 
   // shadow + team ring
   ctx.fillStyle = 'rgba(0,0,0,.3)';
@@ -1812,6 +2016,12 @@ window.GAME = {
   get attackHeld(){ return attackHeld; },
   setAttackHeld(v){ attackHeld = !!v; },
   startCampaign(i, hero){ campaignLevel = i; selHero = hero||0; startMatch(); },
+  get objective(){ return obj; },
+  get objState(){ return { pickups:pickups.map(p=>p.got), commanderKills, surviveT:Math.ceil(surviveT),
+    escapeReached: escapeZone? escapeZone.reached : null, rescueFreed: rescuee? rescuee.freed : null, objDone }; },
+  get escapeZone(){ return escapeZone; },
+  get pickups(){ return pickups; },
+  get rescuee(){ return rescuee; },
   useSkill
 };
 </script>
