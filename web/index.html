@@ -114,6 +114,10 @@
   .mapTip { position:fixed; z-index:40; pointer-events:none; background:rgba(20,14,6,.95); color:#f0e2c4;
     border:1px solid #a8813a; border-radius:8px; padding:6px 10px; font-size:12px; max-width:240px; display:none; }
   .mapTip b { color:#e8b64c; } .mapTip .o { color:#8ce87a; font-size:11px; }
+  @keyframes terrReveal { from{ opacity:0; } to{ opacity:1; } }
+  #mapWrap .revealAnim { animation:terrReveal 1.3s ease-out; transform-box:fill-box; transform-origin:center; }
+  @keyframes nodePulse { 0%,100%{ opacity:1; } 50%{ opacity:.4; } }
+  #mapWrap .nodePulse { animation:nodePulse 0.7s ease-in-out 3; }
   .chRow { display:flex; align-items:center; gap:12px; text-align:left; padding:10px 16px; border-radius:12px;
     background:linear-gradient(180deg, rgba(60,44,22,.9), rgba(32,22,10,.9)); border:1.5px solid #6e5426; cursor:pointer; }
   .chRow.locked { opacity:.5; cursor:default; }
@@ -129,6 +133,9 @@
   .reader p { font-size:15px; line-height:1.85; text-align:left; }
   #readerSrc { margin-top:14px; font-size:12px; font-style:italic; color:#7a5c2e; text-align:right; }
   #introObj { margin-top:14px; font-size:14px; font-weight:700; color:#5a7a2e; text-align:center; }
+  #introFact { margin-top:12px; font-size:11.5px; line-height:1.6; color:#5a4326; text-align:left;
+    background:rgba(160,120,60,.16); border-left:3px solid #a8763a; border-radius:4px; padding:8px 12px; }
+  #introFact b { color:#7a4a10; }
 
   /* амь багасахад анхааруулах улаан хүрээ */
   #lowHp { position:fixed; inset:0; z-index:15; pointer-events:none; opacity:0;
@@ -188,6 +195,7 @@
     <h3 id="introTitle"></h3>
     <p id="introText"></p>
     <div id="introObj"></div>
+    <div id="introFact"></div>
   </div>
   <div style="display:flex; gap:12px; margin-top:14px">
     <button class="btn secondary" id="introBackBtn">БУЦАХ</button>
@@ -599,45 +607,46 @@ const LEVELS = [
   { title:'Зугталт',              src:'МНТ §79–87',   mult:0.55, hero:null,                              reward:80,
     desc:'Тайчиудын хавчлагаас зугтаж, баруун гарц уруу гүй.',
     obj:{ type:'reach', label:'Тайчиудаас зугтаж, БАРУУН ГАРЦ уруу гүй' },
-    intro:'Тайчиудын Таргутай Тэмүжинг хүлж, боол болгов. Нэгэн шөнө хүү харуулын толгойг цохиж мултран, Онон голын харгайд нуугдав. Одоо шөнийн харанхуйгаар гарц уруу зугтах цаг!',
+    theme:'steppe', fact:'Тайчууд бол Хамаг Монголын нэгэн овог. Есүхэйг нас барсны дараа тэд Өэлүн эхийн гэр бүлийг орхиж явсан юм. Тэмүжин ~1177 онд боолчлолоос зугтсан нь түүний хүч чадлын анхны шинж байв.', intro:'Тайчиудын Таргутай Тэмүжинг хүлж, боол болгов. Нэгэн шөнө хүү харуулын толгойг цохиж мултран, Онон голын харгайд нуугдав. Одоо шөнийн харанхуйгаар гарц уруу зугтах цаг!',
     events:[{t:7, kind:'ambush', text:'Отолт! Тайчууд хажуугаас гарч ирлээ!'}] },
   { title:'Найман шарга морь',    src:'МНТ §90–93',   mult:0.70, hero:{ name:'Хулгайн ноён',  k:0.70 },  reward:100,
     desc:'Хулгайлагдсан 8 моримо цуглуулж буцааж ав.',
     obj:{ type:'collect', count:8, label:'Хулгайлагдсан МОРИ цуглуул' },
-    intro:'Найман шарга унаган мориодыг маань хулгайч тууж одов. Тэмүжин ганц морьтой мөрдөн хөөж, замдаа Боорчитой учрав. Тарж бэлчсэн мориодоо цуглуулан гэртээ тууж авчир!',
+    theme:'steppe', fact:'Монголчуудын хувьд адуу бол амьдралын үндэс — унаа, хоол (айраг, мах), эд хөрөнгийн хэмжүүр байв. Морь хулгайлах нь ноцтой гэмт хэрэг. Энэ явдал Тэмүжин, Боорчи нарын анд барилдсан эхлэл болжээ.', intro:'Найман шарга унаган мориодыг маань хулгайч тууж одов. Тэмүжин ганц морьтой мөрдөн хөөж, замдаа Боорчитой учрав. Тарж бэлчсэн мориодоо цуглуулан гэртээ тууж авчир!',
     events:[{t:9, kind:'reinforce', text:'Хулгайчид нэмэлт хүч дуудлаа!'}] },
   { title:'Бөртэг аврах',         src:'МНТ §104–113', mult:0.85, hero:{ name:'Тогтоа бэх',    k:0.85 },  reward:120,
     desc:'Мэргэдээс Бөртэд хүрч, гэр орондоо авчир.',
     obj:{ type:'rescue', label:'БӨРТЭД хүрч, гэртээ дагуулан авчир' },
-    intro:'Гурван мэргэд гэнэт довтолж, Тэмүжиний хатан Бөртэ үжинг олзолж одов. Тэмүжин Тоорил хан, анд Жамуха хоёртой хүч нэгтгэн мэргэдийг мөрдөв. Бөртэдээ хүрч чөлөөлж, гэр орондоо аюулгүй хүргэ!',
+    theme:'steppe', fact:'Мэргэд бол Сэлэнгэ мөрний сав нутгийн хүчирхэг овог. Бөртэг хулгайлсан нь Есүхэй Өэлүнг мэргэдээс булаасны өшөө байв. Тэмүжин Тоорил хан, Жамуха нартай холбоо байгуулж мэргэдийг ялсан.', intro:'Гурван мэргэд гэнэт довтолж, Тэмүжиний хатан Бөртэ үжинг олзолж одов. Тэмүжин Тоорил хан, анд Жамуха хоёртой хүч нэгтгэн мэргэдийг мөрдөв. Бөртэдээ хүрч чөлөөлж, гэр орондоо аюулгүй хүргэ!',
     events:[{t:6, kind:'reinforce', text:'Мэргэдийн харуул сэрлээ!'},{t:16, kind:'ambush', text:'Гэрлэх замд отолт!'}] },
   { title:'Анд ба дайсан',        src:'МНТ §128–129', mult:1.00, hero:{ name:'Жамуха',        k:1.00 },  reward:150,
     desc:'Далан балжудад анд Жамухаг гурван удаа дийл.',
     obj:{ type:'slay', count:3, label:'ЖАМУХАГ дийл' },
-    intro:'Нэгэн цагийн андаа өргөсөн Жамуха эдүгээ эрх мэдлийн төлөө өрсөлдөгч болов. Далан балжудын хээр талд хоёр цэрэг нүүр тулав. Хайр гунигтай ч ялахаас өөр зам үгүй — андаа гурван удаа дийл!',
+    theme:'steppe', fact:'Жамуха, Тэмүжин хоёр гурван удаа анд (цусан ах дүү) болсон ч эрх мэдлийн төлөө хагарсан. 1187 оны орчим Далан балжудын тулаанд Жамуха ялсан ч харгислалаараа дэмжигчдээ алдаж эхэлсэн.', intro:'Нэгэн цагийн андаа өргөсөн Жамуха эдүгээ эрх мэдлийн төлөө өрсөлдөгч болов. Далан балжудын хээр талд хоёр цэрэг нүүр тулав. Хайр гунигтай ч ялахаас өөр зам үгүй — андаа гурван удаа дийл!',
     events:[{t:12, kind:'enrage', text:'Жамуха хилэгнэн дайрав!'}] },
   { title:'Хэрэйдийн уналт',      src:'МНТ §183–185', mult:1.12, hero:{ name:'Ван хан',       k:1.10 },  reward:180,
     desc:'Ван ханы хүчийг хоёр удаа буулгаж дуусга.',
     obj:{ type:'slay', count:2, label:'ВАН ХАНЫГ дийл' },
-    intro:'Хэрэйдийн Тоорил Ван хан урвасан тул Тэмүжин эсэргүүцэв. Жэр хавцалд хэрэйдийн их цэрэг бүрэлгэв. Гурван өдрийн тулааны эцэст Ван ханы хүчийг бут ниргэ!',
+    theme:'steppe', fact:'Хэрэйд бол Христийн (Несториан) шашинтай хүчирхэг хаант улс. Ван хан Тэмүжиний эцэг Есүхэйн анд байсан ивээн тэтгэгч. 1203 онд тэдний холбоо задарч, Жэр хавцлын тулаанд Тэмүжин Хэрэйдийг эзэлсэн.', intro:'Хэрэйдийн Тоорил Ван хан урвасан тул Тэмүжин эсэргүүцэв. Жэр хавцалд хэрэйдийн их цэрэг бүрэлгэв. Гурван өдрийн тулааны эцэст Ван ханы хүчийг бут ниргэ!',
     events:[{t:10, kind:'reinforce', text:'Хэрэйдийн нөөц цэрэг ирлээ!'},{t:22, kind:'enrage', text:'Ван хан эцсийн хүчээ дайчлав!'}] },
   { title:'Найманы төгсгөл',      src:'МНТ §189–196', mult:1.25, hero:{ name:'Таян хан',      k:1.20 },  reward:220,
     desc:'Таян ханы хаалгыг нурааж, Найманыг эзэл.',
     obj:{ type:'gate', label:'Таян ханы ИХ ХААЛГЫГ нураа' },
-    intro:'Баруун зүгийн сүүлчийн их гүрэн — Найман. Таян хан монголчуудыг басамжлав. Тэмүжин шөнөдөө галаа олон асааж, тоогоо үржүүлэн харуулав. Таян ханы их хаалгыг нурааж, талыг нэгтгэ!',
+    theme:'steppe', fact:'Найман бол Алтайн нутгийн соёл иргэншилтэй, Уйгур бичиг хэрэглэдэг байсан овог. 1204 онд Таян ханыг ялснаар Тэмүжин Хамаг Монголыг нэгтгэж, 1206 онд Чингис хаан өргөмжлөгдсөн.', intro:'Баруун зүгийн сүүлчийн их гүрэн — Найман. Таян хан монголчуудыг басамжлав. Тэмүжин шөнөдөө галаа олон асааж, тоогоо үржүүлэн харуулав. Таян ханы их хаалгыг нурааж, талыг нэгтгэ!',
     events:[{t:14, kind:'reinforce', text:'Найманы нэмэлт цэрэг!'},{t:28, kind:'reinforce', text:'Дахин нэмэлт хүч ирлээ!'}] },
   { title:'Хорезмын аян',         src:'1219 он',      mult:1.38, hero:{ name:'Мухаммед шах',  k:1.30 },  reward:260,
     desc:'Их баруун аян — Шахын довтолгоог 80 секунд тэсэж няц.',
     obj:{ type:'survive', secs:80, label:'Шахын довтолгоог ТЭСЭЖ ГАРАХ' },
-    intro:'Отрарын захирагч монголын элч, худалдаачдыг алав. Хилэгнэсэн Чингис хаан их баруун аяныг зарлав. Хорезмын Мухаммед шахын тоо томшгүй цэрэг давалгаалан ирнэ — байраа бариж 80 секунд тэсэж гар!',
+    theme:'khwarezm', fact:'Хорезмын эзэнт гүрэн бол Төв Азийн Ислам шашинт хүчирхэг гүрэн (нийслэл Самарканд, Бухар). 1218 онд Отрарт монголын худалдааны цуваа алагдсан нь 1219 оны их аяны шалтгаан болов. Самарканд, Бухарын сүм, минарет нь дэлхийд алдартай.', intro:'Отрарын захирагч монголын элч, худалдаачдыг алав. Хилэгнэсэн Чингис хаан их баруун аяныг зарлав. Хорезмын Мухаммед шахын тоо томшгүй цэрэг давалгаалан ирнэ — байраа бариж 80 секунд тэсэж гар!',
     events:[{t:25, kind:'ambush', text:'Шахын морьт цэрэг хажуугаас цохив!'},{t:50, kind:'enrage', text:'Шах эцсийн бүх хүчээ шидлээ!'}] },
   { title:'Инду мөрний тулаан',   src:'1221 он',      mult:1.50, hero:{ name:'Жалал ад-Дин',  k:1.45 },  reward:300,
     desc:'Инду мөрөнд зоригт Жалал ад-Диныг эцэслэн дийл.',
     obj:{ type:'slay', count:1, boss:true, label:'ЖАЛАЛ АД-ДИНЫГ эцэслэн дийл' },
-    intro:'Хорезмын хунтайж Жалал ад-Дин эцгээсээ ялгаатай нь зоригтой байв. Инду мөрний эрэг дээр сүүлчийн тулаан болов. Тэрээр мориороо голд үсрэн амиа авран зугтсан ч, өнөөдөр түүнийг эцэслэн дийл!',
+    theme:'khwarezm', fact:'Жалал ад-Дин Мангуберди бол Хорезмын сүүлчийн хунтайж, зоригт жанжин. 1221 онд Инд мөрний тулаанд ялагдсан ч мориороо эгц эргээс мөрөнд үсэрч амиа авран зугтсан нь Чингис хааны биширлийг хүртсэн домогт үйл явдал.', intro:'Хорезмын хунтайж Жалал ад-Дин эцгээсээ ялгаатай нь зоригтой байв. Инду мөрний эрэг дээр сүүлчийн тулаан болов. Тэрээр мориороо голд үсрэн амиа авран зугтсан ч, өнөөдөр түүнийг эцэслэн дийл!',
     events:[{t:12, kind:'enrage', text:'Жалал ад-Дин зоригтойгоор эргэн дайрав!'}] }
 ];
 let campaignLevel = null;   // null = энгийн тулаан
+let justCleared = -1;       // сая дуусгасан түвшин (газрын зураг дээр анимацлах)
 
 // ---------- game state ----------
 let state = 'menu';           // menu | select | play | end
@@ -697,9 +706,12 @@ function startMatch(){
     const k = L.hero ? L.hero.k : L.mult;
     matchDiff = { name:L.title, mHp:L.mult, mDmg:L.mult, hHp:k, hDmg:k, gold:1,
                   eName:(L.hero ? L.hero.name : 'Дайсны дайчин') };
+    matchTheme = L.theme || 'steppe';
   } else {
     matchDiff = Object.assign({ eName:'Жалал ад-Дин' }, DIFFS[selDiff]);
+    matchTheme = 'khwarezm';
   }
+  setupDeco(matchTheme);
 
   pGate = makeUnit({ type:'gate', team:0, x:P_GATE_X, y:LANE_Y, r:52, hp:2000, maxHp:2000, isStruct:true, name:'Их хаалга' });
   eGate = makeUnit({ type:'gate', team:1, x:E_GATE_X, y:LANE_Y, r:52, hp:2000, maxHp:2000, isStruct:true, name:'Хорезмын хаалга' });
@@ -826,12 +838,13 @@ function buildLevels(){   // одоо газрын зураг зурна
   // эх газар
   parts.push('<path d="'+LANDMASS+'" fill="url(#land)" stroke="#7a5c2e" stroke-width="2"/>');
   // эзэнт гүрний нутаг (ахицаас хамааран)
+  const anim = justCleared >= 0 ? ' class="revealAnim"' : '';
   if(done){
-    parts.push('<polygon points="'+T_FULL+'" fill="rgba(242,201,106,.72)" stroke="#fff0c0" stroke-width="3" filter="url(#glow)"/>');
+    parts.push('<polygon'+anim+' points="'+T_FULL+'" fill="rgba(242,201,106,.72)" stroke="#fff0c0" stroke-width="3" filter="url(#glow)"/>');
   } else {
-    if(prog >= 7) parts.push('<polygon points="'+T_CENT+'" fill="rgba(200,90,74,.35)" stroke="#c85a4a" stroke-width="2"/>');
-    else if(prog >= 6) parts.push('<polygon points="'+T_MONG+'" fill="rgba(200,90,74,.32)" stroke="#c85a4a" stroke-width="2"/>');
-    else if(prog >= 1) parts.push('<polygon points="'+T_HOME+'" fill="rgba(200,90,74,.30)" stroke="#c85a4a" stroke-width="2"/>');
+    if(prog >= 7) parts.push('<polygon'+anim+' points="'+T_CENT+'" fill="rgba(200,90,74,.35)" stroke="#c85a4a" stroke-width="2"/>');
+    else if(prog >= 6) parts.push('<polygon'+anim+' points="'+T_MONG+'" fill="rgba(200,90,74,.32)" stroke="#c85a4a" stroke-width="2"/>');
+    else if(prog >= 1) parts.push('<polygon'+anim+' points="'+T_HOME+'" fill="rgba(200,90,74,.30)" stroke="#c85a4a" stroke-width="2"/>');
   }
   // бүс нутгийн нэрс
   for(const [name,x,y] of REGIONS)
@@ -845,7 +858,8 @@ function buildLevels(){   // одоо газрын зураг зурна
     const cleared = prog > i, unlocked = prog >= i;
     const fill = cleared? '#8ce87a' : (unlocked? '#e8b64c' : '#5a4a30');
     const stroke = unlocked? '#3a2a10' : '#3a2a10';
-    parts.push('<g class="mapNode'+(unlocked?'':' locked')+'" data-idx="'+i+'">'
+    const pulse = (i === justCleared) ? ' nodePulse' : '';
+    parts.push('<g class="mapNode'+(unlocked?'':' locked')+pulse+'" data-idx="'+i+'">'
       +'<circle cx="'+n.x+'" cy="'+n.y+'" r="15" fill="'+fill+'" stroke="'+stroke+'" stroke-width="2"'+(unlocked?' filter="url(#glow)"':'')+'/>'
       +'<text x="'+n.x+'" y="'+(n.y+5)+'" fill="#241503" font-size="15" font-weight="800" text-anchor="middle" font-family="sans-serif">'+(cleared?'✓':(i+1))+'</text>'
       +'</g>');
@@ -887,6 +901,7 @@ function buildLevels(){   // одоо газрын зураг зурна
     });
     g.addEventListener('mouseleave', ()=>{ tip.style.display='none'; });
   });
+  if(justCleared >= 0){ Snd.fanfare(); justCleared = -1; }   // анимаци нэг л удаа
 }
 function ensureMapTip(){
   let t = document.getElementById('mapTip');
@@ -1737,18 +1752,34 @@ function updateHUD(){
 }
 
 // ---------- render ----------
-const deco = [];
-(function(){
-  // deterministic decorations
+let deco = [];
+let matchTheme = 'steppe';
+// Талбарын чимэглэлийг тухайн түвшний соёл иргэншлээр байрлуулна
+function setupDeco(theme){
+  deco = [];
   let seed = 7;
   const rnd = ()=> (seed = (seed*16807)%2147483647) / 2147483647;
   for(let i=0;i<26;i++) deco.push({ kind:'grass', x:rnd()*WORLD_W, y:GROUND_TOP+rnd()*(GROUND_BOT-GROUND_TOP), s:.6+rnd()*.8 });
   for(let i=0;i<8;i++)  deco.push({ kind:'rock',  x:200+rnd()*(WORLD_W-400), y:GROUND_TOP+rnd()*(GROUND_BOT-GROUND_TOP), s:.5+rnd()*.9 });
-  deco.push({kind:'ger', x:200, y:GROUND_TOP-40, s:1.15});
-  deco.push({kind:'ger', x:330, y:GROUND_TOP-60, s:0.85});
-  deco.push({kind:'tent', x:2760, y:GROUND_TOP-45, s:1.1});
-  deco.push({kind:'tent', x:2650, y:GROUND_TOP-60, s:0.85});
-})();
+  // ── Монгол тал (зүүн, тоглогчийн буурь): гэр, тэрэг, овоо ──
+  deco.push({kind:'ger',  x:175, y:GROUND_TOP-38, s:1.2});
+  deco.push({kind:'ger',  x:300, y:GROUND_TOP-58, s:0.85});
+  deco.push({kind:'cart', x:390, y:GROUND_TOP-30, s:1.0});   // тэрэг
+  deco.push({kind:'ovoo', x:470, y:GROUND_TOP-52, s:1.0});   // овоо
+  deco.push({kind:'horse',x:250, y:GROUND_TOP-18, s:1.0});
+  // ── Дайсны тал (баруун): соёлоор ялгаатай ──
+  if(theme === 'khwarezm'){
+    deco.push({kind:'mosque',  x:2760, y:GROUND_TOP-30, s:1.15});  // бөмбөгөр сүм
+    deco.push({kind:'minaret', x:2640, y:GROUND_TOP-70, s:1.1});   // минарет
+    deco.push({kind:'minaret', x:2880, y:GROUND_TOP-64, s:0.9});
+  } else {
+    // тал нутгийн дайсан овог — өөр өнгийн гэр, тэрэг
+    deco.push({kind:'gerE', x:2770, y:GROUND_TOP-40, s:1.15});
+    deco.push({kind:'gerE', x:2650, y:GROUND_TOP-60, s:0.85});
+    deco.push({kind:'cart', x:2560, y:GROUND_TOP-28, s:0.95});
+  }
+}
+setupDeco('steppe');
 
 function render(){
   ctx.setTransform(scaleF, 0, 0, scaleF, 0, 0);
@@ -1787,11 +1818,19 @@ function render(){
 
   // decorations
   for(const d of deco){
-    if(d.x < camX-100 || d.x > camX+vw+100) continue;
-    if(d.kind==='grass') drawGrass(d.x, d.y, d.s);
-    else if(d.kind==='rock') drawRock(d.x, d.y, d.s);
-    else if(d.kind==='ger') drawGer(d.x, d.y, d.s);
-    else if(d.kind==='tent') drawTent(d.x, d.y, d.s);
+    if(d.x < camX-140 || d.x > camX+vw+140) continue;
+    switch(d.kind){
+      case 'grass':   drawGrass(d.x, d.y, d.s); break;
+      case 'rock':    drawRock(d.x, d.y, d.s); break;
+      case 'ger':     drawGer(d.x, d.y, d.s, '#b83a2a'); break;
+      case 'gerE':    drawGer(d.x, d.y, d.s, '#3a5a8a'); break;
+      case 'cart':    drawCart(d.x, d.y, d.s); break;
+      case 'ovoo':    drawOvoo(d.x, d.y, d.s); break;
+      case 'horse':   drawHorse(d.x, d.y, d.s); break;
+      case 'mosque':  drawMosque(d.x, d.y, d.s); break;
+      case 'minaret': drawMinaret(d.x, d.y, d.s); break;
+      case 'tent':    drawTent(d.x, d.y, d.s); break;
+    }
   }
 
   // zones
@@ -1928,15 +1967,115 @@ function drawRock(x,y,s){
   ctx.fillStyle = 'rgba(255,255,255,.15)';
   ctx.beginPath(); ctx.ellipse(x-4*s, y-3*s, 7*s, 4*s, 0, 0, TAU); ctx.fill();
 }
-function drawGer(x,y,s){
-  ctx.fillStyle = '#e8e0d0';
-  ctx.beginPath(); ctx.ellipse(x, y+18*s, 42*s, 14*s, 0, 0, Math.PI, true); ctx.fill();
-  ctx.fillRect(x-42*s, y, 84*s, 18*s);
-  ctx.beginPath(); ctx.moveTo(x-46*s, y+2); ctx.lineTo(x, y-26*s); ctx.lineTo(x+46*s, y+2); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#b8452a';
-  ctx.fillRect(x-8*s, y+2*s, 16*s, 16*s);
-  ctx.strokeStyle = '#a89878'; ctx.lineWidth = 1.5;
-  ctx.strokeRect(x-42*s, y, 84*s, 18*s);
+// Монгол гэр (тооно, ханын хээтэй) — banner нь тугны өнгө
+function drawGer(x,y,s,banner){
+  const w = 44*s;
+  ctx.fillStyle = 'rgba(0,0,0,.18)';
+  ctx.beginPath(); ctx.ellipse(x, y+20*s, w, 8*s, 0, 0, TAU); ctx.fill();
+  // ханын цагаан эсгий
+  ctx.fillStyle = '#efe7d6';
+  ctx.beginPath(); ctx.ellipse(x, y+18*s, w, 13*s, 0, 0, Math.PI, true); ctx.fill();
+  ctx.fillRect(x-w, y, w*2, 18*s);
+  // бөмбөгөр дээвэр
+  ctx.beginPath(); ctx.moveTo(x-w-2, y+2); ctx.quadraticCurveTo(x, y-30*s, x+w+2, y+2); ctx.closePath(); ctx.fill();
+  // тооно (орой)
+  ctx.strokeStyle = '#8a7a5a'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.ellipse(x, y-26*s, 9*s, 4*s, 0, 0, TAU); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x-9*s, y-26*s); ctx.lineTo(x, y-30*s); ctx.lineTo(x+9*s, y-26*s); ctx.stroke();
+  // хаалга (өнгөт)
+  ctx.fillStyle = banner || '#b8452a';
+  ctx.fillRect(x-9*s, y+1*s, 18*s, 17*s);
+  ctx.strokeStyle = '#caa06a'; ctx.lineWidth = 1;
+  ctx.strokeRect(x-9*s, y+1*s, 18*s, 17*s);
+  // ханын хээ шугам
+  ctx.strokeStyle = 'rgba(140,120,90,.5)';
+  ctx.beginPath(); ctx.moveTo(x-w, y+9*s); ctx.lineTo(x+w, y+9*s); ctx.stroke();
+}
+// Монгол тэрэг (модон дугуйтай ачааны тэрэг)
+function drawCart(x,y,s){
+  ctx.fillStyle='rgba(0,0,0,.2)';
+  ctx.beginPath(); ctx.ellipse(x, y+14*s, 30*s, 5*s, 0,0,TAU); ctx.fill();
+  // тавцан
+  ctx.fillStyle='#7a5a34'; ctx.fillRect(x-26*s, y-6*s, 52*s, 8*s);
+  // ачаа (боодол)
+  ctx.fillStyle='#c9a86a'; ctx.beginPath(); ctx.ellipse(x, y-12*s, 20*s, 9*s, 0,0,TAU); ctx.fill();
+  ctx.strokeStyle='#8a6a3a'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(x-14*s,y-16*s); ctx.lineTo(x-14*s,y-6*s); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x+14*s,y-16*s); ctx.lineTo(x+14*s,y-6*s); ctx.stroke();
+  // модон дугуй (хигээстэй)
+  ctx.strokeStyle='#5a3a1a'; ctx.lineWidth=2.5;
+  for(const wx of [x-16*s, x+16*s]){
+    ctx.beginPath(); ctx.arc(wx, y+6*s, 9*s, 0, TAU); ctx.stroke();
+    for(let a=0;a<4;a++){ const ang=a*Math.PI/2; ctx.beginPath(); ctx.moveTo(wx,y+6*s); ctx.lineTo(wx+Math.cos(ang)*9*s, y+6*s+Math.sin(ang)*9*s); ctx.stroke(); }
+  }
+  // татах гуя
+  ctx.strokeStyle='#7a5a34'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(x-26*s,y-2*s); ctx.lineTo(x-40*s, y+2*s); ctx.stroke();
+}
+// Овоо (тахилгын чулуун овоо, хөх хадагтай)
+function drawOvoo(x,y,s){
+  ctx.fillStyle='rgba(0,0,0,.2)';
+  ctx.beginPath(); ctx.ellipse(x, y+14*s, 22*s, 6*s, 0,0,TAU); ctx.fill();
+  // чулуун овоо
+  ctx.fillStyle='#8a8272';
+  ctx.beginPath(); ctx.moveTo(x-20*s, y+14*s); ctx.lineTo(x, y-30*s); ctx.lineTo(x+20*s, y+14*s); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='rgba(0,0,0,.2)'; ctx.lineWidth=1;
+  for(let i=1;i<4;i++){ ctx.beginPath(); ctx.moveTo(x-20*s+i*4*s, y+14*s-i*10*s); ctx.lineTo(x+20*s-i*4*s, y+14*s-i*10*s); ctx.stroke(); }
+  // мод + хөх хадаг
+  ctx.strokeStyle='#5a3a1a'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(x, y-30*s); ctx.lineTo(x, y-46*s); ctx.stroke();
+  ctx.fillStyle='#4a90d0';
+  ctx.beginPath(); ctx.moveTo(x, y-44*s); ctx.quadraticCurveTo(x+18*s, y-40*s, x+22*s, y-30*s); ctx.quadraticCurveTo(x+10*s, y-34*s, x, y-32*s); ctx.closePath(); ctx.fill();
+}
+// Морь (бэлчиж буй)
+function drawHorse(x,y,s){
+  ctx.fillStyle='#6a4a2a';
+  ctx.beginPath(); ctx.ellipse(x, y-6*s, 14*s, 7*s, 0,0,TAU); ctx.fill(); // бие
+  ctx.fillRect(x+8*s, y-18*s, 5*s, 14*s); // хүзүү
+  ctx.beginPath(); ctx.ellipse(x+12*s, y-18*s, 5*s, 3*s, 0,0,TAU); ctx.fill(); // толгой
+  ctx.strokeStyle='#4a3018'; ctx.lineWidth=2;
+  for(const lx of [-8,-3,5,9]){ ctx.beginPath(); ctx.moveTo(x+lx*s, y-2*s); ctx.lineTo(x+lx*s, y+8*s); ctx.stroke(); }
+  ctx.strokeStyle='#2a1a08'; ctx.lineWidth=2; // сүүл
+  ctx.beginPath(); ctx.moveTo(x-14*s,y-8*s); ctx.lineTo(x-20*s, y+4*s); ctx.stroke();
+}
+// Хорезмын бөмбөгөр сүм (цэнхэр вааран бөмбөгөр)
+function drawMosque(x,y,s){
+  ctx.fillStyle='rgba(0,0,0,.2)';
+  ctx.beginPath(); ctx.ellipse(x, y+18*s, 46*s, 9*s, 0,0,TAU); ctx.fill();
+  // үндсэн барилга (шавар)
+  ctx.fillStyle='#c9a878'; ctx.fillRect(x-40*s, y-14*s, 80*s, 32*s);
+  ctx.strokeStyle='#a88858'; ctx.lineWidth=1.5; ctx.strokeRect(x-40*s, y-14*s, 80*s, 32*s);
+  // нуман хаалга
+  ctx.fillStyle='#4a3828';
+  ctx.beginPath(); ctx.moveTo(x-9*s,y+18*s); ctx.lineTo(x-9*s,y-2*s); ctx.arc(x,y-2*s,9*s,Math.PI,0); ctx.lineTo(x+9*s,y+18*s); ctx.closePath(); ctx.fill();
+  // цэнхэр бөмбөгөр (сонгодог)
+  const g = ctx.createLinearGradient(x, y-58*s, x, y-14*s);
+  g.addColorStop(0,'#5ab0d8'); g.addColorStop(1,'#2a7098');
+  ctx.fillStyle=g;
+  ctx.beginPath(); ctx.moveTo(x-30*s, y-14*s);
+  ctx.bezierCurveTo(x-30*s, y-52*s, x+30*s, y-52*s, x+30*s, y-14*s); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='#1a5070'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(x, y-14*s); ctx.lineTo(x, y-50*s); ctx.stroke();
+  // орой + сар
+  ctx.strokeStyle='#e8c84a'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(x, y-50*s); ctx.lineTo(x, y-62*s); ctx.stroke();
+  ctx.fillStyle='#e8c84a';
+  ctx.beginPath(); ctx.arc(x, y-66*s, 4*s, 0.4, Math.PI*1.6); ctx.fill();
+}
+// Минарет (өндөр цамхаг)
+function drawMinaret(x,y,s){
+  ctx.fillStyle='rgba(0,0,0,.2)';
+  ctx.beginPath(); ctx.ellipse(x, y+14*s, 12*s, 4*s, 0,0,TAU); ctx.fill();
+  ctx.fillStyle='#d8b888'; ctx.fillRect(x-7*s, y-60*s, 14*s, 74*s);
+  ctx.strokeStyle='#a88858'; ctx.lineWidth=1;
+  for(let i=1;i<5;i++){ ctx.beginPath(); ctx.moveTo(x-7*s, y-60*s+i*15*s); ctx.lineTo(x+7*s, y-60*s+i*15*s); ctx.stroke(); }
+  // тагт
+  ctx.fillStyle='#b89868'; ctx.fillRect(x-10*s, y-46*s, 20*s, 4*s);
+  // цэнхэр бөмбөгөр орой
+  ctx.fillStyle='#3a90b8';
+  ctx.beginPath(); ctx.moveTo(x-8*s, y-60*s); ctx.quadraticCurveTo(x, y-78*s, x+8*s, y-60*s); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#e8c84a';
+  ctx.beginPath(); ctx.arc(x, y-80*s, 3*s, 0.4, Math.PI*1.6); ctx.fill();
 }
 function drawTent(x,y,s){
   ctx.fillStyle = '#7a3040';
@@ -1996,17 +2135,41 @@ function drawUnit(u){
   ctx.fillStyle = '#e0b088';
   ctx.beginPath(); ctx.arc(u.x, u.y-R*1.15, R*0.55, 0, TAU); ctx.fill();
 
-  // helmet: Mongol pointed helmet w/ fur brim (player team) or wrapped turban-ish (enemy)
+  // Дуулга — соёлоор ялгаатай
   if(u.team===0){
+    // Монгол шовгор дуулга, үслэг захтай, оройн залаатай
     ctx.fillStyle = isHero? '#d8b048' : '#8a7a5a';
     ctx.beginPath(); ctx.arc(u.x, u.y-R*1.25, R*0.58, Math.PI, 0); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(u.x-R*0.2, u.y-R*1.7); ctx.lineTo(u.x, u.y-R*2.25); ctx.lineTo(u.x+R*0.2, u.y-R*1.7); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = '#3a2a10'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(u.x-R*0.58, u.y-R*1.25); ctx.lineTo(u.x+R*0.58, u.y-R*1.25); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(u.x-R*0.22, u.y-R*1.72); ctx.lineTo(u.x, u.y-R*2.35); ctx.lineTo(u.x+R*0.22, u.y-R*1.72); ctx.closePath(); ctx.fill();
+    // улаан оройн залаа
+    ctx.strokeStyle='#c22'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(u.x, u.y-R*2.35); ctx.quadraticCurveTo(u.x+R*0.3, u.y-R*2.5, u.x+R*0.15, u.y-R*2.0); ctx.stroke();
+    // үслэг зах
+    ctx.strokeStyle = '#5a3a10'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(u.x-R*0.58, u.y-R*1.22); ctx.lineTo(u.x+R*0.58, u.y-R*1.22); ctx.stroke();
+  } else if(matchTheme === 'khwarezm'){
+    // Хорезм/Персийн дайчин — ороолт (турбан) ба шовгор дуулга
+    ctx.fillStyle = u===aiHero? '#5a4a8a' : '#7a6a4a';
+    ctx.beginPath(); ctx.arc(u.x, u.y-R*1.3, R*0.56, Math.PI, 0); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(u.x-R*0.12, u.y-R*1.7); ctx.lineTo(u.x, u.y-R*2.05); ctx.lineTo(u.x+R*0.12, u.y-R*1.7); ctx.closePath(); ctx.fill(); // шовгор
+    // ороолт (турбан) — цагаан/ногоон
+    ctx.strokeStyle = u===aiHero? '#e8e0d0' : '#d8c8a0'; ctx.lineWidth = R*0.34; ctx.lineCap='round';
+    ctx.beginPath(); ctx.arc(u.x, u.y-R*1.18, R*0.5, Math.PI*1.05, Math.PI*1.95); ctx.stroke();
+    ctx.lineCap='butt';
   } else {
+    // тал нутгийн дайсан овог — Монгол маягийн дуулга (өөр өнгө)
     ctx.fillStyle = u===aiHero? '#c85a4a' : '#9a6a4a';
-    ctx.beginPath(); ctx.arc(u.x, u.y-R*1.3, R*0.56, Math.PI*0.9, Math.PI*0.1); ctx.fill();
-    ctx.fillRect(u.x-R*0.56, u.y-R*1.35, R*1.12, R*0.22);
+    ctx.beginPath(); ctx.arc(u.x, u.y-R*1.25, R*0.56, Math.PI, 0); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(u.x-R*0.2, u.y-R*1.68); ctx.lineTo(u.x, u.y-R*2.15); ctx.lineTo(u.x+R*0.2, u.y-R*1.68); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='#3a2010'; ctx.lineWidth=2.5;
+    ctx.beginPath(); ctx.moveTo(u.x-R*0.56, u.y-R*1.22); ctx.lineTo(u.x+R*0.56, u.y-R*1.22); ctx.stroke();
+  }
+
+  // Хорезмын явган цэрэг — дугуй бамбай (нурууны цаана)
+  if(u.team===1 && matchTheme==='khwarezm' && !u.archer && !isHero){
+    ctx.fillStyle='#8a6a3a'; ctx.strokeStyle='#c9a84a'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(u.x - u.face*R*0.7, u.y-R*0.2, R*0.7, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#c9a84a'; ctx.beginPath(); ctx.arc(u.x - u.face*R*0.7, u.y-R*0.2, R*0.14, 0, TAU); ctx.fill();
   }
 
   // weapon
@@ -2135,6 +2298,7 @@ function endMatch(win){
     const firstClear = (save.campaign||0) === campaignLevel;
     if(firstClear){
       save.campaign = campaignLevel + 1;
+      justCleared = campaignLevel;    // газрын зураг дээр анимацлах
       earned += L.reward;
       campaignLine = '<br><span style="color:#8ce87a">⚔️ '+(campaignLevel+1)+'-р түвшин анх удаа дуусгав! +'+L.reward+' 🪙 бонус</span>';
       if(campaignLevel+1 < LEVELS.length)
@@ -2264,6 +2428,7 @@ $('startBtn').addEventListener('click', ()=>{
     $('introTitle').textContent = (campaignLevel+1) + '. ' + L.title;
     $('introText').textContent = L.intro;
     $('introObj').textContent = '🎯 ' + L.obj.label;
+    $('introFact').innerHTML = '<b>📖 Түүхэн баримт (' + L.src + '):</b> ' + L.fact;
     setState('intro');
     Snd.horn(293.66, .5, .09);
   } else {
