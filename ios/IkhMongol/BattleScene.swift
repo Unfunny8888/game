@@ -237,7 +237,7 @@ final class BattleScene: SKScene {
         Audio.shared.preload()
         Audio.shared.startMusic()
 
-        if isPvp { Multiplayer.shared.delegate = self }
+        if isPvp { NetHub.current?.delegate = self }
 
         announce("Тулаан эхэллээ!")
         announce("Дайсны их хаалгыг нураа!")
@@ -1220,7 +1220,7 @@ final class BattleScene: SKScene {
 
     private func netAnnounce(_ text: String) {
         guard isPvp else { return }
-        Multiplayer.shared.send(.announce(text))
+        NetHub.current?.send(.announce(text), reliable: true)
     }
 
     /// Довтлох товч — дайсны баатрыг тэргүүн ээлжид онилно
@@ -1313,7 +1313,7 @@ final class BattleScene: SKScene {
             snapshotT -= dt
             if snapshotT <= 0 {
                 snapshotT = 0.08
-                Multiplayer.shared.send(.snapshot(buildSnapshot()), reliable: false)
+                NetHub.current?.send(.snapshot(buildSnapshot()), reliable: false)
             }
         }
 
@@ -1711,7 +1711,7 @@ final class BattleScene: SKScene {
         Audio.shared.play(win ? "win" : "lose", volume: 0.9)
 
         if isPvp {
-            Multiplayer.shared.send(.end(hostWon: win, hostKills: kills, guestKills: guestKills))
+            NetHub.current?.send(.end(hostWon: win, hostKills: kills, guestKills: guestKills), reliable: true)
         }
 
         // шагнал: тулааны алт + түвшин + ялалтын урамшуулал, хэцүү байдлаар үржүүлнэ
@@ -1753,8 +1753,9 @@ final class BattleScene: SKScene {
     /// Тулаанаас гарч үндсэн цэс рүү буцах
     private func exitToMenu() {
         if isPvp {
-            Multiplayer.shared.send(.leave)
-            Multiplayer.shared.stop()
+            NetHub.current?.send(.leave, reliable: true)
+            NetHub.current?.stop()
+            NetHub.current = nil
         }
         Audio.shared.play("tap")
         guard let view = view else { return }

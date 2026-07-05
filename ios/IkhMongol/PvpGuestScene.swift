@@ -57,7 +57,7 @@ final class PvpGuestScene: SKScene {
     override func didMove(to view: SKView) {
         view.isMultipleTouchEnabled = true
         insets = view.safeAreaInsets
-        Multiplayer.shared.delegate = self
+        NetHub.current?.delegate = self
 
         buildBackground()
         buildHUD()
@@ -369,8 +369,8 @@ final class PvpGuestScene: SKScene {
         inputT -= dt
         if inputT <= 0 {
             inputT = 0.06
-            Multiplayer.shared.send(.input(dx: Float(joyVec.dx), dy: Float(joyVec.dy)),
-                                    reliable: false)
+            NetHub.current?.send(.input(dx: Float(joyVec.dx), dy: Float(joyVec.dy)),
+                                 reliable: false)
         }
 
         // байрлалын зөөлөн интерполяци
@@ -443,7 +443,7 @@ final class PvpGuestScene: SKScene {
                 return
             }
             if p.distance(to: attackButton.position) <= 44 {
-                Multiplayer.shared.send(.attack)
+                NetHub.current?.send(.attack, reliable: true)
                 attackButton.run(.sequence([.scale(to: 0.88, duration: 0.05),
                                             .scale(to: 1.0, duration: 0.08)]))
                 Haptics.hit()
@@ -452,7 +452,7 @@ final class PvpGuestScene: SKScene {
             var handled = false
             for (i, b) in skillButtons.enumerated() {
                 if p.distance(to: b.position) <= b.btnRadius + 10 {
-                    Multiplayer.shared.send(.skill(i))
+                    NetHub.current?.send(.skill(i), reliable: true)
                     Haptics.skill()
                     handled = true
                     break
@@ -500,8 +500,9 @@ final class PvpGuestScene: SKScene {
     }
 
     private func exitToMenu(sendLeave: Bool) {
-        if sendLeave { Multiplayer.shared.send(.leave) }
-        Multiplayer.shared.stop()
+        if sendLeave { NetHub.current?.send(.leave, reliable: true) }
+        NetHub.current?.stop()
+        NetHub.current = nil
         Audio.shared.play("tap")
         guard let view = view else { return }
         let menu = MenuScene(size: size)
@@ -535,7 +536,8 @@ final class PvpGuestScene: SKScene {
             .wait(forDuration: 0.9),
             .run { [weak self] in
                 guard let self = self, let view = self.view else { return }
-                Multiplayer.shared.stop()
+                NetHub.current?.stop()
+                NetHub.current = nil
                 let end = EndScene(size: self.size, stats: stats)
                 end.scaleMode = .resizeFill
                 view.presentScene(end, transition: .fade(withDuration: 0.8))

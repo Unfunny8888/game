@@ -52,7 +52,7 @@ enum NetMsg: Codable {
     case leave
 }
 
-// MARK: - MultipeerConnectivity менежер (ойролцоох 1v1)
+// MARK: - Сүлжээний холбоосын нийтлэг интерфейс
 
 protocol MultiplayerDelegate: AnyObject {
     func mpConnected(peerName: String)
@@ -60,7 +60,23 @@ protocol MultiplayerDelegate: AnyObject {
     func mpReceived(_ msg: NetMsg)
 }
 
-final class Multiplayer: NSObject {
+/// Тээвэрлэлтийн давхарга — ойролцоо (MultipeerConnectivity) эсвэл онлайн (Game Center)
+protocol NetLink: AnyObject {
+    var delegate: MultiplayerDelegate? { get set }
+    var isHost: Bool { get }
+    var peerName: String { get }
+    func send(_ msg: NetMsg, reliable: Bool)
+    func stop()
+}
+
+/// Идэвхтэй холбоос — тулааны үзэгдлүүд эндээс ашиглана
+enum NetHub {
+    static var current: NetLink?
+}
+
+// MARK: - MultipeerConnectivity менежер (ойролцоох 1v1)
+
+final class Multiplayer: NSObject, NetLink {
 
     static let shared = Multiplayer()
 

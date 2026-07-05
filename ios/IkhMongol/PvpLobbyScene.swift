@@ -1,26 +1,30 @@
 import SpriteKit
+import UIKit
 
-/// Найзтайгаа тоглох — ойролцоох төхөөрөмж хайж, баатраа сонгоод 1v1 тулалдана
+/// Найзтайгаа тоглох — ойролцоо (Wi-Fi) эсвэл онлайн (Game Center) 1v1
 final class PvpLobbyScene: SKScene {
 
+    private enum Stage {
+        case chooseMode   // ойролцоо / онлайн сонгох
+        case searching    // хамтрагч хайж байна
+        case connected    // баатар сонгож, бэлэн болох
+    }
+
+    private var stage: Stage = .chooseMode
     private var built = false
     private var content: SKNode?
 
-    private var connected = false
     private var peerName = ""
     private var selHero = 0
     private var selfReady = false
     private var remoteHero: Int?
     private var starting = false
 
-    private var statusLabel: SKLabelNode?
     private var cardNodes: [SKShapeNode] = []
 
     override func didMove(to view: SKView) {
         view.isMultipleTouchEnabled = true
         built = true
-        Multiplayer.shared.delegate = self
-        Multiplayer.shared.start()
         buildUI()
     }
 
@@ -51,18 +55,40 @@ final class PvpLobbyScene: SKScene {
         title.position = CGPoint(x: cx, y: size.height - 30)
         c.addChild(title)
 
-        let status = UIFactory.label(
-            connected ? "Холбогдлоо: \(peerName)" : "🔍 Ойролцоох найзыг хайж байна...",
-            font: Fonts.demi, size: 13,
-            color: connected
-                ? SKColor(red: 0.56, green: 0.85, blue: 0.52, alpha: 1)
-                : SKColor(red: 0.72, green: 0.64, blue: 0.49, alpha: 1))
-        status.position = CGPoint(x: cx, y: size.height - 56)
-        c.addChild(status)
-        statusLabel = status
+        switch stage {
+        case .chooseMode:
+            let info = UIFactory.multiline(
+                "Ойролцоо: хоёр утас нэг Wi-Fi сүлжээнд эсвэл Bluetooth-ээр ойрхон байх ёстой.\nОнлайн: Game Center-ээр интернэтийн хаанаас ч таарц хайна.",
+                font: Fonts.demi, size: 11,
+                color: SKColor(red: 0.72, green: 0.64, blue: 0.49, alpha: 1),
+                width: size.width * 0.8)
+            info.position = CGPoint(x: cx, y: size.height * 0.68)
+            c.addChild(info)
 
-        if connected {
-            // баатрын сонголт — PvP-д бүх баатар нээлттэй
+            let nearby = UIFactory.button(text: "📶 ОЙРОЛЦОО", name: "nearby", width: 250, height: 52)
+            nearby.position = CGPoint(x: cx - 140, y: size.height * 0.40)
+            c.addChild(nearby)
+
+            let online = UIFactory.button(text: "🌐 ОНЛАЙН", name: "online", width: 250, height: 52)
+            online.position = CGPoint(x: cx + 140, y: size.height * 0.40)
+            c.addChild(online)
+
+        case .searching:
+            let status = UIFactory.label("🔍 Хамтрагч хайж байна...", font: Fonts.demi, size: 14,
+                                         color: SKColor(red: 0.72, green: 0.64, blue: 0.49, alpha: 1))
+            status.position = CGPoint(x: cx, y: size.height * 0.55)
+            c.addChild(status)
+            status.run(.repeatForever(.sequence([
+                .fadeAlpha(to: 0.4, duration: 0.7),
+                .fadeAlpha(to: 1.0, duration: 0.7)
+            ])))
+
+        case .connected:
+            let status = UIFactory.label("Холбогдлоо: \(peerName)", font: Fonts.demi, size: 13,
+                                         color: SKColor(red: 0.56, green: 0.85, blue: 0.52, alpha: 1))
+            status.position = CGPoint(x: cx, y: size.height - 56)
+            c.addChild(status)
+
             let note = UIFactory.label("PvP-д бүх баатар нээлттэй · Мастерийн нэмэгдэл үйлчлэхгүй",
                                        font: Fonts.demi, size: 10,
                                        color: SKColor(red: 0.54, green: 0.46, blue: 0.31, alpha: 1))
@@ -125,11 +151,41 @@ final class PvpLobbyScene: SKScene {
         }
     }
 
+    // MARK: - Холболтын горимууд
+
+    private func startNearby() {
+        let link = Multiplayer.shared
+        link.delegate = self
+        NetHub.current = link
+        link.start()
+        stage = .searching
+        buildUI()
+    }
+
+    private func startOnline() {
+        guard let rootVC = view?.window?.rootViewController else { return }
+        stage = .searching
+        buildUI()
+        GameCenterLink.authenticate(presenter: rootVC) { [weak self] ok in
+            guard let self = self else { return }
+            guard ok else {
+                self.stage = .chooseMode
+                self.buildUI()
+                return
+            }
+            let link = GameCenterLink()
+            link.delegate = self
+            NetHub.current = link
+            link.findMatch(presenter: rootVC)
+        }
+    }
+
     private func maybeStart() {
-        guard !starting, selfReady, let remote = remoteHero else { return }
+        guard !starting, selfReady, let remote = remoteHero,
+              let link = NetHub.current else { return }
         starting = true
-        if Multiplayer.shared.isHost {
-            Multiplayer.shared.send(.start(hostHero: selHero, guestHero: remote))
+        if link.isHost {
+            link.send(.start(hostHero: selHero, guestHero: remote), reliable: true)
             beginBattle(asHost: true, myHero: selHero, otherHero: remote)
         }
         // зочин .start мессеж хүлээнэ
@@ -148,41 +204,53 @@ final class PvpLobbyScene: SKScene {
         }
     }
 
+    // MARK: - Оролт
+
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let t = touches.first else { return }
         guard let name = UIFactory.nodeName(at: t.location(in: self), in: self) else { return }
 
         if name == "back", let view = view {
-            Multiplayer.shared.stop()
+            NetHub.current?.stop()
+            NetHub.current = nil
             Audio.shared.play("tap")
             let menu = MenuScene(size: size)
             menu.scaleMode = .resizeFill
             view.presentScene(menu, transition: .fade(withDuration: 0.35))
             return
         }
-        if name == "ready" && connected && !selfReady {
-            selfReady = true
-            Multiplayer.shared.send(.ready(heroIndex: selHero))
-            Audio.shared.play("tap")
-            buildUI()
-            maybeStart()
-            return
-        }
-        if !selfReady {
-            for i in 0..<GameData.heroes.count where name == "hero\(i)" {
-                selHero = i
+        switch stage {
+        case .chooseMode:
+            if name == "nearby" { Audio.shared.play("tap"); startNearby() }
+            if name == "online" { Audio.shared.play("tap"); startOnline() }
+        case .searching:
+            break
+        case .connected:
+            if name == "ready" && !selfReady {
+                selfReady = true
+                NetHub.current?.send(.ready(heroIndex: selHero), reliable: true)
                 Audio.shared.play("tap")
-                Haptics.hit()
-                refreshSelection()
+                buildUI()
+                maybeStart()
                 return
+            }
+            if !selfReady {
+                for i in 0..<GameData.heroes.count where name == "hero\(i)" {
+                    selHero = i
+                    Audio.shared.play("tap")
+                    Haptics.hit()
+                    refreshSelection()
+                    return
+                }
             }
         }
     }
 }
 
 extension PvpLobbyScene: MultiplayerDelegate {
+
     func mpConnected(peerName name: String) {
-        connected = true
+        stage = .connected
         peerName = name
         Haptics.levelUp()
         Audio.shared.play("level", volume: 0.6)
@@ -190,11 +258,13 @@ extension PvpLobbyScene: MultiplayerDelegate {
     }
 
     func mpDisconnected() {
-        connected = false
+        stage = .chooseMode
         peerName = ""
         selfReady = false
         remoteHero = nil
         starting = false
+        NetHub.current?.stop()
+        NetHub.current = nil
         buildUI()
     }
 

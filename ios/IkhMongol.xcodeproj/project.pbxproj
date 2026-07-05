@@ -22,6 +22,7 @@
 		BB000000000000000000000E /* Multiplayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000000000000000000000F /* Multiplayer.swift */; };
 		BB000000000000000000000F /* PvpLobbyScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000000000000000000010 /* PvpLobbyScene.swift */; };
 		BB0000000000000000000010 /* PvpGuestScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000000000000000000011 /* PvpGuestScene.swift */; };
+		BB0000000000000000000011 /* GameCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000000000000000000013 /* GameCenter.swift */; };
 		BB000000000000000000000B /* Sounds in Resources */ = {isa = PBXBuildFile; fileRef = FA000000000000000000000C /* Sounds */; };
 /* End PBXBuildFile section */
 
@@ -44,6 +45,8 @@
 		FA0000000000000000000010 /* PvpLobbyScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PvpLobbyScene.swift; sourceTree = "<group>"; };
 		FA0000000000000000000011 /* PvpGuestScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PvpGuestScene.swift; sourceTree = "<group>"; };
 		FA0000000000000000000012 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		FA0000000000000000000013 /* GameCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameCenter.swift; sourceTree = "<group>"; };
+		FA0000000000000000000014 /* IkhMongol.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = IkhMongol.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -82,7 +85,9 @@
 				FA000000000000000000000F /* Multiplayer.swift */,
 				FA0000000000000000000010 /* PvpLobbyScene.swift */,
 				FA0000000000000000000011 /* PvpGuestScene.swift */,
+				FA0000000000000000000013 /* GameCenter.swift */,
 				FA0000000000000000000012 /* Info.plist */,
+				FA0000000000000000000014 /* IkhMongol.entitlements */,
 				FA0000000000000000000009 /* Assets.xcassets */,
 				FA000000000000000000000C /* Sounds */,
 			);
@@ -181,6 +186,7 @@
 				BB000000000000000000000E /* Multiplayer.swift in Sources */,
 				BB000000000000000000000F /* PvpLobbyScene.swift in Sources */,
 				BB0000000000000000000010 /* PvpGuestScene.swift in Sources */,
+				BB0000000000000000000011 /* GameCenter.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -312,6 +318,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = IkhMongol/IkhMongol.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
@@ -343,6 +350,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = IkhMongol/IkhMongol.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
