@@ -24,6 +24,7 @@
 		BB0000000000000000000010 /* PvpGuestScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000000000000000000011 /* PvpGuestScene.swift */; };
 		BB0000000000000000000011 /* GameCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000000000000000000013 /* GameCenter.swift */; };
 		BB0000000000000000000012 /* CampaignScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000000000000000000015 /* CampaignScene.swift */; };
+		BB0000000000000000000013 /* MissionIntroScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000000000000000000016 /* MissionIntroScene.swift */; };
 		BB000000000000000000000B /* Sounds in Resources */ = {isa = PBXBuildFile; fileRef = FA000000000000000000000C /* Sounds */; };
 /* End PBXBuildFile section */
 
@@ -49,6 +50,7 @@
 		FA0000000000000000000013 /* GameCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameCenter.swift; sourceTree = "<group>"; };
 		FA0000000000000000000014 /* IkhMongol.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = IkhMongol.entitlements; sourceTree = "<group>"; };
 		FA0000000000000000000015 /* CampaignScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CampaignScene.swift; sourceTree = "<group>"; };
+		FA0000000000000000000016 /* MissionIntroScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MissionIntroScene.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -85,6 +87,7 @@
 				FA000000000000000000000D /* Progress.swift */,
 				FA000000000000000000000E /* StoryScene.swift */,
 				FA0000000000000000000015 /* CampaignScene.swift */,
+				FA0000000000000000000016 /* MissionIntroScene.swift */,
 				FA000000000000000000000F /* Multiplayer.swift */,
 				FA0000000000000000000010 /* PvpLobbyScene.swift */,
 				FA0000000000000000000011 /* PvpGuestScene.swift */,
@@ -191,6 +194,7 @@
 				BB0000000000000000000010 /* PvpGuestScene.swift in Sources */,
 				BB0000000000000000000011 /* GameCenter.swift in Sources */,
 				BB0000000000000000000012 /* CampaignScene.swift in Sources */,
+				BB0000000000000000000013 /* MissionIntroScene.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

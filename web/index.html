@@ -129,6 +129,7 @@
   .reader h3 { font-size:21px; margin:10px 0 12px; letter-spacing:1px; text-align:center; }
   .reader p { font-size:15px; line-height:1.85; text-align:left; }
   #readerSrc { margin-top:14px; font-size:12px; font-style:italic; color:#7a5c2e; text-align:right; }
+  #introObj { margin-top:14px; font-size:14px; font-weight:700; color:#5a7a2e; text-align:center; }
 
   /* амь багасахад анхааруулах улаан хүрээ */
   #lowHp { position:fixed; inset:0; z-index:15; pointer-events:none; opacity:0;
@@ -179,6 +180,20 @@
   <div style="font-size:11px;color:#8a7550;margin-top:2px">Монголын нууц товчоогоор — Тэмүжингээс дэлхийн эзэн хаан хүртэл</div>
   <div class="levels" id="levels"></div>
   <button class="btn secondary" id="campaignBackBtn">БУЦАХ</button>
+</div>
+
+<!-- ================= MISSION INTRO ================= -->
+<div id="introScreen" class="screen hidden">
+  <div class="reader">
+    <div class="rOrnament">⚔ ᠊᠊᠊᠊᠊᠊ ⚔</div>
+    <h3 id="introTitle"></h3>
+    <p id="introText"></p>
+    <div id="introObj"></div>
+  </div>
+  <div style="display:flex; gap:12px; margin-top:14px">
+    <button class="btn secondary" id="introBackBtn">БУЦАХ</button>
+    <button class="btn" id="introGoBtn">⚔️ МОРД</button>
+  </div>
 </div>
 
 <!-- ================= STORY ================= -->
@@ -300,31 +315,164 @@ const GROUND_TOP = 250, GROUND_BOT = 690;
 const LANE_Y = (GROUND_TOP+GROUND_BOT)/2;
 const P_GATE_X = 130, P_TOWER_X = 720, E_TOWER_X = 2280, E_GATE_X = 2870;
 
-// ---------- audio ----------
+// ---------- Монгол өнгө аястай аудио ----------
+// Morin khuur (морин хуур) нумт дуу, хөөмий маягийн басс, таван аялгуут (пентатоник)
+// хайлаас, дайны бөмбөр, эвэр бүрээ.
 const Snd = {
-  ctx:null, muted:false,
-  init(){ if(!this.ctx){ try{ this.ctx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(this.ctx && this.ctx.state==='suspended') this.ctx.resume(); },
-  beep(freq, dur, type, vol, slide){
+  ctx:null, muted:false, master:null,
+  droneNodes:[], musicOn:false, melodyTimer:null, gallopTimer:null, melodyStep:0,
+  init(){
+    if(!this.ctx){
+      try{
+        this.ctx = new (window.AudioContext||window.webkitAudioContext)();
+        this.master = this.ctx.createGain();
+        this.master.gain.value = 0.9;
+        this.master.connect(this.ctx.destination);
+      }catch(e){}
+    }
+    if(this.ctx && this.ctx.state==='suspended') this.ctx.resume();
+  },
+  // Ерөнхий аялгуут дуу
+  tone(freq, dur, type, vol, slide, attack){
     if(this.muted || !this.ctx) return;
     const t = this.ctx.currentTime;
     const o = this.ctx.createOscillator(), g = this.ctx.createGain();
-    o.type = type||'square'; o.frequency.setValueAtTime(freq, t);
-    if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(30,slide), t+dur);
-    g.gain.setValueAtTime(vol||0.05, t);
+    o.type = type||'sine'; o.frequency.setValueAtTime(freq, t);
+    if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(20,slide), t+dur);
+    const a = attack||0.008;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol||0.05, t+a);
     g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
-    o.connect(g); g.connect(this.ctx.destination);
+    o.connect(g); g.connect(this.master);
     o.start(t); o.stop(t+dur+0.02);
   },
-  hit(){ this.beep(140, .08, 'square', .04, 60); },
-  bow(){ this.beep(700, .07, 'triangle', .035, 300); },
-  skill(){ this.beep(300, .18, 'sawtooth', .05, 900); },
-  heal(){ this.beep(500, .25, 'sine', .05, 1000); },
-  level(){ this.beep(520,.12,'sine',.06); setTimeout(()=>this.beep(660,.12,'sine',.06),110); setTimeout(()=>this.beep(880,.2,'sine',.06),220); },
-  crash(){ this.beep(90, .5, 'sawtooth', .08, 30); },
-  win(){ [523,659,784,1047].forEach((f,i)=> setTimeout(()=>this.beep(f,.28,'triangle',.07), i*160)); },
-  lose(){ [400,320,240,160].forEach((f,i)=> setTimeout(()=>this.beep(f,.3,'sawtooth',.05), i*180)); }
+  // Шуугиан (бөмбөр, туурай, зэвсгийн исгэрэлт)
+  noise(dur, vol, cutoff, slideCut){
+    if(this.muted || !this.ctx) return;
+    const t = this.ctx.currentTime, n = Math.floor(this.ctx.sampleRate*dur);
+    const buf = this.ctx.createBuffer(1, n, this.ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for(let i=0;i<n;i++) d[i] = (Math.random()*2-1)*(1-i/n);
+    const src = this.ctx.createBufferSource(); src.buffer = buf;
+    const f = this.ctx.createBiquadFilter(); f.type='lowpass';
+    f.frequency.setValueAtTime(cutoff||1200, t);
+    if(slideCut) f.frequency.exponentialRampToValueAtTime(Math.max(60,slideCut), t+dur);
+    const g = this.ctx.createGain(); g.gain.setValueAtTime(vol||0.1, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+    src.connect(f); f.connect(g); g.connect(this.master);
+    src.start(t);
+  },
+  // Морин хуур маягийн нумт ая (вибратотой сааралдуу тембр)
+  bowed(freq, dur, vol){
+    if(this.muted || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    const o = this.ctx.createOscillator(); o.type='sawtooth'; o.frequency.setValueAtTime(freq, t);
+    // вибрато
+    const lfo = this.ctx.createOscillator(), lg = this.ctx.createGain();
+    lfo.frequency.value = 5.2; lg.gain.value = freq*0.012;
+    lfo.connect(lg); lg.connect(o.frequency);
+    const f = this.ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value = freq*4+400; f.Q.value=2;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t+0.08);
+    g.gain.setValueAtTime(vol, t+dur*0.7);
+    g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+    o.connect(f); f.connect(g); g.connect(this.master);
+    o.start(t); lfo.start(t); o.stop(t+dur+0.02); lfo.stop(t+dur+0.02);
+  },
+  // Дайны эвэр бүрээ (хүчтэй, ялалтын дуудлага)
+  horn(freq, dur, vol){
+    if(this.muted || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    [1, 2, 3].forEach((h, i)=>{
+      const o = this.ctx.createOscillator(); o.type='sawtooth';
+      o.frequency.setValueAtTime(freq*h*0.5, t);
+      o.frequency.exponentialRampToValueAtTime(freq*h, t+0.12);
+      const g = this.ctx.createGain();
+      const v = (vol||0.09)/(i+1);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(v, t+0.1);
+      g.gain.setValueAtTime(v, t+dur*0.6);
+      g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+      const f = this.ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=2200;
+      o.connect(f); f.connect(g); g.connect(this.master);
+      o.start(t); o.stop(t+dur+0.02);
+    });
+  },
+  // ---- SFX ----
+  hit(){ this.noise(.09, .09, 3200, 400); this.tone(200, .06, 'square', .03, 90); }, // сэлмийн цохилт
+  bow(){ this.noise(.08, .05, 5000, 1500); this.tone(880, .06, 'triangle', .025, 300); },
+  skill(){ this.bowed(300, .22, .06); this.tone(300, .18, 'sawtooth', .03, 900); },
+  heal(){ this.tone(392, .3, 'sine', .05, 784); this.tone(587, .3, 'sine', .03, 1175); },
+  level(){ [293.66,349.23,440,587.33].forEach((f,i)=> setTimeout(()=>this.bowed(f,.22,.06), i*90)); }, // пентатоник өсөлт
+  crash(){ this.drum(); this.noise(.5, .09, 900, 40); },
+  drum(){ this.tone(90, .28, 'sine', .12, 42); this.noise(.16, .13, 700, 120); }, // дайны бөмбөр
+  win(){ // ялалтын эвэр бүрээ (таван аялгуу)
+    [293.66,440,587.33,880].forEach((f,i)=> setTimeout(()=>this.horn(f,.5,.09), i*180));
+    [0,300,600].forEach(d=> setTimeout(()=>this.drum(), d));
+  },
+  lose(){ [293.66,246.94,196,146.83].forEach((f,i)=> setTimeout(()=>this.horn(f,.5,.06), i*200)); },
+  fanfare(){ this.horn(293.66,.4,.1); setTimeout(()=>this.horn(440,.5,.1),200); setTimeout(()=>this.drum(),0); setTimeout(()=>this.drum(),360); },
+
+  // ---- Монгол ая (тасралтгүй давтагдах) ----
+  startMusic(){
+    this.init();
+    if(!this.ctx || this.musicOn) return;
+    this.musicOn = true;
+    const t = this.ctx.currentTime;
+    // Хөөмий маягийн басс дрон: D2 + A2 детюнтэй хос, удаан амьсгаа
+    [73.42, 73.9, 110.0].forEach((freq, i)=>{
+      const o = this.ctx.createOscillator(); o.type = i<2?'sawtooth':'sine';
+      o.frequency.value = freq;
+      const f = this.ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value = i<2?320:200; f.Q.value=3;
+      const g = this.ctx.createGain(); g.gain.value = i<2?0.045:0.03;
+      // амьсгаалах LFO
+      const lfo = this.ctx.createOscillator(), lg = this.ctx.createGain();
+      lfo.frequency.value = 0.13; lg.gain.value = 0.02;
+      lfo.connect(lg); lg.connect(g.gain);
+      o.connect(f); f.connect(g); g.connect(this.master);
+      o.start(t); lfo.start(t);
+      this.droneNodes.push(o, lfo);
+    });
+    // Пентатоник (D минор) урт аялгуу — морин хуураар
+    const MEL = [293.66,0,349.23,440, 392,349.23,329.63,293.66, 0,220,293.66,349.23,
+                 329.63,293.66,261.63,0, 440,587.33,523.25,440, 392,349.23,293.66,0];
+    this.melodyStep = 0;
+    const beat = 640;
+    const playNext = ()=>{
+      if(!this.musicOn) return;
+      const f = MEL[this.melodyStep % MEL.length];
+      if(f > 0 && !this.muted) this.bowed(f, beat/1000*1.5, 0.05);
+      this.melodyStep++;
+      this.melodyTimer = setTimeout(playNext, beat);
+    };
+    playNext();
+    // Зөөлөн давхилтын хэмнэл (туурайн чимээ)
+    let gstep = 0;
+    const gallop = ()=>{
+      if(!this.musicOn) return;
+      if(!this.muted){
+        const pat = [1,0,1,1,0,1,0,0];
+        if(pat[gstep%pat.length]) this.noise(.09, .028, 480, 90);
+      }
+      gstep++;
+      this.gallopTimer = setTimeout(gallop, 320);
+    };
+    gallop();
+  },
+  stopMusic(){
+    this.musicOn = false;
+    if(this.melodyTimer) clearTimeout(this.melodyTimer);
+    if(this.gallopTimer) clearTimeout(this.gallopTimer);
+    const t = this.ctx ? this.ctx.currentTime : 0;
+    for(const n of this.droneNodes){ try{ n.stop(t+0.1); }catch(e){} }
+    this.droneNodes = [];
+  }
 };
-$('muteBtn').addEventListener('click', ()=>{ Snd.muted=!Snd.muted; $('muteBtn').textContent = Snd.muted?'🔇':'🔊'; });
+$('muteBtn').addEventListener('click', ()=>{
+  Snd.muted=!Snd.muted;
+  $('muteBtn').textContent = Snd.muted?'🔇':'🔊';
+});
 
 // ---------- heroes ----------
 const HEROES = [
@@ -451,28 +599,44 @@ const chaptersUnlocked = ()=> CHAPTERS.filter(c => reqMet(c.req));
 const LEVELS = [
   { title:'Зугталт',              src:'МНТ §79–87',   mult:0.55, hero:null,                              reward:80,
     desc:'Тайчиудын хавчлагаас зугтаж, баруун гарц уруу гүй.',
-    obj:{ type:'reach', label:'Тайчиудаас зугтаж, БАРУУН ГАРЦ уруу гүй' } },
+    obj:{ type:'reach', label:'Тайчиудаас зугтаж, БАРУУН ГАРЦ уруу гүй' },
+    intro:'Тайчиудын Таргутай Тэмүжинг хүлж, боол болгов. Нэгэн шөнө хүү харуулын толгойг цохиж мултран, Онон голын харгайд нуугдав. Одоо шөнийн харанхуйгаар гарц уруу зугтах цаг!',
+    events:[{t:7, kind:'ambush', text:'Отолт! Тайчууд хажуугаас гарч ирлээ!'}] },
   { title:'Найман шарга морь',    src:'МНТ §90–93',   mult:0.70, hero:{ name:'Хулгайн ноён',  k:0.70 },  reward:100,
     desc:'Хулгайлагдсан 8 моримо цуглуулж буцааж ав.',
-    obj:{ type:'collect', count:8, label:'Хулгайлагдсан МОРИ цуглуул' } },
+    obj:{ type:'collect', count:8, label:'Хулгайлагдсан МОРИ цуглуул' },
+    intro:'Найман шарга унаган мориодыг маань хулгайч тууж одов. Тэмүжин ганц морьтой мөрдөн хөөж, замдаа Боорчитой учрав. Тарж бэлчсэн мориодоо цуглуулан гэртээ тууж авчир!',
+    events:[{t:9, kind:'reinforce', text:'Хулгайчид нэмэлт хүч дуудлаа!'}] },
   { title:'Бөртэг аврах',         src:'МНТ §104–113', mult:0.85, hero:{ name:'Тогтоа бэх',    k:0.85 },  reward:120,
     desc:'Мэргэдээс Бөртэд хүрч, гэр орондоо авчир.',
-    obj:{ type:'rescue', label:'БӨРТЭД хүрч, гэртээ дагуулан авчир' } },
+    obj:{ type:'rescue', label:'БӨРТЭД хүрч, гэртээ дагуулан авчир' },
+    intro:'Гурван мэргэд гэнэт довтолж, Тэмүжиний хатан Бөртэ үжинг олзолж одов. Тэмүжин Тоорил хан, анд Жамуха хоёртой хүч нэгтгэн мэргэдийг мөрдөв. Бөртэдээ хүрч чөлөөлж, гэр орондоо аюулгүй хүргэ!',
+    events:[{t:6, kind:'reinforce', text:'Мэргэдийн харуул сэрлээ!'},{t:16, kind:'ambush', text:'Гэрлэх замд отолт!'}] },
   { title:'Анд ба дайсан',        src:'МНТ §128–129', mult:1.00, hero:{ name:'Жамуха',        k:1.00 },  reward:150,
     desc:'Далан балжудад анд Жамухаг гурван удаа дийл.',
-    obj:{ type:'slay', count:3, label:'ЖАМУХАГ дийл' } },
+    obj:{ type:'slay', count:3, label:'ЖАМУХАГ дийл' },
+    intro:'Нэгэн цагийн андаа өргөсөн Жамуха эдүгээ эрх мэдлийн төлөө өрсөлдөгч болов. Далан балжудын хээр талд хоёр цэрэг нүүр тулав. Хайр гунигтай ч ялахаас өөр зам үгүй — андаа гурван удаа дийл!',
+    events:[{t:12, kind:'enrage', text:'Жамуха хилэгнэн дайрав!'}] },
   { title:'Хэрэйдийн уналт',      src:'МНТ §183–185', mult:1.12, hero:{ name:'Ван хан',       k:1.10 },  reward:180,
     desc:'Ван ханы хүчийг хоёр удаа буулгаж дуусга.',
-    obj:{ type:'slay', count:2, label:'ВАН ХАНЫГ дийл' } },
+    obj:{ type:'slay', count:2, label:'ВАН ХАНЫГ дийл' },
+    intro:'Хэрэйдийн Тоорил Ван хан урвасан тул Тэмүжин эсэргүүцэв. Жэр хавцалд хэрэйдийн их цэрэг бүрэлгэв. Гурван өдрийн тулааны эцэст Ван ханы хүчийг бут ниргэ!',
+    events:[{t:10, kind:'reinforce', text:'Хэрэйдийн нөөц цэрэг ирлээ!'},{t:22, kind:'enrage', text:'Ван хан эцсийн хүчээ дайчлав!'}] },
   { title:'Найманы төгсгөл',      src:'МНТ §189–196', mult:1.25, hero:{ name:'Таян хан',      k:1.20 },  reward:220,
     desc:'Таян ханы хаалгыг нурааж, Найманыг эзэл.',
-    obj:{ type:'gate', label:'Таян ханы ИХ ХААЛГЫГ нураа' } },
+    obj:{ type:'gate', label:'Таян ханы ИХ ХААЛГЫГ нураа' },
+    intro:'Баруун зүгийн сүүлчийн их гүрэн — Найман. Таян хан монголчуудыг басамжлав. Тэмүжин шөнөдөө галаа олон асааж, тоогоо үржүүлэн харуулав. Таян ханы их хаалгыг нурааж, талыг нэгтгэ!',
+    events:[{t:14, kind:'reinforce', text:'Найманы нэмэлт цэрэг!'},{t:28, kind:'reinforce', text:'Дахин нэмэлт хүч ирлээ!'}] },
   { title:'Хорезмын аян',         src:'1219 он',      mult:1.38, hero:{ name:'Мухаммед шах',  k:1.30 },  reward:260,
     desc:'Их баруун аян — Шахын довтолгоог 80 секунд тэсэж няц.',
-    obj:{ type:'survive', secs:80, label:'Шахын довтолгоог ТЭСЭЖ ГАРАХ' } },
+    obj:{ type:'survive', secs:80, label:'Шахын довтолгоог ТЭСЭЖ ГАРАХ' },
+    intro:'Отрарын захирагч монголын элч, худалдаачдыг алав. Хилэгнэсэн Чингис хаан их баруун аяныг зарлав. Хорезмын Мухаммед шахын тоо томшгүй цэрэг давалгаалан ирнэ — байраа бариж 80 секунд тэсэж гар!',
+    events:[{t:25, kind:'ambush', text:'Шахын морьт цэрэг хажуугаас цохив!'},{t:50, kind:'enrage', text:'Шах эцсийн бүх хүчээ шидлээ!'}] },
   { title:'Инду мөрний тулаан',   src:'1221 он',      mult:1.50, hero:{ name:'Жалал ад-Дин',  k:1.45 },  reward:300,
     desc:'Инду мөрөнд зоригт Жалал ад-Диныг эцэслэн дийл.',
-    obj:{ type:'slay', count:1, boss:true, label:'ЖАЛАЛ АД-ДИНЫГ эцэслэн дийл' } }
+    obj:{ type:'slay', count:1, boss:true, label:'ЖАЛАЛ АД-ДИНЫГ эцэслэн дийл' },
+    intro:'Хорезмын хунтайж Жалал ад-Дин эцгээсээ ялгаатай нь зоригтой байв. Инду мөрний эрэг дээр сүүлчийн тулаан болов. Тэрээр мориороо голд үсрэн амиа авран зугтсан ч, өнөөдөр түүнийг эцэслэн дийл!',
+    events:[{t:12, kind:'enrage', text:'Жалал ад-Дин зоригтойгоор эргэн дайрав!'}] }
 ];
 let campaignLevel = null;   // null = энгийн тулаан
 
@@ -492,6 +656,7 @@ let rescuee = null;      // аврах NPC (Бөртэ)
 let commanderKills = 0;  // командлагч алсан тоо
 let surviveT = 0;        // тэсэх хугацаа
 let objDone = false;     // даалгавар биелсэн эсэх (win гарахаас сэргийлж)
+let events = [];         // аяны дундах динамик үйл явдлууд
 
 function announce(txt, dur){
   announceQ.push({txt, dur: dur||2.2});
@@ -571,10 +736,14 @@ function startMatch(){
 
   // Даалгаврыг тохируулна
   obj = null; pickups = []; escapeZone = null; rescuee = null;
-  commanderKills = 0; surviveT = 0; objDone = false;
-  if(inCampaign) setupObjective(LEVELS[campaignLevel].obj);
+  commanderKills = 0; surviveT = 0; objDone = false; events = [];
+  if(inCampaign){
+    setupObjective(LEVELS[campaignLevel].obj);
+    events = (LEVELS[campaignLevel].events || []).map(e => Object.assign({fired:false}, e));
+  }
 
   setState('play');
+  Snd.startMusic();
   if(campaignLevel !== null){
     announce((campaignLevel+1) + '-р түвшин: ' + LEVELS[campaignLevel].title);
     announce('🎯 ' + LEVELS[campaignLevel].obj.label);
@@ -617,6 +786,7 @@ function setState(s){
   $('storyScreen').classList.toggle('hidden', s!=='story');
   $('readerScreen').classList.toggle('hidden', s!=='reader');
   $('campaignScreen').classList.toggle('hidden', s!=='campaign');
+  $('introScreen').classList.toggle('hidden', s!=='intro');
   $('hud').classList.toggle('on', s==='play');
   $('rotate').classList.toggle('armed', s==='play');
   if(s==='menu') updateStoryBadge();
@@ -681,7 +851,7 @@ function openChapter(i){
   const next = CHAPTERS[i+1];
   $('readerNextBtn').style.display = (next && reqMet(next.req)) ? '' : 'none';
   setState('reader');
-  Snd.beep(520,.08,'sine',.04);
+  Snd.tone(520,.08,'sine',.04);
 }
 
 // ---------- waves ----------
@@ -729,7 +899,7 @@ function registerPlayerKill(){
   if(combo >= 3){
     giveXP(combo * 4);
     addFloater(player.x, player.y - player.r*2.8, 'Цуврал x'+combo+'!', '#ffd873');
-    Snd.beep(400 + combo*60, .1, 'square', .05);
+    Snd.tone(400 + combo*60, .1, 'square', .05);
   }
 }
 
@@ -829,6 +999,41 @@ function objComplete(){
   Snd.win();
   announce('🎯 Даалгавар биелэв!');
   setTimeout(()=>{ if(state==='play') endMatch(true); }, 800);
+}
+
+// Аяны дундах динамик үйл явдал
+function fireEvent(e){
+  announce('⚡ ' + e.text, 2.6);
+  shakeT = Math.max(shakeT, 0.4);
+  Snd.horn(220, .4, .07);
+  const D = matchDiff;
+  if(e.kind === 'reinforce'){
+    // дайсны нэмэлт давалгаа
+    const hp = (300 + waveNum*14) * D.mHp, dmg = (27 + waveNum*1.5) * D.mDmg;
+    for(let i=0;i<4;i++){
+      const archer = (i===3);
+      units.push(makeUnit({ type:'minion', team:1, archer,
+        x: eGate.x - (70+i*30), y: LANE_Y + (i-1.2)*58,
+        hp: archer? hp*0.72:hp, maxHp: archer? hp*0.72:hp,
+        dmg: archer? dmg*0.85:dmg, range: archer?175:42,
+        atkCd: archer?1.35:1.1, speed:105, face:-1 }));
+    }
+  } else if(e.kind === 'ambush'){
+    // тоглогчийн хажууд гэнэтийн дайсан
+    const hp = (280 + waveNum*12) * D.mHp, dmg = (26 + waveNum*1.4) * D.mDmg;
+    for(let i=0;i<3;i++){
+      units.push(makeUnit({ type:'minion', team:1,
+        x: clamp(player.x + (i-1)*60, 200, WORLD_W-200),
+        y: player.y + (i%2? 80:-80),
+        hp, maxHp:hp, dmg, range:42, atkCd:1.1, speed:120, face:-1 }));
+      burst(player.x + (i-1)*60, player.y + (i%2?80:-80), '#c85a4a', 12);
+    }
+    Snd.drum();
+  } else if(e.kind === 'enrage'){
+    // командлагч хүчирхэгжинэ
+    if(aiHero){ aiHero.dmg = Math.round(aiHero.dmg*1.35); aiHero.speed *= 1.12; aiHero.rageT = 999; }
+    Snd.drum();
+  }
 }
 
 // Даалгаврын явцыг шинэчилнэ
@@ -1394,6 +1599,10 @@ function update(dt){
   shakeT = Math.max(0, shakeT - dt);
 
   if(obj && !objDone) updateObjective(dt);
+  // аяны динамик үйл явдлууд
+  for(const e of events){
+    if(!e.fired && gameT >= e.t){ e.fired = true; fireEvent(e); }
+  }
 
   // announcements
   if(announceT > 0){
@@ -1919,7 +2128,7 @@ function buildDiffs(){
     pill.className = 'diffPill' + (i===selDiff? ' sel':'');
     pill.textContent = d.name;
     pill.title = d.desc;
-    pill.addEventListener('click', ()=>{ selDiff = i; buildDiffs(); Snd.init(); Snd.beep(430,.05,'sine',.04); });
+    pill.addEventListener('click', ()=>{ selDiff = i; buildDiffs(); Snd.init(); Snd.tone(430,.05,'sine',.04); });
     row.appendChild(pill);
   });
 }
@@ -1945,7 +2154,7 @@ function buildCards(){
     c.addEventListener('click', ()=>{
       Snd.init();
       if(isUnlocked(h.id)){
-        selHero = i; buildCards(); Snd.beep(500,.06,'sine',.04);
+        selHero = i; buildCards(); Snd.tone(500,.06,'sine',.04);
       } else if(save.gold >= HERO_COST[h.id]){
         save.gold -= HERO_COST[h.id];
         save.unlocked.push(h.id);
@@ -1957,17 +2166,31 @@ function buildCards(){
         void $('goldBar').offsetWidth; // рестарт анимаци
         $('goldBar').classList.add('flash');
         $('goldBar').textContent = '🪙 Алт хүрэлцэхгүй! Дахин '+(HERO_COST[h.id]-save.gold)+' хэрэгтэй';
-        Snd.beep(180,.15,'square',.05);
+        Snd.tone(180,.15,'square',.05);
       }
     });
     wrap.appendChild(c);
   });
 }
 
-$('playBtn').addEventListener('click', ()=>{ Snd.init(); campaignLevel = null; buildCards(); buildDiffs(); setState('select'); });
-$('campaignBtn').addEventListener('click', ()=>{ Snd.init(); buildLevels(); setState('campaign'); });
+$('playBtn').addEventListener('click', ()=>{ Snd.init(); Snd.startMusic(); campaignLevel = null; buildCards(); buildDiffs(); setState('select'); });
+$('campaignBtn').addEventListener('click', ()=>{ Snd.init(); Snd.startMusic(); buildLevels(); setState('campaign'); });
 $('campaignBackBtn').addEventListener('click', ()=>{ setState('menu'); });
-$('startBtn').addEventListener('click', ()=>{ Snd.init(); startMatch(); });
+$('startBtn').addEventListener('click', ()=>{
+  Snd.init();
+  if(campaignLevel !== null){
+    const L = LEVELS[campaignLevel];
+    $('introTitle').textContent = (campaignLevel+1) + '. ' + L.title;
+    $('introText').textContent = L.intro;
+    $('introObj').textContent = '🎯 ' + L.obj.label;
+    setState('intro');
+    Snd.horn(293.66, .5, .09);
+  } else {
+    startMatch();
+  }
+});
+$('introGoBtn').addEventListener('click', ()=>{ Snd.init(); startMatch(); });
+$('introBackBtn').addEventListener('click', ()=>{ buildLevels(); setState('campaign'); });
 $('againBtn').addEventListener('click', ()=>{ startMatch(); });
 $('changeBtn').addEventListener('click', ()=>{ buildCards(); buildDiffs(); setState('select'); });
 $('menuBtn').addEventListener('click', ()=>{ Snd.init(); setState('menu'); });

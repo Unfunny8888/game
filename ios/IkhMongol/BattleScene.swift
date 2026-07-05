@@ -222,6 +222,7 @@ final class BattleScene: SKScene {
     // Аяны даалгаврын байдал
     private var objective: Objective?
     private var objDone = false
+    private var pendingEvents: [CampaignEvent] = []
     private var commanderKills = 0
     private var surviveT: CGFloat = 0
     private var escapeZone: SKShapeNode?
@@ -271,6 +272,8 @@ final class BattleScene: SKScene {
         if let level = campaignLevel {
             let L = GameData.campaign[level]
             setupObjective(L.objective)
+            pendingEvents = L.events
+            Audio.shared.play("horn", volume: 0.7)   // дайны эвэр бүрээ — аян эхлэв
             announce("\(level + 1)-р түвшин: \(L.title)")
             announce("🎯 \(L.objective.label)")
         } else {
@@ -578,6 +581,53 @@ final class BattleScene: SKScene {
             guard let self = self, !self.ended else { return }
             self.endMatch(win: true)
         }]))
+    }
+
+    /// Аяны дундах динамик үйл явдлыг гаргана
+    private func fireEvent(_ e: CampaignEvent) {
+        announce("⚡ " + e.text)
+        shakeT = max(shakeT, 0.4)
+        Audio.shared.play("horn", volume: 0.5)
+        let hpBase = 300 + CGFloat(waveNum) * 14
+        let dmgBase = 27 + CGFloat(waveNum) * 1.5
+
+        switch e.kind {
+        case .reinforce:
+            for i in 0..<4 {
+                let archer = i == 3
+                let hp = (archer ? hpBase * 0.72 : hpBase) * effMinionHp
+                let m = Unit(kind: .minion, team: .khwarezm, radius: 15,
+                             hp: hp, dmg: (archer ? dmgBase * 0.85 : dmgBase) * effMinionDmg,
+                             range: archer ? 175 : 42, atkCd: archer ? 1.35 : 1.1,
+                             moveSpeed: 105, archer: archer)
+                m.position = CGPoint(x: eGate.position.x - (70 + CGFloat(i) * 30),
+                                     y: World.laneY + (CGFloat(i) - 1.2) * 58)
+                m.face = -1
+                world.addChild(m)
+                track(m)
+            }
+
+        case .ambush:
+            for i in 0..<3 {
+                let hp = (280 + CGFloat(waveNum) * 12) * effMinionHp
+                let m = Unit(kind: .minion, team: .khwarezm, radius: 15,
+                             hp: hp, dmg: (26 + CGFloat(waveNum) * 1.4) * effMinionDmg,
+                             range: 42, atkCd: 1.1, moveSpeed: 120)
+                m.position = CGPoint(x: clampF(player.position.x + CGFloat(i - 1) * 60, 200, World.width - 200),
+                                     y: player.position.y + (i % 2 == 0 ? -80 : 80))
+                m.face = -1
+                world.addChild(m)
+                track(m)
+                burst(at: m.position, color: Palette.enemyRed, count: 12)
+            }
+            Audio.shared.play("drum", volume: 0.7)
+
+        case .enrage:
+            aiHero.dmg = (aiHero.dmg * 1.35).rounded()
+            aiHero.moveSpeed *= 1.12
+            aiHero.rageT = 9999
+            Audio.shared.play("drum", volume: 0.8)
+        }
     }
 
     private func addDecorations() {
@@ -1543,6 +1593,14 @@ final class BattleScene: SKScene {
         shakeT = max(0, shakeT - dt)
 
         if objective != nil && !objDone { updateObjective(dt: dt) }
+
+        // аяны динамик үйл явдлууд
+        if !pendingEvents.isEmpty {
+            while let first = pendingEvents.first, matchTime >= first.t {
+                pendingEvents.removeFirst()
+                fireEvent(first)
+            }
+        }
 
         // давалгаа
         nextWave -= dt

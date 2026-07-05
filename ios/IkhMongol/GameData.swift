@@ -312,6 +312,14 @@ enum Objective {
     }
 }
 
+/// Аяны дундах динамик үйл явдал
+enum CampaignEventKind { case reinforce, ambush, enrage }
+struct CampaignEvent {
+    let t: CGFloat            // хэдэн секундэд гарах
+    let kind: CampaignEventKind
+    let text: String
+}
+
 struct CampaignLevel {
     let title: String
     let src: String
@@ -321,6 +329,8 @@ struct CampaignLevel {
     let enemyName: String
     let reward: Int          // анх удаа даван туулбал өгөх бонус алт
     let objective: Objective
+    let intro: String        // тулааны өмнөх түүхэн танилцуулга
+    let events: [CampaignEvent]
 }
 
 extension GameData {
@@ -328,34 +338,54 @@ extension GameData {
         CampaignLevel(title: "Зугталт", src: "МНТ §79–87",
                       desc: "Тайчиудаас зугтаж, баруун гарц уруу гүй.",
                       minionMul: 0.55, heroMul: 0.55, enemyName: "Тайчууд дайчин", reward: 80,
-                      objective: .reach(label: "Тайчиудаас зугтаж, БАРУУН ГАРЦ уруу гүй")),
+                      objective: .reach(label: "Тайчиудаас зугтаж, БАРУУН ГАРЦ уруу гүй"),
+                      intro: "Тайчиудын Таргутай Тэмүжинг хүлж, боол болгов. Нэгэн шөнө хүү харуулын толгойг цохиж мултран, Онон голын харгайд нуугдав. Одоо шөнийн харанхуйгаар гарц уруу зугтах цаг!",
+                      events: [CampaignEvent(t: 7, kind: .ambush, text: "Отолт! Тайчууд хажуугаас гарч ирлээ!")]),
         CampaignLevel(title: "Найман шарга морь", src: "МНТ §90–93",
                       desc: "Хулгайлагдсан 8 моримо цуглуулж буцааж ав.",
                       minionMul: 0.70, heroMul: 0.70, enemyName: "Хулгайн ноён", reward: 100,
-                      objective: .collect(count: 8, label: "Хулгайлагдсан МОРИ цуглуул")),
+                      objective: .collect(count: 8, label: "Хулгайлагдсан МОРИ цуглуул"),
+                      intro: "Найман шарга унаган мориодыг маань хулгайч тууж одов. Тэмүжин ганц морьтой мөрдөн хөөж, замдаа Боорчитой учрав. Тарж бэлчсэн мориодоо цуглуулан гэртээ тууж авчир!",
+                      events: [CampaignEvent(t: 9, kind: .reinforce, text: "Хулгайчид нэмэлт хүч дуудлаа!")]),
         CampaignLevel(title: "Бөртэг аврах", src: "МНТ §104–113",
                       desc: "Мэргэдээс Бөртэд хүрч, гэр орондоо авчир.",
                       minionMul: 0.85, heroMul: 0.85, enemyName: "Тогтоа бэх", reward: 120,
-                      objective: .rescue(label: "БӨРТЭД хүрч, гэртээ дагуулан авчир")),
+                      objective: .rescue(label: "БӨРТЭД хүрч, гэртээ дагуулан авчир"),
+                      intro: "Гурван мэргэд гэнэт довтолж, Тэмүжиний хатан Бөртэ үжинг олзолж одов. Тэмүжин Тоорил хан, анд Жамуха хоёртой хүч нэгтгэн мэргэдийг мөрдөв. Бөртэдээ хүрч чөлөөлж, гэр орондоо аюулгүй хүргэ!",
+                      events: [CampaignEvent(t: 6, kind: .reinforce, text: "Мэргэдийн харуул сэрлээ!"),
+                               CampaignEvent(t: 16, kind: .ambush, text: "Гэрлэх замд отолт!")]),
         CampaignLevel(title: "Анд ба дайсан", src: "МНТ §128–129",
                       desc: "Далан балжудад анд Жамухаг гурван удаа дийл.",
                       minionMul: 1.00, heroMul: 1.00, enemyName: "Жамуха", reward: 150,
-                      objective: .slay(count: 3, label: "ЖАМУХАГ дийл")),
+                      objective: .slay(count: 3, label: "ЖАМУХАГ дийл"),
+                      intro: "Нэгэн цагийн андаа өргөсөн Жамуха эдүгээ эрх мэдлийн төлөө өрсөлдөгч болов. Далан балжудын хээр талд хоёр цэрэг нүүр тулав. Хайр гунигтай ч ялахаас өөр зам үгүй — андаа гурван удаа дийл!",
+                      events: [CampaignEvent(t: 12, kind: .enrage, text: "Жамуха хилэгнэн дайрав!")]),
         CampaignLevel(title: "Хэрэйдийн уналт", src: "МНТ §183–185",
                       desc: "Ван ханы хүчийг хоёр удаа буулгаж дуусга.",
                       minionMul: 1.12, heroMul: 1.10, enemyName: "Ван хан", reward: 180,
-                      objective: .slay(count: 2, label: "ВАН ХАНЫГ дийл")),
+                      objective: .slay(count: 2, label: "ВАН ХАНЫГ дийл"),
+                      intro: "Хэрэйдийн Тоорил Ван хан урвасан тул Тэмүжин эсэргүүцэв. Жэр хавцалд хэрэйдийн их цэрэг бүрэлгэв. Гурван өдрийн тулааны эцэст Ван ханы хүчийг бут ниргэ!",
+                      events: [CampaignEvent(t: 10, kind: .reinforce, text: "Хэрэйдийн нөөц цэрэг ирлээ!"),
+                               CampaignEvent(t: 22, kind: .enrage, text: "Ван хан эцсийн хүчээ дайчлав!")]),
         CampaignLevel(title: "Найманы төгсгөл", src: "МНТ §189–196",
                       desc: "Таян ханы хаалгыг нурааж, Найманыг эзэл.",
                       minionMul: 1.25, heroMul: 1.20, enemyName: "Таян хан", reward: 220,
-                      objective: .gate(label: "Таян ханы ИХ ХААЛГЫГ нураа")),
+                      objective: .gate(label: "Таян ханы ИХ ХААЛГЫГ нураа"),
+                      intro: "Баруун зүгийн сүүлчийн их гүрэн — Найман. Таян хан монголчуудыг басамжлав. Тэмүжин шөнөдөө галаа олон асааж, тоогоо үржүүлэн харуулав. Таян ханы их хаалгыг нурааж, талыг нэгтгэ!",
+                      events: [CampaignEvent(t: 14, kind: .reinforce, text: "Найманы нэмэлт цэрэг!"),
+                               CampaignEvent(t: 28, kind: .reinforce, text: "Дахин нэмэлт хүч ирлээ!")]),
         CampaignLevel(title: "Хорезмын аян", src: "1219 он",
                       desc: "Их баруун аян — Шахын довтолгоог 80 секунд тэсэж няц.",
                       minionMul: 1.38, heroMul: 1.30, enemyName: "Мухаммед шах", reward: 260,
-                      objective: .survive(secs: 80, label: "Шахын довтолгоог ТЭСЭЖ ГАРАХ")),
+                      objective: .survive(secs: 80, label: "Шахын довтолгоог ТЭСЭЖ ГАРАХ"),
+                      intro: "Отрарын захирагч монголын элч, худалдаачдыг алав. Хилэгнэсэн Чингис хаан их баруун аяныг зарлав. Хорезмын Мухаммед шахын тоо томшгүй цэрэг давалгаалан ирнэ — байраа бариж 80 секунд тэсэж гар!",
+                      events: [CampaignEvent(t: 25, kind: .ambush, text: "Шахын морьт цэрэг хажуугаас цохив!"),
+                               CampaignEvent(t: 50, kind: .enrage, text: "Шах эцсийн бүх хүчээ шидлээ!")]),
         CampaignLevel(title: "Инду мөрний тулаан", src: "1221 он",
                       desc: "Инду мөрөнд зоригт Жалал ад-Диныг эцэслэн дийл.",
                       minionMul: 1.50, heroMul: 1.45, enemyName: "Жалал ад-Дин", reward: 300,
-                      objective: .slay(count: 1, label: "ЖАЛАЛ АД-ДИНЫГ эцэслэн дийл"))
+                      objective: .slay(count: 1, label: "ЖАЛАЛ АД-ДИНЫГ эцэслэн дийл"),
+                      intro: "Хорезмын хунтайж Жалал ад-Дин эцгээсээ ялгаатай нь зоригтой байв. Инду мөрний эрэг дээр сүүлчийн тулаан болов. Тэрээр мориороо голд үсрэн амиа авран зугтсан ч, өнөөдөр түүнийг эцэслэн дийл!",
+                      events: [CampaignEvent(t: 12, kind: .enrage, text: "Жалал ад-Дин зоригтойгоор эргэн дайрав!")])
     ]
 }

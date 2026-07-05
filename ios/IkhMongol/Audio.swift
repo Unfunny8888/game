@@ -25,7 +25,7 @@ final class Audio {
 
     /// Бүх авиаг урьдчилан ачаалах
     func preload() {
-        for name in ["hit", "bow", "skill", "heal", "level", "crash", "tap", "win", "lose"] {
+        for name in ["hit", "bow", "skill", "heal", "level", "crash", "drum", "horn", "tap", "win", "lose"] {
             guard pools[name] == nil, let u = url(name) else { continue }
             var players: [AVAudioPlayer] = []
             for _ in 0..<3 {

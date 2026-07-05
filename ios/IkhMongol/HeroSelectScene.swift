@@ -215,9 +215,14 @@ final class HeroSelectScene: SKScene {
         if name == "start", let view = view {
             Haptics.skill()
             Audio.shared.play("tap")
-            let battle = BattleScene(size: size, heroIndex: selIndex, difficultyIndex: selDiff,
-                                     campaignLevel: campaignLevel)
-            view.presentScene(battle, transition: .fade(withDuration: 0.6))
+            if let level = campaignLevel {
+                // Аяны горимд эхлээд түүхэн танилцуулга гаргана
+                let intro = MissionIntroScene(size: size, heroIndex: selIndex, level: level)
+                view.presentScene(intro, transition: .fade(withDuration: 0.4))
+            } else {
+                let battle = BattleScene(size: size, heroIndex: selIndex, difficultyIndex: selDiff)
+                view.presentScene(battle, transition: .fade(withDuration: 0.6))
+            }
             return
         }
         for i in 0..<GameData.heroes.count where name == "card\(i)" {
