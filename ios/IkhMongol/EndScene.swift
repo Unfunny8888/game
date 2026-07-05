@@ -81,13 +81,28 @@ final class EndScene: SKScene {
         statsL.position = CGPoint(x: cx, y: size.height * 0.44)
         c.addChild(statsL)
 
-        let again = UIFactory.button(text: "ДАХИН ТУЛАЛДАХ", name: "again", width: 250, height: 52)
-        again.position = CGPoint(x: cx - 140, y: size.height * 0.22)
-        c.addChild(again)
+        if stats.isPvp {
+            // PvP: дахин тоглохын тулд лобби руу, эсвэл цэс рүү
+            let again = UIFactory.button(text: "🤝 ДАХИН ХОЛБОГДОХ", name: "pvpAgain", width: 250, height: 50)
+            again.position = CGPoint(x: cx - 140, y: size.height * 0.2)
+            c.addChild(again)
 
-        let change = UIFactory.button(text: "БААТАР СОЛИХ", name: "change", width: 230, height: 52, primary: false)
-        change.position = CGPoint(x: cx + 140, y: size.height * 0.22)
-        c.addChild(change)
+            let menu = UIFactory.button(text: "ҮНДСЭН ЦЭС", name: "menu", width: 210, height: 50, primary: false)
+            menu.position = CGPoint(x: cx + 140, y: size.height * 0.2)
+            c.addChild(menu)
+        } else {
+            let again = UIFactory.button(text: "ДАХИН ТУЛАЛДАХ", name: "again", width: 230, height: 48)
+            again.position = CGPoint(x: cx - 175, y: size.height * 0.2)
+            c.addChild(again)
+
+            let change = UIFactory.button(text: "БААТАР СОЛИХ", name: "change", width: 200, height: 48, primary: false)
+            change.position = CGPoint(x: cx + 55, y: size.height * 0.2)
+            c.addChild(change)
+
+            let menu = UIFactory.button(text: "ЦЭС", name: "menu", width: 110, height: 48, primary: false)
+            menu.position = CGPoint(x: cx + 225, y: size.height * 0.2)
+            c.addChild(menu)
+        }
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -106,6 +121,18 @@ final class EndScene: SKScene {
             let select = HeroSelectScene(size: size)
             select.scaleMode = .resizeFill
             view.presentScene(select, transition: .fade(withDuration: 0.4))
+        } else if name == "menu" {
+            Haptics.hit()
+            Audio.shared.play("tap")
+            let menu = MenuScene(size: size)
+            menu.scaleMode = .resizeFill
+            view.presentScene(menu, transition: .fade(withDuration: 0.4))
+        } else if name == "pvpAgain" {
+            Haptics.hit()
+            Audio.shared.play("tap")
+            let lobby = PvpLobbyScene(size: size)
+            lobby.scaleMode = .resizeFill
+            view.presentScene(lobby, transition: .fade(withDuration: 0.4))
         }
     }
 }

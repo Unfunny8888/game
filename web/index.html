@@ -67,6 +67,7 @@
   #heroLabel { font-size:10px; color:#f0e2c4; text-shadow:0 1px 2px #000; margin-bottom:2px; letter-spacing:1px; }
   #killLabel { position:absolute; top:calc(10px + env(safe-area-inset-top)); left:50%; transform:translateX(-50%); font-size:13px; color:#f0e2c4; text-shadow:0 1px 3px #000; letter-spacing:1px; background:rgba(0,0,0,.35); padding:4px 14px; border-radius:12px; border:1px solid rgba(232,182,76,.3); }
   #muteBtn { position:absolute; top:calc(8px + env(safe-area-inset-top)); right:calc(12px + env(safe-area-inset-right)); width:40px; height:40px; border-radius:50%; background:rgba(0,0,0,.4); border:1px solid rgba(232,182,76,.4); color:#f0e2c4; font-size:18px; pointer-events:auto; display:flex; align-items:center; justify-content:center; }
+  #exitBtn { position:absolute; top:calc(8px + env(safe-area-inset-top)); right:calc(60px + env(safe-area-inset-right)); width:40px; height:40px; border-radius:50%; background:rgba(0,0,0,.4); border:1px solid rgba(200,90,74,.55); color:#ffa398; font-size:17px; font-weight:700; pointer-events:auto; display:flex; align-items:center; justify-content:center; }
 
   #announce { position:absolute; top:26%; left:50%; transform:translateX(-50%); font-size:clamp(18px, 4.5vw, 30px); font-weight:800; letter-spacing:3px; color:#f2c96a; text-shadow:0 2px 8px #000, 0 0 30px rgba(232,182,76,.4); opacity:0; transition:opacity .3s; white-space:nowrap; }
 
@@ -74,16 +75,21 @@
   #joy { position:absolute; width:110px; height:110px; border-radius:50%; border:2px solid rgba(240,226,196,.35); background:rgba(0,0,0,.25); display:none; }
   #joyKnob { position:absolute; width:48px; height:48px; border-radius:50%; background:radial-gradient(circle at 35% 30%, rgba(242,201,106,.9), rgba(168,118,31,.9)); border:2px solid rgba(110,76,18,.8); left:31px; top:31px; }
 
-  /* skill buttons */
-  #skills { position:absolute; right:calc(18px + env(safe-area-inset-right)); bottom:calc(18px + env(safe-area-inset-bottom)); display:flex; gap:14px; align-items:flex-end; pointer-events:auto; }
-  .skillBtn { position:relative; width:76px; height:76px; border-radius:50%; border:2px solid #a8813a; overflow:hidden;
+  /* ML-маягийн товчнууд: том довтлох товч буланд, жижиг чадварууд нумд */
+  #skills { position:absolute; right:calc(14px + env(safe-area-inset-right)); bottom:calc(14px + env(safe-area-inset-bottom)); width:200px; height:170px; pointer-events:auto; }
+  .skillBtn { position:absolute; width:56px; height:56px; border-radius:50%; border:2px solid #a8813a; overflow:hidden;
     background:radial-gradient(circle at 35% 30%, #6e5426, #2c2008); color:#f0e2c4; font-weight:700; box-shadow:0 4px 14px rgba(0,0,0,.5); }
-  .skillBtn .sname { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:12px; letter-spacing:.5px; z-index:1; text-shadow:0 1px 2px #000; }
-  .skillBtn .sicon { font-size:22px; }
+  .skillBtn .sname { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:10px; letter-spacing:.5px; z-index:1; text-shadow:0 1px 2px #000; }
+  .skillBtn .sicon { font-size:17px; }
   .skillBtn .cdMask { position:absolute; left:0; bottom:0; width:100%; height:0%; background:rgba(0,0,0,.72); z-index:2; }
-  .skillBtn .cdText { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:22px; color:#fff; z-index:3; text-shadow:0 1px 3px #000; opacity:0; }
+  .skillBtn .cdText { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:18px; color:#fff; z-index:3; text-shadow:0 1px 3px #000; opacity:0; }
   .skillBtn:active { transform:scale(.94); }
-  .skillBtn.small { width:60px; height:60px; }
+  #btnS1 { right:94px; bottom:6px; }
+  #btnS2 { right:62px; bottom:78px; }
+  #btnAtk { position:absolute; right:0; bottom:0; width:78px; height:78px; border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #a03424, #58180e); border:3px solid #e88a5a;
+    font-size:32px; box-shadow:0 4px 16px rgba(0,0,0,.55); }
+  #btnAtk:active { transform:scale(.9); }
 
   /* end screen */
   #endTitle { font-size:clamp(40px, 11vw, 72px); font-weight:800; letter-spacing:8px; }
@@ -199,10 +205,11 @@
   </div>
   <div id="killLabel">Алалт: 0</div>
   <button id="muteBtn">🔊</button>
+  <button id="exitBtn">✕</button>
   <div id="announce"></div>
   <div id="joy"><div id="joyKnob"></div></div>
   <div id="skills">
-    <button class="skillBtn small" id="btnS2">
+    <button class="skillBtn" id="btnS2">
       <div class="sname"><span class="sicon" id="s2icon">🌟</span><span id="s2name">Чадвар</span></div>
       <div class="cdMask" id="s2mask"></div><div class="cdText" id="s2cd"></div>
     </button>
@@ -210,6 +217,7 @@
       <div class="sname"><span class="sicon" id="s1icon">⚔️</span><span id="s1name">Чадвар</span></div>
       <div class="cdMask" id="s1mask"></div><div class="cdText" id="s1cd"></div>
     </button>
+    <button id="btnAtk">⚔️</button>
   </div>
 </div>
 
@@ -220,6 +228,7 @@
   <div class="endBtns">
     <button class="btn" id="againBtn">ДАХИН ТУЛАЛДАХ</button>
     <button class="btn secondary" id="changeBtn">БААТАР СОЛИХ</button>
+    <button class="btn secondary" id="menuBtn">ҮНДСЭН ЦЭС</button>
   </div>
 </div>
 
@@ -800,6 +809,23 @@ $('btnS1').addEventListener('touchstart', e=>{ e.preventDefault(); e.stopPropaga
 $('btnS2').addEventListener('touchstart', e=>{ e.preventDefault(); e.stopPropagation(); Snd.init(); useSkill(1); }, {passive:false});
 $('btnS1').addEventListener('mousedown', e=>{ e.stopPropagation(); useSkill(0); });
 $('btnS2').addEventListener('mousedown', e=>{ e.stopPropagation(); useSkill(1); });
+
+// Довтлох товч — дайсны баатрыг тэргүүн ээлжид онилно
+function forceAttack(){
+  if(state!=='play' || !player || player.dead || player.stun>0 || player.dash) return;
+  if(player.atkT > 0) return;
+  let t = null;
+  for(const e of units){
+    if(!e.dead && e.team!==0 && e.type==='hero' && dist(player,e) <= player.range + e.r){ t = e; break; }
+  }
+  if(!t) t = findTarget(player, player.range, false);
+  if(t) attack(player, t);
+}
+$('btnAtk').addEventListener('touchstart', e=>{ e.preventDefault(); e.stopPropagation(); Snd.init(); forceAttack(); }, {passive:false});
+$('btnAtk').addEventListener('mousedown', e=>{ e.stopPropagation(); forceAttack(); });
+
+// Тулаанаас гарах
+$('exitBtn').addEventListener('click', ()=>{ if(state==='play'){ joyEnd(); setState('menu'); } });
 
 // ---------- AI hero (Jalal ad-Din) ----------
 function updateAI(dt){
@@ -1592,6 +1618,7 @@ $('playBtn').addEventListener('click', ()=>{ Snd.init(); buildCards(); buildDiff
 $('startBtn').addEventListener('click', ()=>{ Snd.init(); startMatch(); });
 $('againBtn').addEventListener('click', ()=>{ startMatch(); });
 $('changeBtn').addEventListener('click', ()=>{ buildCards(); buildDiffs(); setState('select'); });
+$('menuBtn').addEventListener('click', ()=>{ Snd.init(); setState('menu'); });
 $('storyBtn').addEventListener('click', ()=>{ Snd.init(); buildChapters(); setState('story'); });
 $('storyBackBtn').addEventListener('click', ()=>{ setState('menu'); });
 $('readerBackBtn').addEventListener('click', ()=>{ buildChapters(); setState('story'); });

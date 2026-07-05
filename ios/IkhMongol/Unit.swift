@@ -37,6 +37,14 @@ final class Unit: SKNode {
     var frenzyT: CGFloat = 0    // Тэнгэрийн нум — харвах хурд ×2
     var isDead = false
     var respawnT: CGFloat = 0
+    var netId: Int32 = 0        // PvP горимд нэгжийг таних дугаар
+
+    // Ухасхийлт (Сүбээдэй) — нэгж бүрд тусдаа
+    var dashT: CGFloat = 0
+    var dashVX: CGFloat = 0
+    var dashVY: CGFloat = 0
+    var dashDmg: CGFloat = 0
+    var dashHit = Set<Unit>()
 
     // Зөвхөн баатарт хамаарах
     var heroDef: HeroDef?

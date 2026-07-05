@@ -160,11 +160,13 @@ final class BattleScene: SKScene {
     private var pGate: Unit!
     private var eGate: Unit!
 
-    // ухасхийлт (Сүбээдэй)
-    private var dashT: CGFloat = 0
-    private var dashVec = CGVector.zero
-    private var dashDmg: CGFloat = 0
-    private var dashHit = Set<Unit>()
+    // PvP (ойролцоох 1v1) — nil бол ганцаарчилсан горим
+    private let pvpRemoteHero: Int?
+    private var isPvp: Bool { pvpRemoteHero != nil }
+    private var remoteJoy = CGVector.zero
+    private var snapshotT: CGFloat = 0
+    private var guestKills = 0
+    private var nextNetId: Int32 = 1
 
     // байдал
     private var camX: CGFloat = 0
@@ -201,6 +203,8 @@ final class BattleScene: SKScene {
     private var respawnLabel: SKLabelNode!
     private var muteButton: SKNode!
     private var muteIcon: SKLabelNode!
+    private var attackButton: SKNode!
+    private var exitButton: SKNode!
     private var lowHpFrame: SKShapeNode!
     private var announceQueue: [String] = []
     private var announceBusy = false
@@ -209,9 +213,10 @@ final class BattleScene: SKScene {
 
     // MARK: - Инициализаци
 
-    init(size: CGSize, heroIndex: Int, difficultyIndex: Int) {
+    init(size: CGSize, heroIndex: Int, difficultyIndex: Int, pvpRemoteHero: Int? = nil) {
         self.heroIndex = heroIndex
         self.difficultyIndex = min(max(difficultyIndex, 0), GameData.difficulties.count - 1)
+        self.pvpRemoteHero = pvpRemoteHero
         super.init(size: size)
         scaleMode = .resizeFill
         backgroundColor = Palette.night
@@ -231,6 +236,8 @@ final class BattleScene: SKScene {
 
         Audio.shared.preload()
         Audio.shared.startMusic()
+
+        if isPvp { Multiplayer.shared.delegate = self }
 
         announce("Тулаан эхэллээ!")
         announce("Дайсны их хаалгыг нураа!")
@@ -342,7 +349,7 @@ final class BattleScene: SKScene {
         for s in [pGate!, eGate!, pTower, eTower] {
             s.zPosition = zFor(y: s.position.y)
             world.addChild(s)
-            units.append(s)
+            track(s)
         }
 
         // тоглогчийн баатар — мастерийн од бүр +3% амь, хүч
@@ -350,7 +357,8 @@ final class BattleScene: SKScene {
         player = Unit(kind: .hero, team: .mongol, displayName: def.name,
                       radius: 20, hp: def.hp, dmg: def.dmg, range: def.range,
                       atkCd: def.atkCd, moveSpeed: def.speed, aggro: 320, heroDef: def)
-        let mastery = Progress.mastery(def.id)
+        // PvP-д шударга байлгах үүднээс мастерийн нэмэгдэл үйлчлэхгүй
+        let mastery = isPvp ? 0 : Progress.mastery(def.id)
         if mastery > 0 {
             player.maxHp = (def.hp * (1 + 0.03 * CGFloat(mastery))).rounded()
             player.hp = player.maxHp
@@ -359,19 +367,33 @@ final class BattleScene: SKScene {
         }
         player.position = CGPoint(x: World.pGateX + 130, y: World.laneY)
         world.addChild(player)
-        units.append(player)
+        track(player)
 
-        // дайсны баатар (AI) — хэцүү байдлаар хүчийг тохируулна
-        let jd = GameData.jalal
-        aiHero = Unit(kind: .hero, team: .khwarezm, displayName: jd.name,
-                      radius: 20, hp: (jd.hp * diff.heroHp).rounded(),
-                      dmg: (jd.dmg * diff.heroDmg).rounded(), range: jd.range,
-                      atkCd: jd.atkCd, moveSpeed: jd.speed, aggro: 320, heroDef: jd)
+        // дайсны баатар: PvP-д алсын тоглогч, эсрэг тохиолдолд AI (Жалал ад-Дин)
+        if let remoteIdx = pvpRemoteHero {
+            let rd = GameData.heroes[remoteIdx]
+            aiHero = Unit(kind: .hero, team: .khwarezm, displayName: rd.name,
+                          radius: 20, hp: rd.hp, dmg: rd.dmg, range: rd.range,
+                          atkCd: rd.atkCd, moveSpeed: rd.speed, aggro: 320, heroDef: rd)
+        } else {
+            let jd = GameData.jalal
+            aiHero = Unit(kind: .hero, team: .khwarezm, displayName: jd.name,
+                          radius: 20, hp: (jd.hp * diff.heroHp).rounded(),
+                          dmg: (jd.dmg * diff.heroDmg).rounded(), range: jd.range,
+                          atkCd: jd.atkCd, moveSpeed: jd.speed, aggro: 320, heroDef: jd)
+        }
         aiHero.position = CGPoint(x: World.eGateX - 130, y: World.laneY)
         world.addChild(aiHero)
-        units.append(aiHero)
+        track(aiHero)
 
         camX = 0
+    }
+
+    /// Нэгжид сүлжээний дугаар өгч жагсаалтад бүртгэнэ
+    private func track(_ u: Unit) {
+        u.netId = nextNetId
+        nextNetId += 1
+        units.append(u)
     }
 
     private func addDecorations() {
@@ -579,9 +601,21 @@ final class BattleScene: SKScene {
         announceLabel.alpha = 0
         hud.addChild(announceLabel)
 
-        // чадварын товчнууд
-        let b2 = SkillButton(skill: def.s2, radius: 30)
-        let b1 = SkillButton(skill: def.s1, radius: 38)
+        // ML-маягийн удирдлага: том довтлох товч + жижиг чадварууд нуман байрлалтай
+        attackButton = SKNode()
+        let atkBg = SKShapeNode(circleOfRadius: 36)
+        atkBg.fillColor = SKColor(red: 0.55, green: 0.16, blue: 0.10, alpha: 0.92)
+        atkBg.strokeColor = SKColor(red: 0.91, green: 0.55, blue: 0.35, alpha: 1)
+        atkBg.lineWidth = 3
+        attackButton.addChild(atkBg)
+        let atkIcon = SKLabelNode(text: "⚔️")
+        atkIcon.fontSize = 30
+        atkIcon.verticalAlignmentMode = .center
+        attackButton.addChild(atkIcon)
+        hud.addChild(attackButton)
+
+        let b1 = SkillButton(skill: def.s1, radius: 26)
+        let b2 = SkillButton(skill: def.s2, radius: 26)
         skillButtons = [b1, b2]
         hud.addChild(b1)
         hud.addChild(b2)
@@ -608,6 +642,21 @@ final class BattleScene: SKScene {
         muteIcon.verticalAlignmentMode = .center
         muteButton.addChild(muteIcon)
         hud.addChild(muteButton)
+
+        // тулаанаас гарах товч
+        exitButton = SKNode()
+        let exitBg = SKShapeNode(circleOfRadius: 18)
+        exitBg.fillColor = SKColor(white: 0, alpha: 0.4)
+        exitBg.strokeColor = SKColor(red: 0.78, green: 0.35, blue: 0.29, alpha: 0.7)
+        exitBg.lineWidth = 1.5
+        exitButton.addChild(exitBg)
+        let exitIcon = SKLabelNode(text: "✕")
+        exitIcon.fontName = Fonts.bold
+        exitIcon.fontSize = 16
+        exitIcon.fontColor = SKColor(red: 1.0, green: 0.62, blue: 0.54, alpha: 1)
+        exitIcon.verticalAlignmentMode = .center
+        exitButton.addChild(exitIcon)
+        hud.addChild(exitButton)
 
         // амилалтын бүрхүүл
         respawnDim = SKSpriteNode(color: SKColor(red: 0.16, green: 0.04, blue: 0.04, alpha: 0.45), size: size)
@@ -638,13 +687,16 @@ final class BattleScene: SKScene {
         topbar.position = CGPoint(x: 12 + insets.left, y: size.height - 8 - insets.top)
         killLabel.position = CGPoint(x: size.width / 2, y: size.height - 24 - insets.top)
         muteButton.position = CGPoint(x: size.width - 30 - insets.right, y: size.height - 28 - insets.top)
+        exitButton.position = CGPoint(x: size.width - 76 - insets.right, y: size.height - 28 - insets.top)
         announceLabel.position = CGPoint(x: size.width / 2, y: size.height * 0.68)
 
-        let bx = size.width - 60 - insets.right
-        let by = 64 + insets.bottom
+        // довтлох товч буланд, чадварууд түүнийг тойрсон нумд (ML-маяг)
+        let ax = size.width - 58 - insets.right
+        let ay = 56 + insets.bottom
+        attackButton.position = CGPoint(x: ax, y: ay)
         if skillButtons.count == 2 {
-            skillButtons[0].position = CGPoint(x: bx, y: by)
-            skillButtons[1].position = CGPoint(x: bx - 88, y: by - 6)
+            skillButtons[0].position = CGPoint(x: ax - 90, y: ay + 6)    // чадвар 1 — зүүн
+            skillButtons[1].position = CGPoint(x: ax - 60, y: ay + 74)   // чадвар 2 — дээд зүүн
         }
 
         respawnDim.size = size
@@ -683,7 +735,7 @@ final class BattleScene: SKScene {
                                      y: World.laneY + yOff)
                 m.face = dir
                 world.addChild(m)
-                units.append(m)
+                track(m)
             }
         }
         // 5 давалгаа тутамд аварга дайчин
@@ -696,8 +748,9 @@ final class BattleScene: SKScene {
             b.position = CGPoint(x: eGate.position.x - 90, y: World.laneY)
             b.face = -1
             world.addChild(b)
-            units.append(b)
+            track(b)
             announce("Аварга дайчин ирлээ!")
+            netAnnounce("Аварга дайчин ирлээ!")
         }
 
         if waveNum == 1 { announce("Цэргүүд хөдөллөө!") }
@@ -773,6 +826,8 @@ final class BattleScene: SKScene {
                 floater("+2 🪙", at: u.position, dy: 34,
                         color: SKColor(red: 1.0, green: 0.85, blue: 0.45, alpha: 1))
                 registerPlayerKill()
+            } else if isPvp, let s = source, s === aiHero {
+                giveXP(26, to: s)
             } else if let s = source, s.team == .mongol {
                 giveXP(10)
             }
@@ -789,9 +844,15 @@ final class BattleScene: SKScene {
                 floater("+15 🪙", at: u.position, dy: 40,
                         color: SKColor(red: 1.0, green: 0.85, blue: 0.45, alpha: 1))
                 announce("Дайсны баатрыг унагалаа!")
-                u.respawnT = 9 + min(matchTime / 60, 8)
+                netAnnounce("Та унасан байна...")
+                u.respawnT = isPvp ? 6 + CGFloat(u.level) * 1.2 : 9 + min(matchTime / 60, 8)
             } else {
+                if isPvp, let s = source, s === aiHero {
+                    guestKills += 1
+                    giveXP(140, to: s)
+                }
                 announce("Та унасан байна...")
+                netAnnounce("Дайсны баатрыг унагалаа!")
                 u.respawnT = 6 + CGFloat(player.level) * 1.2
             }
 
@@ -800,7 +861,9 @@ final class BattleScene: SKScene {
             Audio.shared.play("crash", volume: 1)
             shakeT = max(shakeT, 0.55)
             announce(u.team == .khwarezm ? "Дайсны цамхаг нурлаа!" : "Манай цамхаг нурлаа!")
+            netAnnounce(u.team == .khwarezm ? "Манай цамхаг нурлаа!" : "Дайсны цамхаг нурлаа!")
             if u.team == .khwarezm && byPlayer { giveXP(160); matchGold += 20 }
+            if u.team == .mongol && isPvp { giveXP(160, to: aiHero) }
             u.removeFromParent()
 
         case .gate:
@@ -860,123 +923,110 @@ final class BattleScene: SKScene {
     // MARK: - Туршлага, түвшин
 
     private func giveXP(_ n: CGFloat) {
-        guard player.level < World.maxLevel else { return }
-        player.xp += n
-        var need = World.xpNeed(player.level)
-        while player.xp >= need && player.level < World.maxLevel {
-            player.xp -= need
-            player.level += 1
-            player.maxHp = (player.maxHp * 1.13).rounded()
-            player.dmg = (player.dmg * 1.11).rounded()
-            player.hp = min(player.maxHp, player.hp + player.maxHp * 0.35)
-            player.updateBars()
-            burst(at: player.position, color: Palette.xpBlue, count: 22)
-            announce("Түвшин \(player.level) боллоо!")
-            Haptics.levelUp()
-            Audio.shared.play("level", volume: 0.7)
-            need = World.xpNeed(player.level)
+        giveXP(n, to: player)
+    }
+
+    private func giveXP(_ n: CGFloat, to u: Unit) {
+        guard u.level < World.maxLevel else { return }
+        u.xp += n
+        var need = World.xpNeed(u.level)
+        while u.xp >= need && u.level < World.maxLevel {
+            u.xp -= need
+            u.level += 1
+            u.maxHp = (u.maxHp * 1.13).rounded()
+            u.dmg = (u.dmg * 1.11).rounded()
+            u.hp = min(u.maxHp, u.hp + u.maxHp * 0.35)
+            u.updateBars()
+            burst(at: u.position, color: Palette.xpBlue, count: 22)
+            if u === player {
+                announce("Түвшин \(u.level) боллоо!")
+                Haptics.levelUp()
+                Audio.shared.play("level", volume: 0.7)
+            }
+            need = World.xpNeed(u.level)
         }
     }
 
     // MARK: - Чадварууд
 
     private func useSkill(_ idx: Int) {
-        guard !ended, let def = player.heroDef, !player.isDead, player.stun <= 0 else { return }
+        castSkill(for: player, idx: idx)
+    }
+
+    /// Аль ч баатрын чадвар — PvP-д алсын тоглогчийн баатарт мөн ашиглагдана
+    private func castSkill(for u: Unit, idx: Int) {
+        guard !ended, let def = u.heroDef, !u.isDead, u.stun <= 0 else { return }
         let cd = idx == 0 ? def.s1.cd : def.s2.cd
-        if idx == 0 { guard player.s1T <= 0 else { return }; player.s1T = cd }
-        else        { guard player.s2T <= 0 else { return }; player.s2T = cd }
-        Haptics.skill()
+        if idx == 0 { guard u.s1T <= 0 else { return }; u.s1T = cd }
+        else        { guard u.s2T <= 0 else { return }; u.s2T = cd }
+        if u === player { Haptics.skill() }
         Audio.shared.play("skill", volume: 0.6)
-        let lvl = CGFloat(player.level)
+        let lvl = CGFloat(u.level)
 
         switch def.id {
         case "chinggis":
             if idx == 0 {
                 // Сэлмийн хуй — том хүчирхэг тойрсон цохилт (премиум)
                 let radius: CGFloat = 170
-                ringFx(at: player.position, radius: radius,
+                ringFx(at: u.position, radius: radius,
                        color: SKColor(red: 1.0, green: 0.91, blue: 0.66, alpha: 1))
-                for e in units where !e.isDead && e.team != player.team {
-                    if player.position.distance(to: e.position) < radius + e.radius {
-                        dealDamage(to: e, amount: player.dmg * 1.8 + lvl * 10, from: player)
+                for e in units where !e.isDead && e.team != u.team {
+                    if u.position.distance(to: e.position) < radius + e.radius {
+                        dealDamage(to: e, amount: u.dmg * 1.8 + lvl * 10, from: u)
                     }
                 }
             } else {
                 // Тэнгэрийн ивээл — их эдгэрэлт + урт хурд
                 Audio.shared.play("heal", volume: 0.7)
-                player.hp = min(player.maxHp, player.hp + player.maxHp * 0.35)
-                player.hasteT = 4
-                player.updateBars()
-                for _ in 0..<14 {
-                    let spark = SKShapeNode(circleOfRadius: 3)
-                    spark.fillColor = SKColor(red: 0.66, green: 0.91, blue: 0.69, alpha: 1)
-                    spark.strokeColor = .clear
-                    spark.position = CGPoint(x: player.position.x + .random(in: -30...30),
-                                             y: player.position.y + .random(in: -20...20))
-                    spark.zPosition = 700
-                    world.addChild(spark)
-                    spark.run(.sequence([
-                        .group([.moveBy(x: 0, y: 60, duration: 0.9), .fadeOut(withDuration: 0.9)]),
-                        .removeFromParent()
-                    ]))
-                }
+                u.hp = min(u.maxHp, u.hp + u.maxHp * 0.35)
+                u.hasteT = 4
+                u.updateBars()
+                healSparks(at: u.position, count: 14)
             }
 
         case "temuujin":
             if idx == 0 {
                 // Хурц сэлэм — урд талын цавчилт
-                let center = CGPoint(x: player.position.x + player.face * 80, y: player.position.y)
+                let center = CGPoint(x: u.position.x + u.face * 80, y: u.position.y)
                 ringFx(at: center, radius: 100,
                        color: SKColor(red: 1.0, green: 0.85, blue: 0.66, alpha: 1))
-                for e in units where !e.isDead && e.team != player.team {
+                for e in units where !e.isDead && e.team != u.team {
                     if center.distance(to: e.position) < 100 + e.radius {
-                        dealDamage(to: e, amount: player.dmg * 1.5 + lvl * 7, from: player)
+                        dealDamage(to: e, amount: u.dmg * 1.5 + lvl * 7, from: u)
                     }
                 }
             } else {
                 // Өсөх хүч — дунд зэргийн эдгэрэлт
                 Audio.shared.play("heal", volume: 0.6)
-                player.hp = min(player.maxHp, player.hp + player.maxHp * 0.25)
-                player.updateBars()
-                for _ in 0..<10 {
-                    let spark = SKShapeNode(circleOfRadius: 3)
-                    spark.fillColor = SKColor(red: 0.78, green: 0.91, blue: 0.63, alpha: 1)
-                    spark.strokeColor = .clear
-                    spark.position = CGPoint(x: player.position.x + .random(in: -25...25),
-                                             y: player.position.y + .random(in: -18...18))
-                    spark.zPosition = 700
-                    world.addChild(spark)
-                    spark.run(.sequence([
-                        .group([.moveBy(x: 0, y: 55, duration: 0.8), .fadeOut(withDuration: 0.8)]),
-                        .removeFromParent()
-                    ]))
-                }
+                u.hp = min(u.maxHp, u.hp + u.maxHp * 0.25)
+                u.updateBars()
+                healSparks(at: u.position, count: 10)
             }
 
         case "zev":
             if idx == 0 {
                 // Нэвтлэх сум
-                let t = findTarget(for: player, maxDist: 600, unitsOnly: false)
+                let t = findTarget(for: u, maxDist: 600, unitsOnly: false)
                 let dir: CGFloat
                 if let t = t {
-                    dir = angle(dx: t.position.x - player.position.x, dy: t.position.y - player.position.y)
+                    dir = angle(dx: t.position.x - u.position.x, dy: t.position.y - u.position.y)
                 } else {
-                    dir = player.face > 0 ? 0 : .pi
+                    dir = u.face > 0 ? 0 : .pi
                 }
-                let p = Projectile(from: CGPoint(x: player.position.x, y: player.position.y + 14),
-                                   dmg: player.dmg * 2 + lvl * 10, team: .mongol,
-                                   owner: player, pierce: true, life: 1.1)
+                let p = Projectile(from: CGPoint(x: u.position.x, y: u.position.y + 14),
+                                   dmg: u.dmg * 2 + lvl * 10, team: u.team,
+                                   owner: u, pierce: true, life: 1.1)
                 p.velocity = CGVector(dx: cosF(dir) * 680, dy: sinF(dir) * 680)
                 world.addChild(p.node)
                 projectiles.append(p)
             } else {
                 // Сумны бороо
-                let t = findTarget(for: player, maxDist: 520, unitsOnly: true)
-                    ?? findTarget(for: player, maxDist: 520, unitsOnly: false)
-                let cx = t?.position.x ?? (player.position.x + player.face * 220)
-                let cy = t?.position.y ?? player.position.y
+                let t = findTarget(for: u, maxDist: 520, unitsOnly: true)
+                    ?? findTarget(for: u, maxDist: 520, unitsOnly: false)
+                let cx = t?.position.x ?? (u.position.x + u.face * 220)
+                let cy = t?.position.y ?? u.position.y
                 let z = Zone(center: CGPoint(x: cx, y: cy), r: 130, delay: 0.7,
-                             dmg: player.dmg * 1.7 + lvl * 9, team: .mongol, owner: player)
+                             dmg: u.dmg * 1.7 + lvl * 9, team: u.team, owner: u)
                 world.addChild(z.node)
                 zones.append(z)
             }
@@ -984,88 +1034,105 @@ final class BattleScene: SKScene {
         case "subedei":
             if idx == 0 {
                 // Шуурган довтолгоо
-                let t = findTarget(for: player, maxDist: 420, unitsOnly: true)
+                let t = findTarget(for: u, maxDist: 420, unitsOnly: true)
                 let dir: CGFloat
                 if let t = t {
-                    dir = angle(dx: t.position.x - player.position.x, dy: t.position.y - player.position.y)
+                    dir = angle(dx: t.position.x - u.position.x, dy: t.position.y - u.position.y)
                 } else {
-                    dir = player.face > 0 ? 0 : .pi
+                    dir = u.face > 0 ? 0 : .pi
                 }
-                dashT = 0.28
-                dashVec = CGVector(dx: cosF(dir) * 880, dy: sinF(dir) * 880)
-                dashDmg = player.dmg * 1.3 + lvl * 7
-                dashHit.removeAll()
+                u.dashT = 0.28
+                u.dashVX = cosF(dir) * 880
+                u.dashVY = sinF(dir) * 880
+                u.dashDmg = u.dmg * 1.3 + lvl * 7
+                u.dashHit.removeAll()
             } else {
                 // Төмөр бамбай
-                player.shield = 320 + lvl * 45
-                player.shieldT = 5
+                u.shield = 320 + lvl * 45
+                u.shieldT = 5
             }
 
         case "mukhulai":
             if idx == 0 {
                 // Газар доргилт — тойрсон цохилт + зогсоолт
                 let radius: CGFloat = 130
-                ringFx(at: player.position, radius: radius,
+                ringFx(at: u.position, radius: radius,
                        color: SKColor(red: 0.91, green: 0.71, blue: 0.42, alpha: 1))
-                for e in units where !e.isDead && e.team != player.team {
-                    if player.position.distance(to: e.position) < radius + e.radius {
-                        dealDamage(to: e, amount: player.dmg * 1.3 + lvl * 7, from: player)
+                for e in units where !e.isDead && e.team != u.team {
+                    if u.position.distance(to: e.position) < radius + e.radius {
+                        dealDamage(to: e, amount: u.dmg * 1.3 + lvl * 7, from: u)
                         if e.kind != .tower && e.kind != .gate { e.stun = max(e.stun, 0.7) }
                     }
                 }
             } else {
                 // Тугийн уриа — довтолгооны хүч нэмэгдэнэ
-                player.rageT = 5
-                floater("Уриа!", at: player.position, dy: player.radius + 26,
+                u.rageT = 5
+                floater("Уриа!", at: u.position, dy: u.radius + 26,
                         color: SKColor(red: 1.0, green: 0.62, blue: 0.29, alpha: 1))
-                ringFx(at: player.position, radius: 90,
+                ringFx(at: u.position, radius: 90,
                        color: SKColor(red: 1.0, green: 0.62, blue: 0.29, alpha: 1))
             }
 
         case "boorchi":
             if idx == 0 {
                 // Шуурхай цохилт — гурван даралт; бай олдохгүй бол cd буцаана
-                guard let t = findTarget(for: player, maxDist: 150, unitsOnly: true) else {
-                    player.s1T = 0
+                guard let t = findTarget(for: u, maxDist: 150, unitsOnly: true) else {
+                    u.s1T = 0
                     return
                 }
-                let hitDmg = player.dmg * 0.7 + lvl * 4
+                let hitDmg = u.dmg * 0.7 + lvl * 4
                 for k in 0..<3 {
                     strikes.append(DelayedStrike(t: CGFloat(k) * 0.13, target: t,
-                                                 dmg: hitDmg, from: player))
+                                                 dmg: hitDmg, from: u))
                 }
             } else {
                 // Салхины хөл — хурд + гайхшрал арилгана
-                player.hasteT = 4
-                player.stun = 0
-                floater("Салхи!", at: player.position, dy: player.radius + 26,
+                u.hasteT = 4
+                u.stun = 0
+                floater("Салхи!", at: u.position, dy: u.radius + 26,
                         color: SKColor(red: 0.48, green: 0.76, blue: 0.69, alpha: 1))
             }
 
         case "khasar":
             if idx == 0 {
                 // Гурван сум — ойрын 3 дайсан руу; бай олдохгүй бол cd буцаана
-                let targets = nearestEnemies(of: player, count: 3, maxDist: 420)
+                let targets = nearestEnemies(of: u, count: 3, maxDist: 420)
                 guard !targets.isEmpty else {
-                    player.s1T = 0
+                    u.s1T = 0
                     return
                 }
                 for t in targets {
-                    let p = Projectile(from: CGPoint(x: player.position.x, y: player.position.y + 14),
-                                       dmg: player.dmg * 1.2 + lvl * 6, team: .mongol,
-                                       owner: player, pierce: false, life: 3)
+                    let p = Projectile(from: CGPoint(x: u.position.x, y: u.position.y + 14),
+                                       dmg: u.dmg * 1.2 + lvl * 6, team: u.team,
+                                       owner: u, pierce: false, life: 3)
                     p.target = t
                     world.addChild(p.node)
                     projectiles.append(p)
                 }
             } else {
                 // Тэнгэрийн нум — харвах хурд ×2
-                player.frenzyT = 4
-                floater("Тэнгэрийн нум!", at: player.position, dy: player.radius + 26,
+                u.frenzyT = 4
+                floater("Тэнгэрийн нум!", at: u.position, dy: u.radius + 26,
                         color: SKColor(red: 0.69, green: 0.52, blue: 0.84, alpha: 1))
             }
 
         default: break
+        }
+    }
+
+    private func healSparks(at pos: CGPoint, count: Int) {
+        for _ in 0..<count {
+            let spark = SKShapeNode(circleOfRadius: 3)
+            spark.fillColor = SKColor(red: 0.70, green: 0.91, blue: 0.66, alpha: 1)
+            spark.strokeColor = .clear
+            spark.position = CGPoint(x: pos.x + .random(in: -28...28),
+                                     y: pos.y + .random(in: -20...20))
+            spark.zPosition = 700
+            world.addChild(spark)
+            spark.run(.sequence([
+                .group([.moveBy(x: 0, y: 58, duration: 0.85), .fadeOut(withDuration: 0.85)]),
+                .removeFromParent()
+            ]))
         }
     }
 
@@ -1091,7 +1158,6 @@ final class BattleScene: SKScene {
 
     private func updateAI(dt: CGFloat) {
         let u = aiHero!
-        u.s1T = max(0, u.s1T - dt)
 
         // амь багатай бол ухрах
         if u.hp < u.maxHp * 0.25 && u.position.distance(to: eGate.position) > 200 {
@@ -1132,6 +1198,80 @@ final class BattleScene: SKScene {
         }
     }
 
+    // MARK: - PvP (хост тал)
+
+    /// Зочны жойстик, чадвараар удирдагдах алсын баатар
+    private func updateRemoteHero(dt: CGFloat) {
+        let u = aiHero!
+        let m = vecLen(remoteJoy.dx, remoteJoy.dy)
+        if m > 0.15 && u.stun <= 0 && u.dashT <= 0 {
+            let sp = u.moveSpeed * (u.hasteT > 0 ? 1.35 : 1) * min(m, 1)
+            u.position.x = clampF(u.position.x + remoteJoy.dx / m * sp * dt, 30, World.width - 30)
+            u.position.y = clampF(u.position.y + remoteJoy.dy / m * sp * dt,
+                                  World.groundBottom, World.groundTop)
+            if abs(remoteJoy.dx) > 0.1 { u.face = remoteJoy.dx > 0 ? 1 : -1 }
+        }
+        if u.atkT <= 0 && u.stun <= 0 && u.dashT <= 0 {
+            if let t = findTarget(for: u, maxDist: u.range, unitsOnly: false) {
+                performAttack(u, on: t)
+            }
+        }
+    }
+
+    private func netAnnounce(_ text: String) {
+        guard isPvp else { return }
+        Multiplayer.shared.send(.announce(text))
+    }
+
+    /// Довтлох товч — дайсны баатрыг тэргүүн ээлжид онилно
+    private func forceAttack(_ u: Unit) {
+        guard !u.isDead, u.stun <= 0, u.atkT <= 0, u.dashT <= 0 else { return }
+        var target: Unit?
+        for e in units where !e.isDead && e.team != u.team && e.kind == .hero {
+            if u.position.distance(to: e.position) <= u.range + e.radius { target = e; break }
+        }
+        if target == nil {
+            if let t = findTarget(for: u, maxDist: u.range, unitsOnly: false) { target = t }
+        }
+        if let t = target { performAttack(u, on: t) }
+    }
+
+    private func buildSnapshot() -> Snapshot {
+        var snapUnits: [SnapUnit] = []
+        for u in units where !u.isDead {
+            let kindCode: UInt8
+            switch u.kind {
+            case .minion: kindCode = 0
+            case .hero: kindCode = 1
+            case .tower: kindCode = 2
+            case .gate: kindCode = 3
+            }
+            var heroIdx: Int8 = -1
+            var slot: Int8 = -1
+            if u.kind == .hero, let def = u.heroDef,
+               let idx = GameData.heroes.firstIndex(where: { $0.id == def.id }) {
+                heroIdx = Int8(idx)
+                slot = u === player ? 0 : 1
+            }
+            snapUnits.append(SnapUnit(
+                i: u.netId, k: kindCode, t: UInt8(u.team.rawValue),
+                x: Float(u.position.x), y: Float(u.position.y),
+                hp: Float(u.hp), mh: Float(u.maxHp), f: Int8(u.face),
+                h: heroIdx, b: u.isBoss, a: u.archer, s: slot))
+        }
+        let snapProjs = projectiles.map {
+            SnapProj(x: Float($0.node.position.x), y: Float($0.node.position.y),
+                     t: UInt8($0.team.rawValue), r: Float($0.node.zRotation))
+        }
+        let g = aiHero!
+        return Snapshot(
+            u: snapUnits, p: snapProjs, wave: waveNum,
+            hostKills: kills, guestKills: guestKills,
+            gHp: Float(g.hp), gMax: Float(g.maxHp), gLvl: g.level,
+            gXp: Float(g.xp), gNeed: Float(World.xpNeed(g.level)),
+            gS1: Float(g.s1T), gS2: Float(g.s2T))
+    }
+
     // MARK: - Гол шинэчлэл
 
     override func update(_ currentTime: TimeInterval) {
@@ -1157,10 +1297,23 @@ final class BattleScene: SKScene {
         updatePlayer(dt: dt)
 
         if !aiHero.isDead {
-            updateAI(dt: dt)
+            if isPvp {
+                updateRemoteHero(dt: dt)
+            } else {
+                updateAI(dt: dt)
+            }
             if aiHero.position.distance(to: eGate.position) < 240 {
-                aiHero.hp = min(aiHero.maxHp, aiHero.hp + aiHero.maxHp * 0.06 * dt)
+                aiHero.hp = min(aiHero.maxHp, aiHero.hp + aiHero.maxHp * (isPvp ? 0.05 : 0.06) * dt)
                 aiHero.updateBars()
+            }
+        }
+
+        // PvP: тоглоомын байдлыг зочинд илгээх (~12 удаа/сек)
+        if isPvp {
+            snapshotT -= dt
+            if snapshotT <= 0 {
+                snapshotT = 0.08
+                Multiplayer.shared.send(.snapshot(buildSnapshot()), reliable: false)
             }
         }
 
@@ -1201,7 +1354,7 @@ final class BattleScene: SKScene {
 
         // жойстикийн хөдөлгөөн
         let m = vecLen(joyVec.dx, joyVec.dy)
-        if m > 0.15 && player.stun <= 0 && dashT <= 0 {
+        if m > 0.15 && player.stun <= 0 && player.dashT <= 0 {
             let sp = player.moveSpeed * (player.hasteT > 0 ? 1.35 : 1) * min(m, 1)
             player.position.x = clampF(player.position.x + joyVec.dx / m * sp * dt, 30, World.width - 30)
             player.position.y = clampF(player.position.y + joyVec.dy / m * sp * dt,
@@ -1209,32 +1362,8 @@ final class BattleScene: SKScene {
             if abs(joyVec.dx) > 0.1 { player.face = joyVec.dx > 0 ? 1 : -1 }
         }
 
-        // ухасхийлт
-        if dashT > 0 {
-            player.position.x = clampF(player.position.x + dashVec.dx * dt, 30, World.width - 30)
-            player.position.y = clampF(player.position.y + dashVec.dy * dt,
-                                       World.groundBottom, World.groundTop)
-            let trail = SKShapeNode(circleOfRadius: 8)
-            trail.fillColor = Palette.shieldBlue.withAlphaComponent(0.5)
-            trail.strokeColor = .clear
-            trail.position = player.position
-            trail.zPosition = 650
-            world.addChild(trail)
-            trail.run(.sequence([.fadeOut(withDuration: 0.25), .removeFromParent()]))
-
-            for e in units where !e.isDead && e.team != player.team {
-                if e.kind == .tower || e.kind == .gate || dashHit.contains(e) { continue }
-                if player.position.distance(to: e.position) < 46 + e.radius {
-                    dashHit.insert(e)
-                    dealDamage(to: e, amount: dashDmg, from: player)
-                    e.stun = max(e.stun, 0.9)
-                }
-            }
-            dashT -= dt
-        }
-
         // автомат довтолгоо
-        if player.atkT <= 0 && player.stun <= 0 && dashT <= 0 {
+        if player.atkT <= 0 && player.stun <= 0 && player.dashT <= 0 {
             if let t = findTarget(for: player, maxDist: player.range, unitsOnly: false) {
                 performAttack(player, on: t)
             }
@@ -1245,9 +1374,6 @@ final class BattleScene: SKScene {
             player.hp = min(player.maxHp, player.hp + player.maxHp * 0.05 * dt)
             player.updateBars()
         }
-
-        player.s1T = max(0, player.s1T - dt)
-        player.s2T = max(0, player.s2T - dt)
     }
 
     private func updateUnits(dt: CGFloat) {
@@ -1259,8 +1385,11 @@ final class BattleScene: SKScene {
                     if u.respawnT <= 0 {
                         u.isDead = false
                         u.isHidden = false
-                        u.maxHp = (u.maxHp * 1.1).rounded()
-                        u.dmg = (u.dmg * 1.08).rounded()
+                        if !isPvp {
+                            // AI баатар амилах бүрдээ бага зэрэг хүчирхэгжинэ
+                            u.maxHp = (u.maxHp * 1.1).rounded()
+                            u.dmg = (u.dmg * 1.08).rounded()
+                        }
                         u.hp = u.maxHp
                         u.stun = 0
                         u.position = CGPoint(x: eGate.position.x - 130, y: World.laneY)
@@ -1276,9 +1405,35 @@ final class BattleScene: SKScene {
             u.hasteT = max(0, u.hasteT - dt)
             u.rageT = max(0, u.rageT - dt)
             u.frenzyT = max(0, u.frenzyT - dt)
+            u.s1T = max(0, u.s1T - dt)
+            u.s2T = max(0, u.s2T - dt)
             if u.shieldT > 0 {
                 u.shieldT -= dt
                 if u.shieldT <= 0 { u.shield = 0 }
+            }
+
+            // ухасхийлт — аль ч баатарт
+            if u.dashT > 0 {
+                u.position.x = clampF(u.position.x + u.dashVX * dt, 30, World.width - 30)
+                u.position.y = clampF(u.position.y + u.dashVY * dt,
+                                      World.groundBottom, World.groundTop)
+                let trail = SKShapeNode(circleOfRadius: 8)
+                trail.fillColor = Palette.shieldBlue.withAlphaComponent(0.5)
+                trail.strokeColor = .clear
+                trail.position = u.position
+                trail.zPosition = 650
+                world.addChild(trail)
+                trail.run(.sequence([.fadeOut(withDuration: 0.25), .removeFromParent()]))
+
+                for e in units where !e.isDead && e.team != u.team {
+                    if e.kind == .tower || e.kind == .gate || u.dashHit.contains(e) { continue }
+                    if u.position.distance(to: e.position) < 46 + e.radius {
+                        u.dashHit.insert(e)
+                        dealDamage(to: e, amount: u.dashDmg, from: u)
+                        e.stun = max(e.stun, 0.9)
+                    }
+                }
+                u.dashT -= dt
             }
 
             if u.kind == .minion && u.stun <= 0 {
@@ -1555,11 +1710,18 @@ final class BattleScene: SKScene {
         if win { Haptics.victory() } else { Haptics.defeat() }
         Audio.shared.play(win ? "win" : "lose", volume: 0.9)
 
+        if isPvp {
+            Multiplayer.shared.send(.end(hostWon: win, hostKills: kills, guestKills: guestKills))
+        }
+
         // шагнал: тулааны алт + түвшин + ялалтын урамшуулал, хэцүү байдлаар үржүүлнэ
+        // (PvP-д тогтмол: ялбал 100, ялагдвал 30)
         let heroId = GameData.heroes[heroIndex].id
         let chaptersBefore = Set(GameData.chapters.filter { $0.req.isMet }.map { $0.id })
-        let earned = Int(((CGFloat(matchGold) + CGFloat(player.level) * 5 + (win ? 80 : 20))
-                          * diff.goldMult).rounded())
+        let earned = isPvp
+            ? (win ? 100 : 30)
+            : Int(((CGFloat(matchGold) + CGFloat(player.level) * 5 + (win ? 80 : 20))
+                   * diff.goldMult).rounded())
         Progress.gold += earned
         Progress.recordMatch(win: win)
         var gainedStar = false
@@ -1576,7 +1738,7 @@ final class BattleScene: SKScene {
                                difficultyIndex: difficultyIndex,
                                goldEarned: earned, totalGold: Progress.gold,
                                masteryStars: Progress.mastery(heroId), gainedStar: gainedStar,
-                               newChapter: newChapter)
+                               newChapter: newChapter, isPvp: isPvp)
         run(.sequence([
             .wait(forDuration: 0.9),
             .run { [weak self] in
@@ -1586,6 +1748,19 @@ final class BattleScene: SKScene {
                 view.presentScene(end, transition: .fade(withDuration: 0.8))
             }
         ]))
+    }
+
+    /// Тулаанаас гарч үндсэн цэс рүү буцах
+    private func exitToMenu() {
+        if isPvp {
+            Multiplayer.shared.send(.leave)
+            Multiplayer.shared.stop()
+        }
+        Audio.shared.play("tap")
+        guard let view = view else { return }
+        let menu = MenuScene(size: size)
+        menu.scaleMode = .resizeFill
+        view.presentScene(menu, transition: .fade(withDuration: 0.4))
     }
 
     // MARK: - Мэдрэгчийн оролт
@@ -1598,6 +1773,20 @@ final class BattleScene: SKScene {
             if p.distance(to: muteButton.position) <= 26 {
                 Audio.shared.muted.toggle()
                 muteIcon.text = Audio.shared.muted ? "🔇" : "🔊"
+                continue
+            }
+
+            // гарах товч
+            if p.distance(to: exitButton.position) <= 26 {
+                exitToMenu()
+                return
+            }
+
+            // довтлох товч
+            if p.distance(to: attackButton.position) <= 44 {
+                forceAttack(player)
+                attackButton.run(.sequence([.scale(to: 0.88, duration: 0.05),
+                                            .scale(to: 1.0, duration: 0.08)]))
                 continue
             }
 
@@ -1667,4 +1856,35 @@ struct MatchStats {
     let masteryStars: Int
     let gainedStar: Bool
     let newChapter: String?
+    var isPvp: Bool = false
+}
+
+// MARK: - PvP мессеж хүлээн авах (хост)
+
+extension BattleScene: MultiplayerDelegate {
+    func mpConnected(peerName: String) {}
+
+    func mpDisconnected() {
+        guard isPvp, !ended else { return }
+        announce("Найз тоглоомоос гарлаа")
+        run(.sequence([.wait(forDuration: 1.0), .run { [weak self] in
+            self?.endMatch(win: true)
+        }]))
+    }
+
+    func mpReceived(_ msg: NetMsg) {
+        guard isPvp else { return }
+        switch msg {
+        case .input(let dx, let dy):
+            remoteJoy = CGVector(dx: CGFloat(dx), dy: CGFloat(dy))
+        case .skill(let idx):
+            if !aiHero.isDead { castSkill(for: aiHero, idx: idx) }
+        case .attack:
+            if !aiHero.isDead { forceAttack(aiHero) }
+        case .leave:
+            mpDisconnected()
+        default:
+            break
+        }
+    }
 }

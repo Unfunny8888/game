@@ -19,6 +19,9 @@
 		BB000000000000000000000A /* Audio.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000000000000000000000B /* Audio.swift */; };
 		BB000000000000000000000C /* Progress.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000000000000000000000D /* Progress.swift */; };
 		BB000000000000000000000D /* StoryScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000000000000000000000E /* StoryScene.swift */; };
+		BB000000000000000000000E /* Multiplayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000000000000000000000F /* Multiplayer.swift */; };
+		BB000000000000000000000F /* PvpLobbyScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000000000000000000010 /* PvpLobbyScene.swift */; };
+		BB0000000000000000000010 /* PvpGuestScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000000000000000000011 /* PvpGuestScene.swift */; };
 		BB000000000000000000000B /* Sounds in Resources */ = {isa = PBXBuildFile; fileRef = FA000000000000000000000C /* Sounds */; };
 /* End PBXBuildFile section */
 
@@ -37,6 +40,10 @@
 		FA000000000000000000000C /* Sounds */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Sounds; sourceTree = "<group>"; };
 		FA000000000000000000000D /* Progress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Progress.swift; sourceTree = "<group>"; };
 		FA000000000000000000000E /* StoryScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryScene.swift; sourceTree = "<group>"; };
+		FA000000000000000000000F /* Multiplayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Multiplayer.swift; sourceTree = "<group>"; };
+		FA0000000000000000000010 /* PvpLobbyScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PvpLobbyScene.swift; sourceTree = "<group>"; };
+		FA0000000000000000000011 /* PvpGuestScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PvpGuestScene.swift; sourceTree = "<group>"; };
+		FA0000000000000000000012 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -72,6 +79,10 @@
 				FA000000000000000000000B /* Audio.swift */,
 				FA000000000000000000000D /* Progress.swift */,
 				FA000000000000000000000E /* StoryScene.swift */,
+				FA000000000000000000000F /* Multiplayer.swift */,
+				FA0000000000000000000010 /* PvpLobbyScene.swift */,
+				FA0000000000000000000011 /* PvpGuestScene.swift */,
+				FA0000000000000000000012 /* Info.plist */,
 				FA0000000000000000000009 /* Assets.xcassets */,
 				FA000000000000000000000C /* Sounds */,
 			);
@@ -167,6 +178,9 @@
 				BB000000000000000000000A /* Audio.swift in Sources */,
 				BB000000000000000000000C /* Progress.swift in Sources */,
 				BB000000000000000000000D /* StoryScene.swift in Sources */,
+				BB000000000000000000000E /* Multiplayer.swift in Sources */,
+				BB000000000000000000000F /* PvpLobbyScene.swift in Sources */,
+				BB0000000000000000000010 /* PvpGuestScene.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -302,6 +316,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = IkhMongol/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Их Монгол";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -332,6 +347,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = IkhMongol/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Их Монгол";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

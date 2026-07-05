@@ -62,13 +62,17 @@ final class MenuScene: SKScene {
         c.addChild(tagline)
 
         let play = UIFactory.button(text: "ТОГЛОХ", name: "play")
-        play.position = CGPoint(x: cx, y: size.height * 0.31)
+        play.position = CGPoint(x: cx, y: size.height * 0.32)
         c.addChild(play)
+
+        let pvp = UIFactory.button(text: "🤝 НАЙЗТАЙГАА", name: "pvp", width: 200, height: 42, primary: false)
+        pvp.position = CGPoint(x: cx - 110, y: size.height * 0.185)
+        c.addChild(pvp)
 
         let unread = GameData.unreadChapterCount
         let storyText = unread > 0 ? "📜 ТҮҮХ (\(unread))" : "📜 ТҮҮХ"
-        let story = UIFactory.button(text: storyText, name: "story", width: 210, height: 42, primary: false)
-        story.position = CGPoint(x: cx, y: size.height * 0.185)
+        let story = UIFactory.button(text: storyText, name: "story", width: 200, height: 42, primary: false)
+        story.position = CGPoint(x: cx + 110, y: size.height * 0.185)
         c.addChild(story)
 
         let hint = UIFactory.multiline(
@@ -95,6 +99,12 @@ final class MenuScene: SKScene {
             let story = StoryScene(size: size)
             story.scaleMode = .resizeFill
             view.presentScene(story, transition: .fade(withDuration: 0.4))
+        } else if name == "pvp", let view = view {
+            Haptics.hit()
+            Audio.shared.play("tap")
+            let lobby = PvpLobbyScene(size: size)
+            lobby.scaleMode = .resizeFill
+            view.presentScene(lobby, transition: .fade(withDuration: 0.4))
         }
     }
 }
