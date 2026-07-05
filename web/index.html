@@ -431,13 +431,22 @@ const Snd = {
     });
   },
   // ---- SFX ----
-  hit(){ this.noise(.09, .09, 3200, 400); this.tone(200, .06, 'square', .03, 90); }, // сэлмийн цохилт
-  bow(){ this.noise(.08, .05, 5000, 1500); this.tone(880, .06, 'triangle', .025, 300); },
-  skill(){ this.bowed(300, .22, .06); this.tone(300, .18, 'sawtooth', .03, 900); },
-  heal(){ this.tone(392, .3, 'sine', .05, 784); this.tone(587, .3, 'sine', .03, 1175); },
-  level(){ [293.66,349.23,440,587.33].forEach((f,i)=> setTimeout(()=>this.bowed(f,.22,.06), i*90)); }, // пентатоник өсөлт
-  crash(){ this.drum(); this.noise(.5, .09, 900, 40); },
-  drum(){ this.tone(90, .28, 'sine', .12, 42); this.noise(.16, .13, 700, 120); }, // дайны бөмбөр
+  // сэлмийн цохилт — ганг металл + мах цохих дуу
+  hit(){
+    this.noise(.05, .10, 4200, 900);            // ирний исгэрэлт
+    this.tone(1400, .05, 'triangle', .028, 620);// металл цан
+    this.tone(150, .09, 'square', .05, 60);     // мах/яс цохих
+  },
+  bow(){ this.noise(.05, .04, 6000, 2200); this.tone(1100, .05, 'triangle', .022, 380); this.tone(240,.06,'sine',.03,120); },
+  skill(){ // хүчний долгион — доошоо шүүрдэх + гялбаа
+    this.tone(600, .28, 'sawtooth', .045, 140, 0.02);
+    this.bowed(300, .3, .05);
+    this.tone(1200, .22, 'sine', .03, 2400);
+  },
+  heal(){ [392,494,587,784].forEach((f,i)=> setTimeout(()=>this.tone(f,.5,'sine',.04, f*1.5), i*70)); }, // дулаан хөг
+  level(){ [293.66,349.23,440,587.33,880].forEach((f,i)=> setTimeout(()=>{ this.bowed(f,.25,.06); this.tone(f*2,.15,'sine',.02); }, i*85)); },
+  crash(){ this.tone(60,.5,'sine',.16,30); this.drum(); this.noise(.55, .11, 1100, 40); }, // том нуралт
+  drum(){ this.tone(85, .3, 'sine', .13, 40); this.tone(120,.14,'triangle',.06,60); this.noise(.15, .13, 800, 130); }, // дайны бөмбөр
   win(){ // ялалтын эвэр бүрээ (таван аялгуу)
     [293.66,440,587.33,880].forEach((f,i)=> setTimeout(()=>this.horn(f,.5,.09), i*180));
     [0,300,600].forEach(d=> setTimeout(()=>this.drum(), d));
@@ -1108,7 +1117,9 @@ function dealDamage(target, amount, source){
     if(amount<=0){ addFloater(target.x, target.y-target.r-14, 'Бамбай!', '#9fd0e8'); return; }
   }
   target.hp -= amount;
-  addFloater(target.x + (Math.random()*20-10), target.y - target.r - 12, Math.round(amount), target.team===0? '#ff7a6a':'#ffd873');
+  target.hitFlash = 0.13;
+  const crit = amount >= (target.maxHp*0.12);
+  addFloater(target.x + (Math.random()*20-10), target.y - target.r - 12, Math.round(amount), target.team===0? '#ff7a6a':'#ffd873', crit);
   if(target.hp <= 0) killUnit(target, source);
 }
 
@@ -1159,12 +1170,16 @@ function killUnit(u, source){
   }
   if(u.type==='tower'){
     Snd.crash();
+    burst(u.x, u.y-40, '#caa', 26); ringFx(u.x, u.y, 120, 'rgba(200,180,150,.8)');
+    screenFlash('#e8d8b0', 0.16);
     shakeT = Math.max(shakeT, 0.55);
     announce(u.team? 'Дайсны цамхаг нурлаа!' : 'Манай цамхаг нурлаа!');
     if(u.team && byPlayer){ giveXP(160); matchGold += 20; }
   }
   if(u.type==='gate'){
     Snd.crash();
+    burst(u.x, u.y-50, '#d8c0a0', 40); ringFx(u.x, u.y, 180, 'rgba(220,200,160,.85)');
+    screenFlash('#f0e0c0', 0.22);
     shakeT = Math.max(shakeT, 0.7);
     if(u.team===0){
       // Манай хаалга унах нь зөвхөн хамгаалах шинжтэй даалгаварт ялагдал болно
@@ -1274,6 +1289,7 @@ function updateObjective(dt){
 function attack(u, target){
   u.atkT = u.atkCd * (u.frenzyT>0 ? 0.5 : 1);
   u.face = target.x >= u.x ? 1 : -1;
+  u.atkAnim = 0.22;   // цохилтын хөдөлгөөн
   const dmg = u.dmg * (u.rageT>0 ? 1.45 : 1);
   if(u.range > 100){
     Snd.bow();
@@ -1281,7 +1297,10 @@ function attack(u, target){
   } else {
     Snd.hit();
     dealDamage(target, dmg, u);
-    slashArc(u.x + u.face*u.r, u.y, u.face, u.team? '#ff9d8a':'#ffe9a8');
+    const col = u.team? '#ff9d8a':'#ffe9a8';
+    slashArc(u.x + u.face*u.r*1.3, u.y-u.r*0.3, u.face, col);
+    sparks(target.x - u.face*target.r*0.5, target.y-target.r*0.4, u.face, col, 5);
+    if(u.type==='hero') shakeT = Math.max(shakeT, 0.12);
   }
 }
 
@@ -1305,6 +1324,8 @@ function giveXP(n){
     player.dmg   = Math.round(player.dmg * 1.11);
     player.hp    = Math.min(player.maxHp, player.hp + player.maxHp*0.35);
     burst(player.x, player.y, '#8ec8ff', 22);
+    ringFx(player.x, player.y, 90, '#8ec8ff');
+    screenFlash('#bfe0ff', 0.22);
     announce('Түвшин ' + player.level + ' боллоо!');
     Snd.level();
     need = xpNeed(player.level);
@@ -1565,19 +1586,40 @@ window.addEventListener('keydown', e=>{
 window.addEventListener('keyup', e=>{ keys[e.key.toLowerCase()] = false; });
 
 // ---------- effects ----------
-function addFloater(x,y,txt,color){ floaters.push({x,y,txt:String(txt),color,life:0.9,vy:-46}); }
+let flashT = 0, flashCol = '#fff';   // дэлгэцийн гэрэлтэлт
+function screenFlash(col, dur){ flashT = Math.max(flashT, dur||0.14); flashCol = col||'#fff'; }
+function addFloater(x,y,txt,color,big){ floaters.push({x,y,txt:String(txt),color,life:big?1.1:0.9,vy:-46,big:!!big,t:0}); }
 function burst(x,y,color,n){
   for(let i=0;i<n;i++){
-    const a = Math.random()*TAU, s = 60+Math.random()*140;
-    particles.push({x,y,vx:Math.cos(a)*s, vy:Math.sin(a)*s, life:.5+Math.random()*.4, size:2+Math.random()*3, color});
+    const a = Math.random()*TAU, s = 50+Math.random()*160;
+    particles.push({x,y,vx:Math.cos(a)*s, vy:Math.sin(a)*s - 40, grav:340, life:.45+Math.random()*.45, maxLife:.9, size:2+Math.random()*3, color, spark:Math.random()<0.4});
   }
 }
-function ringFx(x,y,r,color){ particles.push({x,y,ring:true,r:16,maxR:r,life:.32,maxLife:.32,color,size:0,vx:0,vy:0}); }
-function slashArc(x,y,face,color){ particles.push({x,y,slash:true,face,life:.18,maxLife:.18,color,size:0,vx:0,vy:0}); }
+// Цохилтын оч — толгойгоо чиглэлд шидэгдэх гялбаа
+function sparks(x,y,face,color,n){
+  n = n||6;
+  for(let i=0;i<n;i++){
+    const a = (face>0?0:Math.PI) + (Math.random()*1.4-0.7);
+    const s = 130+Math.random()*180;
+    particles.push({x,y,vx:Math.cos(a)*s, vy:Math.sin(a)*s-30, grav:260, life:.22+Math.random()*.2, maxLife:.42, size:1.5+Math.random()*2, color, spark:true});
+  }
+}
+// Тоос босгох — хөл, давхилт
+function dust(x,y,color){
+  for(let i=0;i<3;i++){
+    const a = Math.PI + (Math.random()*1.2-0.6);
+    particles.push({x:x+(Math.random()*8-4), y, vx:Math.cos(a)*20, vy:-8-Math.random()*14, grav:20, life:.4+Math.random()*.3, maxLife:.7, size:3+Math.random()*3, color:color||'rgba(180,160,120,.5)', puff:true});
+  }
+}
+function ringFx(x,y,r,color){ particles.push({x,y,ring:true,r:16,maxR:r,life:.34,maxLife:.34,color,size:0,vx:0,vy:0}); }
+function slashArc(x,y,face,color){ particles.push({x,y,slash:true,face,life:.2,maxLife:.2,color,size:0,vx:0,vy:0}); }
 
 // ---------- update ----------
 function update(dt){
   gameT += dt;
+
+  // хөдөлгөөний анимацийн төлөв — байрлалыг тэмдэглэнэ
+  for(const u of units){ if(!u.dead){ u._px = u.x; u._py = u.y; } }
 
   // waves
   nextWaveT -= dt;
@@ -1711,6 +1753,22 @@ function update(dt){
     }
   }
 
+  // хөдөлгөөн + цохилтын гэрэлтэлт (анимацид)
+  for(const u of units){
+    if(u.dead) continue;
+    if(u._px !== undefined){
+      const md = Math.hypot(u.x-u._px, u.y-u._py);
+      u.moving = md > 0.4;
+      if(u.moving){
+        u.walkT = (u.walkT||0) + dt;
+        // давхих тоос (хааяа)
+        if(!u.isStruct && u.type!=='npc' && Math.sin(u.walkT*11)>0.9) dust(u.x, u.y+u.r*0.7);
+      }
+    }
+    u.hitFlash = Math.max(0, (u.hitFlash||0) - dt);
+    u.atkAnim = Math.max(0, (u.atkAnim||0) - dt);
+  }
+
   // projectiles
   for(let i=projectiles.length-1;i>=0;i--){
     const p = projectiles[i];
@@ -1770,11 +1828,12 @@ function update(dt){
     const pt = particles[i];
     pt.life -= dt;
     if(pt.life<=0){ particles.splice(i,1); continue; }
+    if(pt.grav) pt.vy += pt.grav*dt;
     pt.x += (pt.vx||0)*dt; pt.y += (pt.vy||0)*dt;
   }
   for(let i=floaters.length-1;i>=0;i--){
     const f = floaters[i];
-    f.life -= dt; f.y += f.vy*dt;
+    f.life -= dt; f.t += dt; f.y += f.vy*dt; f.vy *= 0.92;
     if(f.life<=0) floaters.splice(i,1);
   }
 
@@ -1782,6 +1841,7 @@ function update(dt){
   comboT = Math.max(0, comboT - dt);
   if(comboT <= 0) combo = 0;
   shakeT = Math.max(0, shakeT - dt);
+  flashT = Math.max(0, flashT - dt);
 
   if(obj && !objDone) updateObjective(dt);
   // аяны динамик үйл явдлууд
@@ -1870,35 +1930,65 @@ function setupDeco(theme){
 }
 setupDeco('steppe');
 
+// уур амьсгалын өнгө — тулааны газраар ялгаатай
+const SKIES = {
+  steppe:   { sky:['#20345f','#4a6a9a','#c9a56a','#e6c088'], far:'#3d4a63', mid:'#4a5468', near:'#3f4d3c',
+              ground:['#8a9a52','#6a7a3a','#48582a'], sun:'255,224,150', haze:'230,205,150' },
+  khwarezm: { sky:['#3a3050','#8a5a48','#d69a5a','#f0c880'], far:'#5a4658', mid:'#6a5048', near:'#7a6040',
+              ground:['#c9a86a','#a88850','#7a6236'], sun:'255,210,130', haze:'235,200,140' }
+};
 function render(){
   ctx.setTransform(scaleF, 0, 0, scaleF, 0, 0);
   const vw = viewW;
+  const P = SKIES[matchTheme] || SKIES.steppe;
 
-  // sky
+  // sky (олон шаттай)
   const sky = ctx.createLinearGradient(0,0,0,GROUND_TOP+80);
-  sky.addColorStop(0,'#2c3e66'); sky.addColorStop(.55,'#8a6a4a'); sky.addColorStop(1,'#c9955c');
+  sky.addColorStop(0,P.sky[0]); sky.addColorStop(.4,P.sky[1]); sky.addColorStop(.78,P.sky[2]); sky.addColorStop(1,P.sky[3]);
   ctx.fillStyle = sky; ctx.fillRect(0,0,vw,GROUND_TOP+80);
 
-  // sun
-  ctx.fillStyle = 'rgba(255,214,140,.9)';
-  ctx.beginPath(); ctx.arc(vw*0.5 - camX*0.05, 120, 46, 0, TAU); ctx.fill();
-  ctx.fillStyle = 'rgba(255,214,140,.25)';
-  ctx.beginPath(); ctx.arc(vw*0.5 - camX*0.05, 120, 78, 0, TAU); ctx.fill();
+  // sun + гэрлэн туяа
+  const sunX = vw*0.62 - camX*0.04, sunY = 108;
+  const glow = ctx.createRadialGradient(sunX, sunY, 10, sunX, sunY, 150);
+  glow.addColorStop(0,'rgba('+P.sun+',.55)'); glow.addColorStop(1,'rgba('+P.sun+',0)');
+  ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(sunX, sunY, 150, 0, TAU); ctx.fill();
+  ctx.fillStyle = 'rgba('+P.sun+',.95)';
+  ctx.beginPath(); ctx.arc(sunX, sunY, 42, 0, TAU); ctx.fill();
 
-  // mountains (parallax)
-  ctx.fillStyle = '#4a3a56';
-  drawRange(0.25, 150, 90);
-  ctx.fillStyle = '#5c4448';
-  drawRange(0.45, 190, 70);
+  // хөвөгч үүл (аажим хөдөлнө)
+  ctx.fillStyle = 'rgba(255,250,240,.16)';
+  for(let i=0;i<4;i++){
+    const cx = ((i*760 + gameT*10) % (vw+400)) - 200;
+    const cy = 60 + (i%2)*44;
+    drawCloud(cx, cy, 0.7 + (i%3)*0.25);
+  }
+  // алс нисэх шувууд
+  ctx.strokeStyle = 'rgba(30,25,35,.45)'; ctx.lineWidth = 1.5;
+  for(let i=0;i<3;i++){
+    const bx = ((i*230 - gameT*22) % (vw+120) + vw+120) % (vw+120) - 60;
+    const by = 80 + i*16 + Math.sin(gameT*0.6+i)*4;
+    const fl = 2 + Math.sin(gameT*6+i)*1.5;
+    ctx.beginPath(); ctx.moveTo(bx-5, by+fl); ctx.lineTo(bx, by); ctx.lineTo(bx+5, by+fl); ctx.stroke();
+  }
+
+  // mountains (3 давхар параллакс)
+  ctx.fillStyle = P.far;  drawRange(0.16, 130, 100);
+  ctx.fillStyle = P.mid;  drawRange(0.28, 165, 85);
+  // горизонтын манан
+  const hz = ctx.createLinearGradient(0,GROUND_TOP-70,0,GROUND_TOP+30);
+  hz.addColorStop(0,'rgba('+P.haze+',0)'); hz.addColorStop(1,'rgba('+P.haze+',.5)');
+  ctx.fillStyle = hz; ctx.fillRect(0, GROUND_TOP-70, vw, 100);
+  ctx.fillStyle = P.near; drawRange(0.44, 195, 66);
 
   // ground
   const g = ctx.createLinearGradient(0,GROUND_TOP-40,0,VIEW_H);
-  g.addColorStop(0,'#7a8a44'); g.addColorStop(.4,'#6a7a3a'); g.addColorStop(1,'#4c5a2a');
+  g.addColorStop(0,P.ground[0]); g.addColorStop(.4,P.ground[1]); g.addColorStop(1,P.ground[2]);
   ctx.fillStyle = g; ctx.fillRect(0, GROUND_TOP-40, vw, VIEW_H-(GROUND_TOP-40));
 
-  // lane path
-  ctx.fillStyle = 'rgba(160,130,80,.35)';
-  ctx.fillRect(0, LANE_Y-90, vw, 180);
+  // lane path (зөөлөн ирмэгтэй зам)
+  const lg = ctx.createLinearGradient(0,LANE_Y-90,0,LANE_Y+90);
+  lg.addColorStop(0,'rgba(170,140,90,0)'); lg.addColorStop(.5,'rgba(170,140,90,.4)'); lg.addColorStop(1,'rgba(170,140,90,0)');
+  ctx.fillStyle = lg; ctx.fillRect(0, LANE_Y-90, vw, 180);
 
   ctx.save();
   const shx = shakeT>0 ? (Math.random()*2-1)*10*shakeT : 0;
@@ -1988,23 +2078,45 @@ function render(){
 
   // particles
   for(const pt of particles){
+    const prog = 1 - pt.life/(pt.maxLife||0.6);
     const a = clamp(pt.life/(pt.maxLife||0.6), 0, 1);
     if(pt.ring){
-      const r = pt.r + (pt.maxR-pt.r)*(1 - pt.life/pt.maxLife);
-      ctx.strokeStyle = pt.color; ctx.globalAlpha = a; ctx.lineWidth = 5;
+      const r = pt.r + (pt.maxR-pt.r)*prog;
+      ctx.globalAlpha = a*0.9; ctx.strokeStyle = pt.color; ctx.lineWidth = 6*a+1;
       ctx.beginPath(); ctx.ellipse(pt.x, pt.y, r, r*0.55, 0, 0, TAU); ctx.stroke();
+      ctx.globalAlpha = a*0.4; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(pt.x, pt.y, r*0.7, r*0.7*0.55, 0, 0, TAU); ctx.stroke();
       ctx.globalAlpha = 1;
     } else if(pt.slash){
-      ctx.strokeStyle = pt.color; ctx.globalAlpha = a; ctx.lineWidth = 4;
-      ctx.beginPath();
-      if(pt.face>0) ctx.arc(pt.x, pt.y, 26, -1, 1, false);
-      else ctx.arc(pt.x, pt.y, 26, Math.PI-1, Math.PI+1, false);
-      ctx.stroke();
+      // нумарсан сэлмийн зам — гэрлэн туяа
+      const sweep = prog;             // 0→1 нум татна
+      const a0 = pt.face>0 ? -1.15 : Math.PI-1.15;
+      const a1 = a0 + 2.3;
+      const cur = a0 + (a1-a0)*sweep;
+      ctx.globalAlpha = a;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = 'rgba(255,255,255,'+(a*0.9)+')'; ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.arc(pt.x, pt.y, 30, a0, cur, false); ctx.stroke();
+      ctx.strokeStyle = pt.color; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(pt.x, pt.y, 30, a0, cur, false); ctx.stroke();
+      ctx.lineCap = 'butt';
       ctx.globalAlpha = 1;
     } else if(pt.arrow){
       ctx.strokeStyle = pt.color; ctx.globalAlpha = a; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(pt.x, pt.y); ctx.lineTo(pt.x, pt.y+14); ctx.stroke();
       ctx.globalAlpha = 1;
+    } else if(pt.puff){
+      ctx.fillStyle = pt.color; ctx.globalAlpha = a*0.6;
+      ctx.beginPath(); ctx.arc(pt.x, pt.y, pt.size*(1+prog*1.6), 0, TAU); ctx.fill();
+      ctx.globalAlpha = 1;
+    } else if(pt.spark){
+      // сунасан оч
+      const vlen = Math.hypot(pt.vx,pt.vy)||1;
+      ctx.strokeStyle = pt.color; ctx.globalAlpha = a; ctx.lineWidth = pt.size;
+      ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(pt.x, pt.y);
+      ctx.lineTo(pt.x - pt.vx/vlen*7, pt.y - pt.vy/vlen*7); ctx.stroke();
+      ctx.lineCap='butt'; ctx.globalAlpha = 1;
     } else {
       ctx.fillStyle = pt.color; ctx.globalAlpha = a;
       ctx.beginPath(); ctx.arc(pt.x, pt.y, pt.size, 0, TAU); ctx.fill();
@@ -2012,17 +2124,31 @@ function render(){
     }
   }
 
-  // floaters
-  ctx.font = '700 17px -apple-system, sans-serif';
+  // floaters — өсөж гарч ирээд бүдгэрэх хохирлын тоо
   ctx.textAlign = 'center';
   for(const f of floaters){
-    ctx.globalAlpha = clamp(f.life/0.9, 0, 1);
-    ctx.fillStyle = '#000'; ctx.fillText(f.txt, f.x+1, f.y+1);
+    const pop = f.t < 0.12 ? 0.6 + (f.t/0.12)*0.55 : 1.15 - Math.min(0.15, (f.t-0.12));
+    const sz = (f.big? 22:16) * pop;
+    ctx.font = '800 '+sz.toFixed(1)+'px -apple-system, sans-serif';
+    ctx.globalAlpha = clamp(f.life/0.5, 0, 1);
+    ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.85)';
+    ctx.strokeText(f.txt, f.x, f.y);
     ctx.fillStyle = f.color; ctx.fillText(f.txt, f.x, f.y);
     ctx.globalAlpha = 1;
   }
 
   ctx.restore();
+
+  // дэлгэцийн гэрэлтэлт (том үйл явдал)
+  if(flashT > 0){
+    ctx.globalAlpha = clamp(flashT/0.14, 0, 1) * 0.4;
+    ctx.fillStyle = flashCol; ctx.fillRect(0,0,vw,VIEW_H);
+    ctx.globalAlpha = 1;
+  }
+  // булангийн бараан хүрээ (vignette)
+  const vig = ctx.createRadialGradient(vw/2, VIEW_H/2, VIEW_H*0.42, vw/2, VIEW_H/2, VIEW_H*0.85);
+  vig.addColorStop(0,'rgba(0,0,0,0)'); vig.addColorStop(1,'rgba(0,0,0,.34)');
+  ctx.fillStyle = vig; ctx.fillRect(0,0,vw,VIEW_H);
 
   // respawn overlay
   if(player && player.dead){
@@ -2032,6 +2158,14 @@ function render(){
   }
 }
 
+function drawCloud(x, y, s){
+  ctx.beginPath();
+  ctx.ellipse(x, y, 34*s, 14*s, 0, 0, TAU);
+  ctx.ellipse(x-24*s, y+4*s, 22*s, 10*s, 0, 0, TAU);
+  ctx.ellipse(x+26*s, y+3*s, 24*s, 11*s, 0, 0, TAU);
+  ctx.ellipse(x+4*s, y-8*s, 20*s, 12*s, 0, 0, TAU);
+  ctx.fill();
+}
 function drawRange(par, base, amp){
   const off = camX*par;
   ctx.beginPath();
@@ -2202,27 +2336,67 @@ function drawUnit(u){
     return;
   }
 
-  // shadow + team ring
-  ctx.fillStyle = 'rgba(0,0,0,.3)';
-  ctx.beginPath(); ctx.ellipse(u.x, u.y+u.r*0.75, u.r*1.1, u.r*0.45, 0, 0, TAU); ctx.fill();
-  ctx.strokeStyle = teamCol; ctx.lineWidth = 2.5; ctx.globalAlpha = .8;
-  ctx.beginPath(); ctx.ellipse(u.x, u.y+u.r*0.75, u.r*1.15, u.r*0.5, 0, 0, TAU); ctx.stroke();
-  ctx.globalAlpha = 1;
-
   const isHero = u.type==='hero';
   const bodyCol = isHero ? u.color : (u.team? '#8a4438':'#7a5a34');
   const R = u.r;
 
-  // body (deel / armor)
-  ctx.fillStyle = bodyCol;
-  ctx.beginPath(); ctx.ellipse(u.x, u.y-R*0.1, R*0.85, R, 0, 0, TAU); ctx.fill();
-  // belt (bus)
-  ctx.fillStyle = isHero? '#5a3a10' : 'rgba(40,25,8,.7)';
-  ctx.fillRect(u.x-R*0.85, u.y-R*0.05, R*1.7, R*0.28);
+  // ── анимацийн офсет: алхах найгалт, амьсгаа, цохилтын өнхрөлт ──
+  const wob = u.moving ? Math.sin((u.walkT||0)*11) : 0;
+  const bob = u.moving ? Math.abs(wob)*R*0.14 : Math.sin(gameT*2.4 + u.x*0.05)*R*0.05;
+  const atk = u.atkAnim ? Math.sin((1 - u.atkAnim/0.22)*Math.PI) : 0;
+  const lunge = atk * u.face * R*0.42;
 
-  // head
-  ctx.fillStyle = '#e0b088';
-  ctx.beginPath(); ctx.arc(u.x, u.y-R*1.15, R*0.55, 0, TAU); ctx.fill();
+  // shadow + team ring (газарт хэвээр)
+  const shScale = u.moving ? 1 - Math.abs(wob)*0.1 : 1;
+  ctx.fillStyle = 'rgba(0,0,0,.32)';
+  ctx.beginPath(); ctx.ellipse(u.x, u.y+u.r*0.78, u.r*1.1*shScale, u.r*0.42*shScale, 0, 0, TAU); ctx.fill();
+  ctx.strokeStyle = teamCol; ctx.lineWidth = 2.5; ctx.globalAlpha = .85;
+  ctx.beginPath(); ctx.ellipse(u.x, u.y+u.r*0.78, u.r*1.18, u.r*0.5, 0, 0, TAU); ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  ctx.save();
+  ctx.translate(lunge, -bob);
+
+  // ── хөл (алхалтын алхаа) ──
+  const legCol = u.team? '#3a2418' : '#402a18';
+  ctx.strokeStyle = legCol; ctx.lineWidth = R*0.32; ctx.lineCap='round';
+  const hipY = u.y + R*0.18, footY = u.y + R*0.74, stride = wob * R*0.36;
+  ctx.beginPath(); ctx.moveTo(u.x - R*0.26, hipY); ctx.lineTo(u.x - R*0.24 + stride, footY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(u.x + R*0.26, hipY); ctx.lineTo(u.x + R*0.24 - stride, footY); ctx.stroke();
+  ctx.lineCap='butt';
+
+  // ── ар гар (жин, зэвсгийн эсрэг тал) ──
+  ctx.strokeStyle = bodyCol; ctx.lineWidth = R*0.28; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(u.x - u.face*R*0.4, u.y-R*0.72); ctx.lineTo(u.x - u.face*R*0.72, u.y-R*0.1); ctx.stroke();
+  ctx.lineCap='butt';
+
+  // ── бие (дээл / хуяг) сүүдэр гэрэлтэй ──
+  const bodyY = u.y - R*0.36, bodyRX = R*0.66, bodyRY = R*0.72;
+  const bgr = ctx.createLinearGradient(u.x-bodyRX, bodyY-bodyRY, u.x+bodyRX, bodyY+bodyRY);
+  bgr.addColorStop(0, 'rgba(255,255,255,.26)'); bgr.addColorStop(0.4, bodyCol); bgr.addColorStop(1, 'rgba(0,0,0,.28)');
+  ctx.fillStyle = bodyCol;
+  ctx.beginPath(); ctx.ellipse(u.x, bodyY, bodyRX, bodyRY, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = bgr;
+  ctx.beginPath(); ctx.ellipse(u.x, bodyY, bodyRX, bodyRY, 0, 0, TAU); ctx.fill();
+  // мөр (мөрөвч)
+  ctx.fillStyle = isHero? 'rgba(230,205,120,.55)' : 'rgba(255,255,255,.14)';
+  ctx.beginPath(); ctx.ellipse(u.x, u.y-R*0.92, R*0.66, R*0.3, 0, 0, TAU); ctx.fill();
+  // дээлийн энгэрийн зүсэлт
+  ctx.strokeStyle = 'rgba(0,0,0,.28)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(u.x, u.y-R*0.85); ctx.lineTo(u.x + u.face*R*0.22, u.y-R*0.05); ctx.stroke();
+  // belt (бүс)
+  ctx.fillStyle = isHero? '#6a4410' : 'rgba(40,25,8,.78)';
+  ctx.fillRect(u.x-R*0.64, u.y-R*0.2, R*1.28, R*0.22);
+  ctx.fillStyle = isHero? '#e8c24a' : 'rgba(180,150,90,.6)';   // товруу
+  ctx.fillRect(u.x-R*0.1, u.y-R*0.2, R*0.2, R*0.22);
+
+  // head + царай
+  ctx.fillStyle = '#d8a578';
+  ctx.beginPath(); ctx.arc(u.x, u.y-R*1.15, R*0.52, 0, TAU); ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,.18)';   // хацрын сүүдэр
+  ctx.beginPath(); ctx.arc(u.x - u.face*R*0.18, u.y-R*1.1, R*0.5, -0.4, 0.9); ctx.fill();
+  ctx.fillStyle = '#2a1c12';           // нүд
+  ctx.fillRect(u.x + u.face*R*0.08, u.y-R*1.22, R*0.13, R*0.09);
 
   // Дуулга — соёлоор ялгаатай
   if(u.team===0){
@@ -2261,19 +2435,49 @@ function drawUnit(u){
     ctx.fillStyle='#c9a84a'; ctx.beginPath(); ctx.arc(u.x - u.face*R*0.7, u.y-R*0.2, R*0.14, 0, TAU); ctx.fill();
   }
 
-  // weapon
-  ctx.strokeStyle = '#d8d8d0'; ctx.lineWidth = 3;
-  const wx = u.x + u.face*R*0.95;
+  // weapon + зэвсгийн гар
+  const wx = u.x + u.face*R*0.9;
   if(u.archer || (u.hero && u.hero.id==='zev')){
-    ctx.strokeStyle = '#7a4a20';
-    ctx.beginPath(); ctx.arc(wx, u.y-R*0.4, R*0.7, -Math.PI/2 + (u.face>0?0:Math.PI)*0 , Math.PI/2, u.face<0); ctx.stroke();
-    ctx.strokeStyle = 'rgba(230,230,220,.7)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(wx, u.y-R*1.1); ctx.lineTo(wx, u.y+R*0.3); ctx.stroke();
+    // нум (татсан хөвчтэй)
+    ctx.strokeStyle = '#6a4018'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(wx, u.y-R*0.4, R*0.75, -Math.PI*0.6, Math.PI*0.6); ctx.stroke();
+    ctx.strokeStyle = 'rgba(240,240,225,.8)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(wx + Math.cos(-Math.PI*0.6)*R*0.75, u.y-R*0.4 + Math.sin(-Math.PI*0.6)*R*0.75);
+    ctx.lineTo(wx + Math.cos(Math.PI*0.6)*R*0.75, u.y-R*0.4 + Math.sin(Math.PI*0.6)*R*0.75); ctx.stroke();
+    // гар нумыг барина
+    ctx.strokeStyle = '#d8a578'; ctx.lineWidth = R*0.24; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(u.x + u.face*R*0.4, u.y-R*0.5); ctx.lineTo(wx, u.y-R*0.4); ctx.stroke();
+    ctx.lineCap='butt';
   } else {
-    ctx.beginPath(); ctx.moveTo(wx, u.y); ctx.lineTo(wx + u.face*R*0.8, u.y-R*1.1); ctx.stroke();
-    ctx.strokeStyle = '#8a6a2a'; ctx.lineWidth = 4;
-    ctx.beginPath(); ctx.moveTo(wx, u.y+2); ctx.lineTo(wx + u.face*4, u.y-6); ctx.stroke();
+    // сэлмийг цохилтоор эргүүлнэ
+    const swing = (-0.9 + atk*1.7) * u.face;   // дээшээс доош хийсгэнэ
+    ctx.save();
+    ctx.translate(wx, u.y-R*0.3); ctx.rotate(swing);
+    // барих гар
+    ctx.strokeStyle = '#d8a578'; ctx.lineWidth = R*0.24; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(-u.face*R*0.5, R*0.2); ctx.lineTo(0,0); ctx.stroke();
+    // ир (гэрэлтэй ган)
+    const bl = ctx.createLinearGradient(0,0, u.face*R*1.4, -R*0.2);
+    bl.addColorStop(0,'#b8bcc4'); bl.addColorStop(0.5,'#f4f6fa'); bl.addColorStop(1,'#9aa0aa');
+    ctx.strokeStyle = bl; ctx.lineWidth = 3.5; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(u.face*R*1.35, -R*0.08); ctx.stroke();
+    // хамгаалалт
+    ctx.strokeStyle = '#8a6a2a'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(-u.face*R*0.1, -R*0.14); ctx.lineTo(u.face*R*0.14, R*0.14); ctx.stroke();
+    ctx.lineCap='butt';
+    ctx.restore();
   }
+
+  // цохилтын гэрэлтэлт (цайвар давхарга)
+  if(u.hitFlash > 0){
+    ctx.globalAlpha = clamp(u.hitFlash/0.13, 0, 1) * 0.7;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.ellipse(u.x, u.y-R*0.1, R*0.82, R*1.02, 0, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(u.x, u.y-R*1.15, R*0.52, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.restore();   // анимацийн translate дуусав
 
   // shield bubble
   if(u.shield > 0){
