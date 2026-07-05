@@ -105,16 +105,15 @@
     background:#c8392a; color:#fff; font-size:11px; font-weight:800; padding:0 5px; margin-left:6px; vertical-align:middle; }
   .badge.hidden { display:none; }
   .chapters { display:flex; flex-direction:column; gap:8px; margin-top:14px; width:min(600px, 92vw); }
-  .levels { display:flex; flex-direction:column; gap:8px; margin-top:14px; width:min(600px, 92vw); }
-  .lvRow { display:flex; align-items:center; gap:12px; text-align:left; padding:10px 16px; border-radius:12px;
-    background:linear-gradient(180deg, rgba(60,44,22,.9), rgba(32,22,10,.9)); border:1.5px solid #6e5426; cursor:pointer; }
-  .lvRow.locked { opacity:.5; cursor:default; }
-  .lvRow.cleared { border-color:#8ce87a; }
-  .lvRow .lvNum { font-size:16px; font-weight:800; color:#c9973f; min-width:26px; text-align:center; }
-  .lvRow .lvBody { flex:1; }
-  .lvRow .lvTitle { font-size:14px; font-weight:700; color:#f0dfae; }
-  .lvRow .lvDesc { font-size:10.5px; color:#9a8560; margin-top:2px; }
-  .lvRow .lvTag { font-size:16px; }
+  /* байлдан дагуулалтын зураг */
+  #mapWrap { display:flex; justify-content:center; }
+  #mapWrap svg { height:min(58vh, 340px); width:auto; max-width:97vw; display:block; border-radius:10px;
+    box-shadow:0 8px 30px rgba(0,0,0,.5); border:2px solid #6e5426; }
+  .mapNode { cursor:pointer; }
+  .mapNode.locked { cursor:default; }
+  .mapTip { position:fixed; z-index:40; pointer-events:none; background:rgba(20,14,6,.95); color:#f0e2c4;
+    border:1px solid #a8813a; border-radius:8px; padding:6px 10px; font-size:12px; max-width:240px; display:none; }
+  .mapTip b { color:#e8b64c; } .mapTip .o { color:#8ce87a; font-size:11px; }
   .chRow { display:flex; align-items:center; gap:12px; text-align:left; padding:10px 16px; border-radius:12px;
     background:linear-gradient(180deg, rgba(60,44,22,.9), rgba(32,22,10,.9)); border:1.5px solid #6e5426; cursor:pointer; }
   .chRow.locked { opacity:.5; cursor:default; }
@@ -174,12 +173,12 @@
   <div class="hint">Зүүн тал — хөдөлгөөний жойстик &nbsp;·&nbsp; Баруун тал — чадвар ба ⚔️ довтлох товч<br>Утсаа хөндлөн барьж тоглоорой.</div>
 </div>
 
-<!-- ================= CAMPAIGN ================= -->
+<!-- ================= CAMPAIGN (MAP) ================= -->
 <div id="campaignScreen" class="screen hidden">
-  <h2 style="letter-spacing:4px;color:#e8b64c">АЯН ДАЙН</h2>
-  <div style="font-size:11px;color:#8a7550;margin-top:2px">Монголын нууц товчоогоор — Тэмүжингээс дэлхийн эзэн хаан хүртэл</div>
-  <div class="levels" id="levels"></div>
-  <button class="btn secondary" id="campaignBackBtn">БУЦАХ</button>
+  <h2 style="letter-spacing:4px;color:#e8b64c">АЯН ДАЙН — БАЙЛДАН ДАГУУЛАЛТЫН ЗУРАГ</h2>
+  <div style="font-size:11px;color:#8a7550;margin:2px 0 6px">Тэмдэглэсэн газар дээр дарж тулаанд мор · Дуусгах тусам эзэнт гүрэн тэлнэ</div>
+  <div id="mapWrap"></div>
+  <button class="btn secondary" id="campaignBackBtn" style="margin-top:8px">БУЦАХ</button>
 </div>
 
 <!-- ================= MISSION INTRO ================= -->
@@ -793,24 +792,106 @@ function setState(s){
 }
 
 // ---------- Аян дайны дэлгэц ----------
-function buildLevels(){
-  const wrap = $('levels');
-  wrap.innerHTML = '';
-  LEVELS.forEach((L, i)=>{
-    const done = (save.campaign||0) > i;
-    const unlocked = (save.campaign||0) >= i;   // одоогийн ба өмнөх түвшнүүд
-    const row = document.createElement('div');
-    row.className = 'lvRow' + (unlocked? '':' locked') + (done? ' cleared':'');
-    const tag = done ? '✅' : (unlocked ? '⚔️' : '🔒');
-    row.innerHTML = '<div class="lvNum">'+(i+1)+'</div>'
-      + '<div class="lvBody"><div class="lvTitle">'+(unlocked? L.title : '???')+'</div>'
-      + '<div class="lvDesc">'+(unlocked? (L.desc+'  ·  '+L.src) : 'Өмнөх түвшинг дуусгаж нээнэ')+'</div></div>'
-      + '<div class="lvTag">'+tag+'</div>';
-    if(unlocked) row.addEventListener('click', ()=>{
-      Snd.init(); campaignLevel = i; buildCards(); buildDiffs(); setState('select');
-    });
-    wrap.appendChild(row);
+// Байлдан дагуулалтын газрын зураг дээрх түвшний байрлалууд (viewBox 1000×560)
+const MAPNODES = [
+  {x:702,y:206}, {x:676,y:236}, {x:654,y:182}, {x:702,y:256},
+  {x:646,y:232}, {x:560,y:216}, {x:402,y:316}, {x:496,y:430}
+];
+// Эзэнт гүрний нутаг дэвсгэрийн давхаргууд (нэгдэх тусам тэлнэ)
+const T_HOME = "638,176 720,186 746,226 716,270 654,276 616,236 620,196";
+const T_MONG = "538,166 732,176 772,222 742,286 610,296 544,256 520,200";
+const T_CENT = "358,272 540,166 732,176 772,222 742,286 500,342 380,332 338,292";
+const T_FULL = "150,150 320,118 560,108 762,120 902,160 936,242 872,302 762,342 560,362 470,442 380,402 300,382 210,342 150,250";
+const LANDMASS = "M40,232 C90,150 210,116 360,104 C540,90 720,92 870,128 C960,150 984,210 970,262 C956,314 880,326 812,312 C800,360 720,388 700,392 C640,404 560,392 524,404 C516,452 486,498 452,500 C420,502 424,452 452,420 C388,414 300,404 226,372 C150,340 70,300 40,262 Z";
+const REGIONS = [
+  ['Европ',110,214],['Орос',286,168],['Сибирь',560,150],['Төв Ази',432,300],
+  ['Перс',330,392],['Энэтхэг',498,470],['Монгол',664,232],['Хятад',806,330],['Солонгос',918,300]
+];
+
+function buildLevels(){   // одоо газрын зураг зурна
+  const prog = save.campaign||0;
+  const done = prog >= LEVELS.length;
+  const parts = [];
+  parts.push('<svg viewBox="0 0 1000 560" xmlns="http://www.w3.org/2000/svg">');
+  // тэнгис / хуучин цаас
+  parts.push('<defs>'
+    +'<radialGradient id="sea" cx="50%" cy="45%" r="75%"><stop offset="0%" stop-color="#2a4a52"/><stop offset="100%" stop-color="#16303a"/></radialGradient>'
+    +'<linearGradient id="land" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#9c8a5e"/><stop offset="100%" stop-color="#7c6a3e"/></linearGradient>'
+    +'<filter id="glow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>'
+    +'</defs>');
+  parts.push('<rect width="1000" height="560" fill="url(#sea)"/>');
+  // өргөрөг/уртрагийн тор
+  for(let gx=100; gx<1000; gx+=100) parts.push('<line x1="'+gx+'" y1="0" x2="'+gx+'" y2="560" stroke="rgba(255,240,200,.05)"/>');
+  for(let gy=80; gy<560; gy+=80) parts.push('<line x1="0" y1="'+gy+'" x2="1000" y2="'+gy+'" stroke="rgba(255,240,200,.05)"/>');
+  // эх газар
+  parts.push('<path d="'+LANDMASS+'" fill="url(#land)" stroke="#7a5c2e" stroke-width="2"/>');
+  // эзэнт гүрний нутаг (ахицаас хамааран)
+  if(done){
+    parts.push('<polygon points="'+T_FULL+'" fill="rgba(242,201,106,.72)" stroke="#fff0c0" stroke-width="3" filter="url(#glow)"/>');
+  } else {
+    if(prog >= 7) parts.push('<polygon points="'+T_CENT+'" fill="rgba(200,90,74,.35)" stroke="#c85a4a" stroke-width="2"/>');
+    else if(prog >= 6) parts.push('<polygon points="'+T_MONG+'" fill="rgba(200,90,74,.32)" stroke="#c85a4a" stroke-width="2"/>');
+    else if(prog >= 1) parts.push('<polygon points="'+T_HOME+'" fill="rgba(200,90,74,.30)" stroke="#c85a4a" stroke-width="2"/>');
+  }
+  // бүс нутгийн нэрс
+  for(const [name,x,y] of REGIONS)
+    parts.push('<text x="'+x+'" y="'+y+'" fill="rgba(60,40,18,.7)" font-size="15" font-weight="700" text-anchor="middle" font-family="Georgia,serif">'+name+'</text>');
+  // байлдааны зам (нээгдсэн цэгүүдийн хооронд)
+  let route = '';
+  for(let i=0;i<MAPNODES.length;i++){ if(prog >= i){ route += (route?' ':'') + MAPNODES[i].x+','+MAPNODES[i].y; } }
+  if(route) parts.push('<polyline points="'+route+'" fill="none" stroke="#f2c96a" stroke-width="2.5" stroke-dasharray="7 6" opacity=".85"/>');
+  // цэгүүд
+  MAPNODES.forEach((n,i)=>{
+    const cleared = prog > i, unlocked = prog >= i;
+    const fill = cleared? '#8ce87a' : (unlocked? '#e8b64c' : '#5a4a30');
+    const stroke = unlocked? '#3a2a10' : '#3a2a10';
+    parts.push('<g class="mapNode'+(unlocked?'':' locked')+'" data-idx="'+i+'">'
+      +'<circle cx="'+n.x+'" cy="'+n.y+'" r="15" fill="'+fill+'" stroke="'+stroke+'" stroke-width="2"'+(unlocked?' filter="url(#glow)"':'')+'/>'
+      +'<text x="'+n.x+'" y="'+(n.y+5)+'" fill="#241503" font-size="15" font-weight="800" text-anchor="middle" font-family="sans-serif">'+(cleared?'✓':(i+1))+'</text>'
+      +'</g>');
   });
+  // луужин
+  parts.push('<g transform="translate(930,470)" opacity=".7"><circle r="26" fill="none" stroke="#7a5c2e" stroke-width="1.5"/>'
+    +'<polygon points="0,-22 5,0 0,22 -5,0" fill="#c85a4a"/><text y="-30" fill="#7a5c2e" font-size="12" text-anchor="middle" font-weight="700">Хойд</text></g>');
+  // гарчиг
+  if(done)
+    parts.push('<text x="500" y="40" fill="#f2c96a" font-size="26" font-weight="800" text-anchor="middle" font-family="Georgia,serif" filter="url(#glow)">ИХ МОНГОЛ ЭЗЭНТ ГҮРЭН</text>'
+      +'<text x="500" y="62" fill="#e8d9b5" font-size="13" text-anchor="middle" font-family="Georgia,serif">1206–1279 · Номхон далайгаас Дунай мөрөн хүртэл · түүхэн дэх хамгийн том тив залгасан гүрэн</text>');
+  parts.push('</svg>');
+  $('mapWrap').innerHTML = parts.join('');
+
+  // цэгүүдэд дарах үйлдэл
+  const tip = ensureMapTip();
+  $('mapWrap').querySelectorAll('.mapNode').forEach(g=>{
+    const i = +g.getAttribute('data-idx');
+    const unlocked = (save.campaign||0) >= i;
+    g.addEventListener('click', (e)=>{
+      Snd.init();
+      if(unlocked){
+        campaignLevel = i; buildCards(); buildDiffs(); setState('select'); tip.style.display='none';
+      } else {
+        const r = g.getBoundingClientRect();
+        tip.innerHTML = '<b>🔒 '+( i+1)+'-р түвшин</b><br>Өмнөх түвшинг дуусгаж нээнэ';
+        tip.style.left = (r.left)+'px'; tip.style.top = (r.top-46)+'px'; tip.style.display='block';
+        Snd.tone(180,.12,'square',.05);
+        setTimeout(()=>{ tip.style.display='none'; }, 1600);
+      }
+    });
+    g.addEventListener('mouseenter', (e)=>{
+      const L = LEVELS[i];
+      const r = g.getBoundingClientRect();
+      tip.innerHTML = unlocked
+        ? '<b>'+(i+1)+'. '+L.title+'</b><br><span class="o">🎯 '+L.obj.label+'</span><br>'+L.src
+        : '<b>🔒 '+(i+1)+'-р түвшин</b><br>Өмнөх түвшинг дуусга';
+      tip.style.left = (r.left - 90)+'px'; tip.style.top = (r.top - 60)+'px'; tip.style.display='block';
+    });
+    g.addEventListener('mouseleave', ()=>{ tip.style.display='none'; });
+  });
+}
+function ensureMapTip(){
+  let t = document.getElementById('mapTip');
+  if(!t){ t = document.createElement('div'); t.id='mapTip'; t.className='mapTip'; document.body.appendChild(t); }
+  return t;
 }
 
 // ---------- түүхийн дэлгэц ----------
