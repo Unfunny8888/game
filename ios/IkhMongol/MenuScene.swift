@@ -67,25 +67,29 @@ final class MenuScene: SKScene {
         c.addChild(tagline)
 
         let campaign = UIFactory.button(text: "⚔️ АЯН ДАЙН", name: "campaign")
-        campaign.position = CGPoint(x: cx, y: size.height * 0.33)
+        campaign.position = CGPoint(x: cx, y: size.height * 0.345)
         c.addChild(campaign)
 
-        let play = UIFactory.button(text: "Чөлөөт тулаан", name: "play", width: 200, height: 42, primary: false)
-        play.position = CGPoint(x: cx - 110, y: size.height * 0.185)
+        let play = UIFactory.button(text: "Чөлөөт тулаан", name: "play", width: 200, height: 40, primary: false)
+        play.position = CGPoint(x: cx - 110, y: size.height * 0.215)
         c.addChild(play)
 
-        let pvp = UIFactory.button(text: "🤝 НАЙЗТАЙГАА", name: "pvp", width: 200, height: 42, primary: false)
-        pvp.position = CGPoint(x: cx + 110, y: size.height * 0.185)
+        let pvp = UIFactory.button(text: "🤝 НАЙЗТАЙГАА", name: "pvp", width: 200, height: 40, primary: false)
+        pvp.position = CGPoint(x: cx + 110, y: size.height * 0.215)
         c.addChild(pvp)
+
+        let camp = UIFactory.button(text: "🏕️ БУУРЬ", name: "camp", width: 200, height: 40, primary: false)
+        camp.position = CGPoint(x: cx - 110, y: size.height * 0.13)
+        c.addChild(camp)
 
         let unread = GameData.unreadChapterCount
         let storyText = unread > 0 ? "📜 ТҮҮХ (\(unread))" : "📜 ТҮҮХ"
         let story = UIFactory.button(text: storyText, name: "story", width: 200, height: 40, primary: false)
-        story.position = CGPoint(x: cx - 110, y: size.height * 0.09)
+        story.position = CGPoint(x: cx + 110, y: size.height * 0.13)
         c.addChild(story)
 
-        let codex = UIFactory.button(text: "📚 НЭВТЭРХИЙ ТОЛЬ", name: "codex", width: 200, height: 40, primary: false)
-        codex.position = CGPoint(x: cx + 110, y: size.height * 0.09)
+        let codex = UIFactory.button(text: "📚 НЭВТЭРХИЙ ТОЛЬ", name: "codex", width: 240, height: 40, primary: false)
+        codex.position = CGPoint(x: cx, y: size.height * 0.045)
         c.addChild(codex)
     }
 
@@ -192,6 +196,12 @@ final class MenuScene: SKScene {
             let codex = CodexScene(size: size)
             codex.scaleMode = .resizeFill
             view.presentScene(codex, transition: .fade(withDuration: 0.4))
+        } else if name == "camp", let view = view {
+            Haptics.hit()
+            Audio.shared.play("tap")
+            let camp = CampScene(size: size)
+            camp.scaleMode = .resizeFill
+            view.presentScene(camp, transition: .fade(withDuration: 0.4))
         }
     }
 }

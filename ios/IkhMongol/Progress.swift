@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 
 /// Байнгын хадгалалт — алт, баатрын нээлт, мастери (UserDefaults)
 enum Progress {
@@ -71,6 +72,36 @@ enum Progress {
         arr.append(id)
         UserDefaults.standard.set(arr, forKey: readChaptersKey)
     }
+
+    // MARK: - Буурийн эдийн засаг (V2) — адуу, төмөр ба шинэчлэлүүд
+
+    private static let horsesKey = "im_horses"
+    private static let ironKey = "im_iron"
+    private static let horseLvlKey = "im_horse_lvl"
+    private static let ironLvlKey = "im_iron_lvl"
+    static let campMaxLevel = 8
+
+    static var horses: Int {
+        get { UserDefaults.standard.integer(forKey: horsesKey) }
+        set { UserDefaults.standard.set(max(0, newValue), forKey: horsesKey) }
+    }
+    static var iron: Int {
+        get { UserDefaults.standard.integer(forKey: ironKey) }
+        set { UserDefaults.standard.set(max(0, newValue), forKey: ironKey) }
+    }
+    static var horseLevel: Int {
+        get { UserDefaults.standard.integer(forKey: horseLvlKey) }
+        set { UserDefaults.standard.set(min(campMaxLevel, max(0, newValue)), forKey: horseLvlKey) }
+    }
+    static var ironLevel: Int {
+        get { UserDefaults.standard.integer(forKey: ironLvlKey) }
+        set { UserDefaults.standard.set(min(campMaxLevel, max(0, newValue)), forKey: ironLvlKey) }
+    }
+
+    /// Отряд ба тоглогчийн хурдны үржүүлэгч (адууны сүрэг: +4%/түвшин)
+    static var horseSpeedMul: CGFloat { 1 + CGFloat(horseLevel) * 0.04 }
+    /// Отряд ба тоглогчийн хүчний үржүүлэгч (дархны зэвсэг: +5%/түвшин)
+    static var ironDamageMul: CGFloat { 1 + CGFloat(ironLevel) * 0.05 }
 
     // MARK: - Аян дайны ахиц (дуусгасан түвшний тоо)
 

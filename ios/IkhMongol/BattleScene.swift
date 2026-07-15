@@ -456,6 +456,11 @@ final class BattleScene: SKScene {
             player.dmg = (def.dmg * (1 + 0.03 * CGFloat(mastery))).rounded()
             player.updateBars()
         }
+        // буурийн шинэчлэл: адууны сүрэг → хурд, дархны зэвсэг → хүч (PvP-д үйлчлэхгүй)
+        if !isPvp {
+            player.moveSpeed = (player.moveSpeed * Progress.horseSpeedMul).rounded()
+            player.dmg = (player.dmg * Progress.ironDamageMul).rounded()
+        }
         player.position = CGPoint(x: World.pGateX + 130, y: World.laneY)
         world.addChild(player)
         track(player)
@@ -1198,9 +1203,10 @@ final class BattleScene: SKScene {
             let hp = 720 + CGFloat(level) * 42
             let c = Unit(kind: .minion, team: .mongol, displayName: h.name,
                          radius: 18, hp: hp,
-                         dmg: (42 + CGFloat(level) * 2.6),
+                         dmg: ((42 + CGFloat(level) * 2.6) * Progress.ironDamageMul).rounded(),
                          range: ranged ? 200 : 64,
-                         atkCd: 0.85, moveSpeed: 178, aggro: 250, archer: ranged)
+                         atkCd: 0.85, moveSpeed: (178 * Progress.horseSpeedMul).rounded(),
+                         aggro: 250, archer: ranged)
             let off = offs[i]
             c.markCompanion(name: h.name, offset: off)
             c.position = CGPoint(x: player.position.x + off.x,
@@ -2551,6 +2557,18 @@ final class BattleScene: SKScene {
             : Int(((CGFloat(matchGold) + CGFloat(player.level) * 5 + (win ? 80 : 20))
                    * goldMult).rounded())
 
+        // Эзлэлтийн олз: адуу ба төмөр (буурийн эдийн засаг) — аяны ялалтад
+        var lootHorses = 0, lootIron = 0
+        if let level = campaignLevel, win {
+            lootHorses = 2 + Int(CGFloat(level) * 0.7)
+            lootIron = 1 + Int(CGFloat(level) * 0.6)
+            Progress.horses += lootHorses
+            Progress.iron += lootIron
+        }
+        // нөхдийн отрядын тоо (regroup дэлгэцэд)
+        let warband = units.filter { $0.isCompanion }
+        let warbandAlive = warband.filter { !$0.isDead }.count
+
         // Аян дайн: анх удаа даван туулбал түвшин ахьж, бонус алт өгнө
         var campaignCleared: (index: Int, reward: Int, last: Bool)? = nil
         if let level = campaignLevel, win, Progress.clearCampaignLevel(level) {
@@ -2583,7 +2601,10 @@ final class BattleScene: SKScene {
                                goldEarned: earned, totalGold: Progress.gold,
                                masteryStars: Progress.mastery(heroId), gainedStar: gainedStar,
                                newChapter: newChapter, isPvp: isPvp,
-                               campaignLevel: campaignLevel, campaignLine: campaignLine)
+                               campaignLevel: campaignLevel, campaignLine: campaignLine,
+                               cityTitle: campaignLevel.map { GameData.campaign[$0].title },
+                               lootHorses: lootHorses, lootIron: lootIron,
+                               warbandAlive: warbandAlive, warbandTotal: warband.count)
         run(.sequence([
             .wait(forDuration: 0.9),
             .run { [weak self] in
@@ -2713,6 +2734,12 @@ struct MatchStats {
     var isPvp: Bool = false
     var campaignLevel: Int? = nil
     var campaignLine: String? = nil
+    // V2 — эзлэлтийн олз ба нөхдийн отряд
+    var cityTitle: String? = nil
+    var lootHorses: Int = 0
+    var lootIron: Int = 0
+    var warbandAlive: Int = 0
+    var warbandTotal: Int = 0
 }
 
 // MARK: - PvP мессеж хүлээн авах (хост)
