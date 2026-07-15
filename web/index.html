@@ -101,6 +101,19 @@
   #endTitle.lose { color:#c85a4a; text-shadow:0 0 30px rgba(200,90,74,.5), 0 3px 0 #5a241c; }
   #endStats { margin-top:14px; font-size:15px; color:#d8c298; line-height:1.9; }
   .endBtns { display:flex; gap:14px; margin-top:10px; flex-wrap:wrap; justify-content:center; }
+  /* V2 эзлэлтийн мөчлөг */
+  #conquestLoop { display:flex; align-items:center; justify-content:center; gap:6px; flex-wrap:wrap;
+    margin-top:16px; padding:10px 14px; border:1px solid rgba(232,182,76,.25); border-radius:14px;
+    background:rgba(30,22,10,.5); max-width:640px; }
+  .cqStep { display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 10px; border-radius:10px;
+    opacity:.4; transition:opacity .35s, background .35s, transform .35s; min-width:74px; }
+  .cqStep.on { opacity:1; background:rgba(232,182,76,.12); }
+  .cqStep.done .cqIco::after { content:" ✓"; color:#8ce87a; font-size:12px; }
+  .cqStep.active { transform:scale(1.08); background:rgba(120,200,255,.14); }
+  .cqIco { font-size:22px; }
+  .cqName { font-size:10.5px; letter-spacing:.5px; color:#d8c298; white-space:nowrap; }
+  .cqArrow { color:#8a6a3a; font-size:14px; opacity:.6; }
+  #nextBtn.pending { opacity:.5; pointer-events:none; }
 
   /* түүхийн бүлгүүд */
   .badge { display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; border-radius:9px;
@@ -333,6 +346,15 @@
 <!-- ================= END ================= -->
 <div id="endScreen" class="screen hidden">
   <div id="endTitle" class="win">ЯЛАЛТ!</div>
+  <div id="conquestLoop" class="hidden">
+    <div class="cqStep" data-k="assault"><span class="cqIco">⚔️</span><span class="cqName">Эзлэх</span></div>
+    <div class="cqArrow">→</div>
+    <div class="cqStep" data-k="settle"><span class="cqIco">🏕️</span><span class="cqName">Буурьших</span></div>
+    <div class="cqArrow">→</div>
+    <div class="cqStep" data-k="regroup"><span class="cqIco">🤝</span><span class="cqName">Отрядаа цуглуул</span></div>
+    <div class="cqArrow">→</div>
+    <div class="cqStep" data-k="march"><span class="cqIco">🐎</span><span class="cqName">Мородох</span></div>
+  </div>
   <div id="endStats"></div>
   <div class="endBtns">
     <button class="btn" id="nextBtn" style="display:none">ДАРААГИЙН ТҮВШИН ⚔️</button>
@@ -2781,6 +2803,37 @@ function drawStruct(u, teamCol){
 }
 
 // ---------- end ----------
+// V2 эзлэлтийн мөчлөг: Эзлэх → Буурьших → Отрядаа цуглуул → Мородох.
+// «Отрядаа цуглуул» нь дараагийн хот руу мородохоос өмнөх regroup gate болно.
+let cqTimers = [];
+function clearConquestLoop(){ cqTimers.forEach(clearTimeout); cqTimers = []; }
+function runConquestLoop(aliveWb, totalWb, canNext){
+  clearConquestLoop();
+  const cq = $('conquestLoop');
+  cq.classList.remove('hidden');
+  const steps = {};
+  cq.querySelectorAll('.cqStep').forEach(s => steps[s.dataset.k] = s);
+  Object.values(steps).forEach(s => s.classList.remove('on','done','active'));
+  const nb = $('nextBtn');
+  steps.assault.classList.add('on','done');
+  if(canNext) nb.classList.add('pending');   // цугартал мородох боломжгүй (regroup gate)
+  cqTimers.push(setTimeout(()=>{ steps.settle.classList.add('on','done'); Snd.tone(430,.08,'sine',.05); }, 400));
+  cqTimers.push(setTimeout(()=>{
+    steps.regroup.classList.add('on','active');
+    steps.regroup.querySelector('.cqName').textContent = 'Отряд цугларч байна…';
+  }, 800));
+  cqTimers.push(setTimeout(()=>{
+    steps.regroup.classList.remove('active'); steps.regroup.classList.add('done');
+    steps.regroup.querySelector('.cqName').textContent = totalWb ? ('Отряд '+aliveWb+'/'+totalWb+' цугларав') : 'Отряд бэлэн';
+    Snd.tone(560,.1,'sine',.05);
+  }, 1600));
+  cqTimers.push(setTimeout(()=>{
+    steps.march.classList.add('on');
+    if(canNext){ nb.classList.remove('pending'); Snd.horn(392,.4,.08); }
+    else steps.march.classList.add('done');
+  }, 1900));
+}
+
 function endMatch(win){
   setState('end');
   const mins = Math.floor((performance.now()-matchStart)/60000);
@@ -2851,6 +2904,18 @@ function endMatch(win){
   const canNext = inCampaign && win && campaignLevel+1 < LEVELS.length;
   $('nextBtn').style.display = canNext ? '' : 'none';
   $('againBtn').textContent = inCampaign ? 'ЭНЭ ТҮВШНИЙГ ДАХИХ' : 'ДАХИН ТУЛАЛДАХ';
+
+  // V2 эзлэлтийн мөчлөг — зөвхөн аяны ялалтад
+  if(inCampaign && win){
+    t.textContent = '⚔️ ЭЗЛЭГДЛЭЭ';
+    t.className = 'win';
+    $('endStats').innerHTML = '<b style="color:#f2c96a">'+LEVELS[campaignLevel].title+'</b> хотыг эзлэн авлаа!<br>'+common;
+    const wb = units.filter(u => u.companion);
+    runConquestLoop(wb.filter(u=>!u.dead).length, wb.length, canNext);
+  } else {
+    clearConquestLoop();
+    $('conquestLoop').classList.add('hidden');
+  }
 
   // алт тоолох анимаци
   const el = $('goldCount');
