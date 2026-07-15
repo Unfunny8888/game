@@ -59,6 +59,7 @@ final class EndScene: SKScene {
         // V2 эзлэлтийн мөчлөгийн зурвас (аяны ялалтад)
         if isConquest {
             buildConquestStrip(in: c, at: CGPoint(x: cx, y: size.height * 0.60))
+            celebrateConquest(in: c)
         }
 
         let flavour = isConquest
@@ -197,10 +198,45 @@ final class EndScene: SKScene {
             .run { [weak self] in
                 chips[3].alpha = 1
                 self?.marchReady = true
-                if let nb = self?.nextButton { nb.run(.fadeAlpha(to: 1, duration: 0.25)) }
-                Audio.shared.play("horn", volume: 0.5)
+                let pulse = SKAction.repeatForever(.sequence([
+                    .scale(to: 1.07, duration: 0.55), .scale(to: 1.0, duration: 0.55)]))
+                chips[3].run(pulse)
+                if let nb = self?.nextButton {
+                    nb.run(.fadeAlpha(to: 1, duration: 0.25))
+                    nb.run(pulse)
+                }
+                Audio.shared.play("win", volume: 0.7)
             }
         ]))
+    }
+
+    /// Эзлэлтийн ялалтын алтан баяр хөөр (confetti) + дайны бөмбөр
+    private func celebrateConquest(in parent: SKNode) {
+        Audio.shared.play("drum", volume: 0.7)
+        let colors = [SKColor(red: 0.91, green: 0.71, blue: 0.30, alpha: 1),
+                      SKColor(red: 0.97, green: 0.84, blue: 0.48, alpha: 1),
+                      SKColor(red: 0.78, green: 0.28, blue: 0.23, alpha: 1),
+                      SKColor(red: 0.55, green: 0.90, blue: 0.48, alpha: 1),
+                      SKColor(red: 0.37, green: 0.63, blue: 0.85, alpha: 1)]
+        for _ in 0..<90 {
+            let s = CGFloat.random(in: 4...9)
+            let bit = SKSpriteNode(color: colors[Int.random(in: 0..<colors.count)],
+                                   size: CGSize(width: s, height: s * 0.6))
+            bit.position = CGPoint(x: size.width * CGFloat.random(in: 0.2...0.8),
+                                   y: size.height + CGFloat.random(in: 0...120))
+            bit.zRotation = CGFloat.random(in: 0...(2 * .pi))
+            bit.zPosition = 60
+            parent.addChild(bit)
+            let dur = Double.random(in: 1.8...3.0)
+            let dx = CGFloat.random(in: -90...90)
+            let fall = SKAction.moveBy(x: dx, y: -(size.height + 160), duration: dur)
+            fall.timingMode = .easeIn
+            let spin = SKAction.rotate(byAngle: CGFloat.random(in: -8...8), duration: dur)
+            bit.run(.sequence([
+                .group([fall, spin, .sequence([.wait(forDuration: dur * 0.6), .fadeOut(withDuration: dur * 0.4)])]),
+                .removeFromParent()
+            ]))
+        }
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {

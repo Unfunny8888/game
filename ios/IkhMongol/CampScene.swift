@@ -100,18 +100,22 @@ final class CampScene: SKScene {
         let node = SKNode()
         node.position = center
 
-        let card = SKShapeNode(rectOf: CGSize(width: width, height: height), cornerRadius: 14)
-        card.fillColor = SKColor(red: 0.16, green: 0.11, blue: 0.05, alpha: 0.9)
-        card.strokeColor = SKColor(red: 0.43, green: 0.33, blue: 0.15, alpha: 1)
-        card.lineWidth = 1.5
-        node.addChild(card)
-
         let lvl = up.level()
         let maxed = lvl >= Progress.campMaxLevel
+        let affordable = !maxed && up.resource() >= up.cost(lvl)
+
+        let card = SKShapeNode(rectOf: CGSize(width: width, height: height), cornerRadius: 14)
+        card.fillColor = SKColor(red: 0.16, green: 0.11, blue: 0.05, alpha: 0.9)
+        card.strokeColor = affordable ? Palette.gold : SKColor(red: 0.43, green: 0.33, blue: 0.15, alpha: 1)
+        card.lineWidth = affordable ? 2 : 1.5
+        if affordable { card.glowWidth = 6 }
+        node.addChild(card)
 
         let icon = SKLabelNode(text: up.icon)
         icon.fontSize = 34; icon.verticalAlignmentMode = .center
         icon.position = CGPoint(x: -width / 2 + 34, y: 0)
+        icon.run(.repeatForever(.sequence([
+            .moveBy(x: 0, y: 5, duration: 1.6), .moveBy(x: 0, y: -5, duration: 1.6)])))
         node.addChild(icon)
 
         let name = UIFactory.label("\(up.name)   Түв \(lvl)", font: Fonts.heavy, size: 15,
@@ -134,7 +138,6 @@ final class CampScene: SKScene {
         node.addChild(starL)
 
         let cost = up.cost(lvl)
-        let affordable = up.resource() >= cost
         let btnText = maxed ? "Дээд зэрэг" : "🔨 \(cost) \(up.resName)"
         let btn = UIFactory.button(text: btnText, name: maxed ? "maxed\(index)" : "buy\(index)",
                                    width: 150, height: 42, primary: !maxed && affordable)
