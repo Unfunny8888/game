@@ -45,6 +45,10 @@ final class Unit: SKNode {
     var isGuard = false
     var homePos: CGPoint = .zero
 
+    // Нөхдийн отряд — тоглогчийг дагаж хамт байлдана (V2 co-op мэдрэмж)
+    var isCompanion = false
+    var compOff: CGPoint = .zero
+
     // Ухасхийлт (Сүбээдэй) — нэгж бүрд тусдаа
     var dashT: CGFloat = 0
     var dashVX: CGFloat = 0
@@ -507,6 +511,19 @@ final class Unit: SKNode {
         flash.zPosition = 20
         addChild(flash)
         flash.run(.sequence([.fadeOut(withDuration: 0.14), .removeFromParent()]))
+    }
+
+    /// Нөхдийн отряд болгож тэмдэглэн, нэрийн шошго нэмнэ
+    func markCompanion(name: String, offset: CGPoint) {
+        isCompanion = true
+        compOff = offset
+        let nameL = SKLabelNode(text: name)
+        nameL.fontName = Fonts.bold
+        nameL.fontSize = 12
+        nameL.fontColor = SKColor(red: 0.66, green: 0.88, blue: 0.75, alpha: 1)
+        nameL.position = CGPoint(x: 0, y: radius * 2.05 + 8)
+        nameL.zPosition = 6
+        addChild(nameL)
     }
 
     /// Зэвсгээ хийсгэх цохилтын хөдөлгөөн

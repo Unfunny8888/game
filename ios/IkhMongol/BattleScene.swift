@@ -281,6 +281,7 @@ final class BattleScene: SKScene {
             let L = GameData.campaign[level]
             setupObjective(L.objective)
             setupCamps(level: level)                 // задгай талбарын дайсны бууц
+            setupWarband(level: level)               // нөхдийн отряд (co-op мэдрэмж)
             pendingEvents = L.events
             Audio.shared.play("horn", volume: 0.7)   // дайны эвэр бүрээ — аян эхлэв
             announce("\(level + 1)-р түвшин: \(L.title)")
@@ -1188,6 +1189,29 @@ final class BattleScene: SKScene {
         track(b)
     }
 
+    /// Нөхдийн отряд — тоглогчийг дагаж хамт байлдах жанжид (V2 co-op мэдрэмжийн прототип).
+    private func setupWarband(level: Int) {
+        let mates = GameData.heroes.filter { $0.id != GameData.heroes[heroIndex].id && $0.id != "chinggis" }.prefix(2)
+        let offs = [CGPoint(x: -48, y: 48), CGPoint(x: -48, y: -48)]
+        for (i, h) in mates.enumerated() {
+            let ranged = h.range > 150
+            let hp = 720 + CGFloat(level) * 42
+            let c = Unit(kind: .minion, team: .mongol, displayName: h.name,
+                         radius: 18, hp: hp,
+                         dmg: (42 + CGFloat(level) * 2.6),
+                         range: ranged ? 200 : 64,
+                         atkCd: 0.85, moveSpeed: 178, aggro: 250, archer: ranged)
+            let off = offs[i]
+            c.markCompanion(name: h.name, offset: off)
+            c.position = CGPoint(x: player.position.x + off.x,
+                                 y: clampF(player.position.y + off.y, World.groundBottom, World.groundTop))
+            c.face = 1
+            world.addChild(c)
+            track(c)
+        }
+        if !mates.isEmpty { announce("🤝 Нөхдийн отряд тантай хамт мордов!") }
+    }
+
     private func spawnWave() {
         waveNum += 1
         let hp = 300 + CGFloat(waveNum) * 14
@@ -1292,6 +1316,14 @@ final class BattleScene: SKScene {
             announce("Бөртэ алагдлаа...")
             u.removeFromParent()
             if !objDone { endMatch(win: false) }
+            return
+        }
+
+        // Нөхдийн отряд — дайсны шагнал биш; дэргэд эргэн босно (устгахгүй)
+        if u.isCompanion {
+            u.isHidden = true
+            u.respawnT = 6 + CGFloat(campaignLevel ?? 0) * 0.25
+            floater("\(u.displayName) унав", at: u.position, dy: u.radius + 24, color: Palette.shieldBlue)
             return
         }
 
@@ -1986,6 +2018,20 @@ final class BattleScene: SKScene {
                         burst(at: u.position, color: Palette.enemyRed, count: 16)
                     }
                 }
+                // нөхдийн отряд — тоглогчийн дэргэд эргэн босно
+                if u.isCompanion && u.respawnT > 0 && !player.isDead {
+                    u.respawnT -= dt
+                    if u.respawnT <= 0 {
+                        u.isDead = false
+                        u.isHidden = false
+                        u.hp = u.maxHp
+                        u.stun = 0
+                        u.position = CGPoint(x: player.position.x + u.compOff.x,
+                                             y: clampF(player.position.y + u.compOff.y, World.groundBottom, World.groundTop))
+                        u.updateBars()
+                        burst(at: u.position, color: Palette.xpBlue, count: 12)
+                    }
+                }
                 continue
             }
 
@@ -2026,13 +2072,23 @@ final class BattleScene: SKScene {
             }
 
             if u.kind == .minion && !u.isNpc && u.stun <= 0 {
-                if let t = findTarget(for: u, maxDist: u.aggro, unitsOnly: false) {
+                let searchR = u.isCompanion ? max(u.aggro, u.range + 40) : u.aggro
+                let t = findTarget(for: u, maxDist: searchR, unitsOnly: false)
+                if let t = t, !u.isCompanion || u.position.distance(to: t.position) < 260 {
                     let d = u.position.distance(to: t.position)
                     if d <= u.range + t.radius {
                         if u.atkT <= 0 { performAttack(u, on: t) }
                     } else {
                         moveUnit(u, toward: t.position, dt: dt)
                     }
+                } else if u.isCompanion, !player.isDead {
+                    // тоглогчийг формацаар дагана (хол хоцорвол гүйцэж ирнэ)
+                    let tx = clampF(player.position.x + u.compOff.x, 30, World.width - 30)
+                    let ty = clampF(player.position.y + u.compOff.y, World.groundBottom, World.groundTop)
+                    let dest = CGPoint(x: tx, y: ty)
+                    let gap = u.position.distance(to: dest)
+                    if gap > 620 { u.position = dest }
+                    else if gap > 22 { moveUnit(u, toward: dest, dt: dt) }
                 } else if u.isGuard {
                     // хуарандаа буцаж хамгаална (задгай талбарын бууц)
                     if u.position.distance(to: u.homePos) > 10 {
