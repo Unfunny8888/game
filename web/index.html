@@ -114,6 +114,18 @@
   .cqName { font-size:10.5px; letter-spacing:.5px; color:#d8c298; white-space:nowrap; }
   .cqArrow { color:#8a6a3a; font-size:14px; opacity:.6; }
   #nextBtn.pending { opacity:.5; pointer-events:none; }
+  /* V2 буурь — эдийн засаг */
+  #campRes { font-size:15px; color:#e8b64c; margin:6px 0 14px; letter-spacing:.5px; }
+  #campList { display:flex; flex-direction:column; gap:12px; width:min(560px,92vw); }
+  .campCard { display:flex; align-items:center; gap:14px; padding:14px 16px; text-align:left;
+    border:1px solid rgba(232,182,76,.22); border-radius:14px; background:rgba(30,22,10,.5); }
+  .campIco { font-size:34px; flex:0 0 auto; }
+  .campBody { flex:1; min-width:0; }
+  .campName { font-size:15px; color:#f0e2c4; font-weight:700; }
+  .campName b { color:#8ce87a; font-size:12px; }
+  .campDesc { font-size:12px; color:#a08a60; margin:2px 0 4px; }
+  .campStars { color:#ffd873; font-size:13px; letter-spacing:1px; }
+  .campCard button { flex:0 0 auto; font-size:13px; padding:9px 14px; }
 
   /* түүхийн бүлгүүд */
   .badge { display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; border-radius:9px;
@@ -241,6 +253,7 @@
   <button class="btn" id="campaignBtn">⚔️ АЯН ДАЙН</button>
   <div style="display:flex; gap:12px; margin-top:14px; flex-wrap:wrap; justify-content:center">
     <button class="btn secondary" id="playBtn">Чөлөөт тулаан</button>
+    <button class="btn secondary" id="campBtn">🏕️ БУУРЬ</button>
     <button class="btn secondary" id="storyBtn">📜 ТҮҮХ <span id="storyBadge" class="badge hidden"></span></button>
     <button class="btn secondary" id="codexBtn">📚 НЭВТЭРХИЙ ТОЛЬ</button>
   </div>
@@ -254,6 +267,15 @@
   <div id="codexTabs"></div>
   <div id="codexList"></div>
   <button class="btn secondary" id="codexBackBtn" style="margin-top:8px">БУЦАХ</button>
+</div>
+
+<!-- ================= CAMP (economy) ================= -->
+<div id="campScreen" class="screen hidden">
+  <h2 style="letter-spacing:3px;color:#e8b64c">🏕️ БУУРЬ</h2>
+  <div style="font-size:11px;color:#8a7550;margin:2px 0 4px">Эзэлсэн олзоор отрядаа хүчирхэгжүүл — адуу маллаж, зэвсэг давт</div>
+  <div id="campRes"></div>
+  <div id="campList"></div>
+  <button class="btn secondary" id="campBackBtn" style="margin-top:10px">БУЦАХ</button>
 </div>
 
 <!-- ================= CAMPAIGN (MAP) ================= -->
@@ -641,13 +663,15 @@ let selDiff = 1;
 // ---------- байнгын хадгалалт: алт, нээлт, мастери ----------
 const SAVE_KEY = 'ikhmongol_save';
 const HERO_COST = { temuujin:0, zev:0, subedei:150, mukhulai:300, boorchi:500, khasar:750, chinggis:1500 };
+const SAVE_DEFAULT = { gold:0, unlocked:['temuujin','zev'], mastery:{}, matches:0, wins:0,
+                       readChapters:[], campaign:0, horses:0, iron:0, horseLvl:0, ironLvl:0 };
 function loadSave(){
   try{
     const s = JSON.parse(localStorage.getItem(SAVE_KEY));
     if(s && typeof s === 'object')
-      return Object.assign({gold:0, unlocked:['temuujin','zev'], mastery:{}, matches:0, wins:0, readChapters:[], campaign:0}, s);
+      return Object.assign({}, SAVE_DEFAULT, s);
   }catch(e){}
-  return { gold:0, unlocked:['temuujin','zev'], mastery:{}, matches:0, wins:0, readChapters:[], campaign:0 };
+  return Object.assign({}, SAVE_DEFAULT);
 }
 let save = loadSave();
 function persistSave(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }catch(e){} }
@@ -823,6 +847,9 @@ function startMatch(){
     player.hp = player.maxHp;
     player.dmg = Math.round(def.dmg * (1 + 0.03*mastery));
   }
+  // буурийн шинэчлэл: адууны сүрэг → хурд, дархны зэвсэг → хүч (тоглогч + отряд)
+  player.speed = Math.round(player.speed * horseSpeedMul());
+  player.dmg = Math.round(player.dmg * ironDmgMul());
   units.push(player);
 
   // enemy AI hero — тухайн түвшний командлагч / хүндрэлээр тохируулна
@@ -864,6 +891,10 @@ function startMatch(){
 
 // Нөхдийн отряд — тоглогчийг дагаж хамт байлдах жанжид (V2-ийн co-op мэдрэмжийн прототип).
 // Ганц тоглогчийн горимд ч «отрядтай» мэт мэдрэмж өгнө; дараа нь жинхэнэ co-op болно.
+// Буурийн шинэчлэлийн үржүүлэгч — адууны сүрэг (хурд), дархны зэвсэг (хүч)
+function horseSpeedMul(){ return 1 + (save.horseLvl||0)*0.04; }
+function ironDmgMul(){ return 1 + (save.ironLvl||0)*0.05; }
+
 function setupWarband(){
   const lvl = campaignLevel || 0;
   const mates = HEROES.filter(h => h.id !== HEROES[selHero].id && h.id !== 'chinggis').slice(0, 2);
@@ -875,9 +906,9 @@ function setupWarband(){
       type:'minion', team:0, companion:true, name:h.name, color:h.color,
       compOff: offs[i],
       x: player.x + offs[i].x, y: clamp(player.y + offs[i].y, GROUND_TOP, GROUND_BOT),
-      r:18, hp, maxHp:hp, dmg: Math.round(42 + lvl*2.6),
+      r:18, hp, maxHp:hp, dmg: Math.round((42 + lvl*2.6) * ironDmgMul()),
       range: ranged ? 200 : 64, archer: ranged,
-      atkCd: 0.85, speed: 178, aggro: 250, face: 1
+      atkCd: 0.85, speed: Math.round(178 * horseSpeedMul()), aggro: 250, face: 1
     }));
   });
   if(mates.length) announce('🤝 Нөхдийн отряд тантай хамт мордов!');
@@ -961,6 +992,7 @@ function setState(s){
   $('campaignScreen').classList.toggle('hidden', s!=='campaign');
   $('introScreen').classList.toggle('hidden', s!=='intro');
   $('codexScreen').classList.toggle('hidden', s!=='codex');
+  $('campScreen').classList.toggle('hidden', s!=='camp');
   $('hud').classList.toggle('on', s==='play');
   $('rotate').classList.toggle('armed', s==='play');
   if(s==='menu') updateStoryBadge();
@@ -1112,6 +1144,42 @@ const CODEX = {
   ]}
 };
 let codexCat = 'heroes';
+// V2 буурийн эдийн засаг — эзэлсэн олзоор отрядыг хүчирхэгжүүлнэ
+const CAMP_MAX = 8;
+const CAMP_UP = [
+  { key:'horseLvl', res:'horses', icon:'🐎', name:'Адууны сүрэг', resName:'адуу',
+    desc:'Отряд ба өөрийн хурд +4% / түвшин', cost: lvl => 4 + lvl*3 },
+  { key:'ironLvl', res:'iron', icon:'⚒️', name:'Дархны зэвсэг', resName:'төмөр',
+    desc:'Отряд ба өөрийн хүч +5% / түвшин', cost: lvl => 3 + lvl*3 }
+];
+function buildCamp(){
+  $('campRes').innerHTML = '🐎 <b>'+save.horses+'</b> адуу &nbsp;·&nbsp; ⚒️ <b>'+save.iron+'</b> төмөр';
+  const list = $('campList'); list.innerHTML = '';
+  CAMP_UP.forEach(u=>{
+    const lvl = save[u.key]||0, cost = u.cost(lvl), have = save[u.res]||0, maxed = lvl>=CAMP_MAX;
+    const card = document.createElement('div');
+    card.className = 'campCard';
+    card.innerHTML = '<div class="campIco">'+u.icon+'</div>'
+      + '<div class="campBody"><div class="campName">'+u.name+' <b>Түв '+lvl+'</b></div>'
+      + '<div class="campDesc">'+u.desc+'</div>'
+      + '<div class="campStars">'+'★'.repeat(lvl)+'☆'.repeat(CAMP_MAX-lvl)+'</div></div>'
+      + '<button class="btn'+(maxed||have<cost?' secondary':'')+'"'+(maxed?' disabled':'')+'>'
+        + (maxed ? 'Дээд зэрэг' : ('🔨 '+cost+' '+u.resName)) + '</button>';
+    const btn = card.querySelector('button');
+    btn.addEventListener('click', ()=>{
+      Snd.init();
+      if(maxed) return;
+      if((save[u.res]||0) >= cost){
+        save[u.res] -= cost; save[u.key] = lvl+1; persistSave(); buildCamp(); Snd.level();
+      } else {
+        Snd.tone(180,.15,'square',.05);
+        $('campRes').classList.remove('flash'); void $('campRes').offsetWidth; $('campRes').classList.add('flash');
+      }
+    });
+    list.appendChild(card);
+  });
+}
+
 function buildCodex(){
   const tabs = $('codexTabs');
   tabs.innerHTML = '';
@@ -2846,6 +2914,16 @@ function endMatch(win){
   save.matches = (save.matches||0) + 1;
   if(win) save.wins = (save.wins||0) + 1;
 
+  // Эзлэлтийн олз: адуу ба төмөр (буурийн эдийн засагт) — аяны ялалтад
+  let lootLine = '';
+  if(inCampaign && win){
+    const lv = campaignLevel;
+    const gotHorses = 2 + Math.floor(lv*0.7);
+    const gotIron = 1 + Math.floor(lv*0.6);
+    save.horses += gotHorses; save.iron += gotIron;
+    lootLine = '<br><span style="color:#cdb98a">🐎 +'+gotHorses+' адуу · ⚒️ +'+gotIron+' төмөр (буурьт цуглав)</span>';
+  }
+
   // Аян дайн: анх удаа даван туулбал түвшин ахьж, бонус алт өгнө
   let campaignLine = '';
   if(inCampaign && win){
@@ -2889,7 +2967,7 @@ function endMatch(win){
   const modeLabel = inCampaign ? (campaignLevel+1)+'-р түвшин' : DIFFS[selDiff].name;
   const common = 'Алалт: <b>'+kills+'</b> · Түвшин: <b>'+player.level+'</b> · Хугацаа: <b>'+mins+':'+String(secs).padStart(2,'0')+'</b> · '+modeLabel
     + '<br>🪙 Олсон алт: <b id="goldCount" style="color:#ffd873">+0</b> · Нийт: <b style="color:#ffd873">'+save.gold+'</b>'
-    + campaignLine + masteryLine + chapterLine + unlockHint;
+    + lootLine + campaignLine + masteryLine + chapterLine + unlockHint;
   if(win){
     t.textContent = 'ЯЛАЛТ!'; t.className = 'win';
     $('endStats').innerHTML = 'Мөнх тэнгэрийн хүчин дор дайсны хаалга нурлаа!<br>'+common;
@@ -3017,6 +3095,8 @@ $('menuBtn').addEventListener('click', ()=>{ Snd.init(); setState('menu'); });
 $('storyBtn').addEventListener('click', ()=>{ Snd.init(); buildChapters(); setState('story'); });
 $('codexBtn').addEventListener('click', ()=>{ Snd.init(); Snd.startMusic(); buildCodex(); setState('codex'); });
 $('codexBackBtn').addEventListener('click', ()=>{ setState('menu'); });
+$('campBtn').addEventListener('click', ()=>{ Snd.init(); Snd.startMusic(); buildCamp(); setState('camp'); });
+$('campBackBtn').addEventListener('click', ()=>{ setState('menu'); });
 $('storyBackBtn').addEventListener('click', ()=>{ setState('menu'); });
 $('readerBackBtn').addEventListener('click', ()=>{ buildChapters(); setState('story'); });
 $('readerNextBtn').addEventListener('click', ()=>{ openChapter(readerIdx+1); });
@@ -3055,7 +3135,8 @@ window.GAME = {
   startQuick(i, d){ campaignLevel = null; selHero = i||0; if(d!==undefined) selDiff = d; startMatch(); },
   setDiff(d){ selDiff = d; },
   skipToWave(n){ waveNum = n - 1; nextWaveT = 0.1; },
-  resetSave(){ save = {gold:0, unlocked:['temuujin','zev'], mastery:{}, matches:0, wins:0, readChapters:[], campaign:0}; persistSave(); },
+  resetSave(){ save = Object.assign({}, SAVE_DEFAULT); persistSave(); },
+  get horses(){ return save.horses; }, get iron(){ return save.iron; },
   get chapters(){ return CHAPTERS.map(c => ({id:c.id, unlocked:reqMet(c.req)})); },
   get campaignProgress(){ return save.campaign||0; },
   get attackHeld(){ return attackHeld; },
