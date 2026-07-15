@@ -825,6 +825,7 @@ function startMatch(){
     setupObjective(LEVELS[campaignLevel].obj);
     events = (LEVELS[campaignLevel].events || []).map(e => Object.assign({fired:false}, e));
     setupCamps();          // аяны горим: давалгааны оронд тарсан дайсны бууц
+    setupWarband();        // нөхдийн отряд — тантай хамт байлдах жанжид (co-op мэдрэмж)
     nextWaveT = Infinity;  // марш давалгаа унтраана — задгай талбарын адал явдал
   }
 
@@ -837,6 +838,27 @@ function startMatch(){
     announce('Тулаан эхэллээ!');
     announce('Дайсны их хаалгыг нураа!');
   }
+}
+
+// Нөхдийн отряд — тоглогчийг дагаж хамт байлдах жанжид (V2-ийн co-op мэдрэмжийн прототип).
+// Ганц тоглогчийн горимд ч «отрядтай» мэт мэдрэмж өгнө; дараа нь жинхэнэ co-op болно.
+function setupWarband(){
+  const lvl = campaignLevel || 0;
+  const mates = HEROES.filter(h => h.id !== HEROES[selHero].id && h.id !== 'chinggis').slice(0, 2);
+  const offs = [{x:-48,y:-48}, {x:-48,y:48}];
+  mates.forEach((h, i)=>{
+    const ranged = h.range > 150;
+    const hp = Math.round(720 + lvl*42);
+    units.push(makeUnit({
+      type:'minion', team:0, companion:true, name:h.name, color:h.color,
+      compOff: offs[i],
+      x: player.x + offs[i].x, y: clamp(player.y + offs[i].y, GROUND_TOP, GROUND_BOT),
+      r:18, hp, maxHp:hp, dmg: Math.round(42 + lvl*2.6),
+      range: ranged ? 200 : 64, archer: ranged,
+      atkCd: 0.85, speed: 178, aggro: 250, face: 1
+    }));
+  });
+  if(mates.length) announce('🤝 Нөхдийн отряд тантай хамт мордов!');
 }
 
 // Аяны горим — задгай талбарт тарсан дайсны бууц (марш давалгааны оронд).
@@ -1213,6 +1235,12 @@ function killUnit(u, source){
   u.dead = true;
   burst(u.x, u.y, u.team? '#c85a4a':'#e8b64c', 14);
   const byPlayer = source && (source===player || (source.owner===player));
+  // Нөхдийн отряд унасан — дайсны шагнал биш, дэргэд эргэн босно
+  if(u.companion){
+    u.respawnT = 6 + (campaignLevel||0)*0.25;
+    addFloater(u.x, u.y-34, u.name+' унав', '#9fd0e8');
+    return;
+  }
   if(u.type==='minion'){
     if(u.boss){
       shakeT = Math.max(shakeT, 0.45);
@@ -1798,6 +1826,16 @@ function update(dt){
           if(u===aiHero){ u.maxHp = Math.round(u.maxHp*1.1); u.dmg = Math.round(u.dmg*1.08); u.hp = u.maxHp; }
         }
       }
+      // нөхдийн отряд — тоглогчийн дэргэд эргэн босно
+      if(u.companion && u.respawnT > 0 && player && !player.dead){
+        u.respawnT -= dt;
+        if(u.respawnT <= 0){
+          u.dead = false; u.hp = u.maxHp; u.stun = 0;
+          u.x = player.x + (u.compOff?u.compOff.x:-46);
+          u.y = clamp(player.y + (u.compOff?u.compOff.y:0), GROUND_TOP, GROUND_BOT);
+          burst(u.x, u.y, '#8ec8ff', 12);
+        }
+      }
       continue;
     }
     u.atkT = Math.max(0, u.atkT - dt);
@@ -1808,11 +1846,20 @@ function update(dt){
     if(u.shieldT > 0){ u.shieldT -= dt; if(u.shieldT<=0) u.shield = 0; }
 
     if(u.type==='minion' && u.stun<=0){
-      const t = findTarget(u, u.aggro, false);
-      if(t){
+      // нөхдийн отряд: ойрын дайсныг довтолж, эс бөгөөс тоглогчийг дагана
+      const searchR = u.companion ? Math.max(u.aggro, u.range+40) : u.aggro;
+      const t = findTarget(u, searchR, false);
+      if(t && (!u.companion || dist(u,t) < 260)){
         const d = dist(u,t);
         if(d <= u.range + t.r){ if(u.atkT<=0) attack(u,t); }
         else moveUnit(u, t.x, t.y, dt);
+      } else if(u.companion && player && !player.dead){
+        const off = u.compOff || {x:-46,y:0};
+        const tx = clamp(player.x + off.x, 30, WORLD_W-30);
+        const ty = clamp(player.y + off.y, GROUND_TOP, GROUND_BOT);
+        const gap = Math.hypot(tx-u.x, ty-u.y);
+        if(gap > 620){ u.x = tx; u.y = ty; }        // хол хоцорвол гүйцэж ирнэ (leash)
+        else if(gap > 22) moveUnit(u, tx, ty, dt);
       } else if(u.guard){
         // хуарандаа буцаж хамгаална (задгай талбарын бууц)
         if(Math.hypot(u.homeX-u.x, u.homeY-u.y) > 10) moveUnit(u, u.homeX, u.homeY, dt);
@@ -2674,11 +2721,11 @@ function drawUnit(u){
     ctx.fillRect(u.x-bw/2, by-3, bw*clamp(u.shield/u.maxHp,0,1), 2.5);
   }
 
-  // hero/boss name
-  if(isHero || u.boss){
-    ctx.font = '700 13px -apple-system, sans-serif'; ctx.textAlign = 'center';
+  // hero/boss/companion name
+  if(isHero || u.boss || u.companion){
+    ctx.font = (u.companion?'700 11px':'700 13px')+' -apple-system, sans-serif'; ctx.textAlign = 'center';
     ctx.fillStyle = '#000'; ctx.fillText(u.name, u.x+1, by-7+1);
-    ctx.fillStyle = u.boss? '#ffd873' : (u.team===0? '#cfe8ff' : '#ffd0c8');
+    ctx.fillStyle = u.boss? '#ffd873' : (u.companion? '#a9e0c0' : (u.team===0? '#cfe8ff' : '#ffd0c8'));
     ctx.fillText(u.name, u.x, by-7);
   }
 }
@@ -2940,7 +2987,7 @@ window.GAME = {
   get save(){ return save; },
   get matchGold(){ return matchGold; },
   get combo(){ return combo; },
-  startQuick(i, d){ selHero = i||0; if(d!==undefined) selDiff = d; startMatch(); },
+  startQuick(i, d){ campaignLevel = null; selHero = i||0; if(d!==undefined) selDiff = d; startMatch(); },
   setDiff(d){ selDiff = d; },
   skipToWave(n){ waveNum = n - 1; nextWaveT = 0.1; },
   resetSave(){ save = {gold:0, unlocked:['temuujin','zev'], mastery:{}, matches:0, wins:0, readChapters:[], campaign:0}; persistSave(); },
