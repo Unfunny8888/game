@@ -103,23 +103,43 @@
   .endBtns { display:flex; gap:14px; margin-top:10px; flex-wrap:wrap; justify-content:center; }
   /* V2 эзлэлтийн мөчлөг */
   #conquestLoop { display:flex; align-items:center; justify-content:center; gap:6px; flex-wrap:wrap;
-    margin-top:16px; padding:10px 14px; border:1px solid rgba(232,182,76,.25); border-radius:14px;
-    background:rgba(30,22,10,.5); max-width:640px; }
-  .cqStep { display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 10px; border-radius:10px;
-    opacity:.4; transition:opacity .35s, background .35s, transform .35s; min-width:74px; }
-  .cqStep.on { opacity:1; background:rgba(232,182,76,.12); }
-  .cqStep.done .cqIco::after { content:" ✓"; color:#8ce87a; font-size:12px; }
-  .cqStep.active { transform:scale(1.08); background:rgba(120,200,255,.14); }
-  .cqIco { font-size:22px; }
-  .cqName { font-size:10.5px; letter-spacing:.5px; color:#d8c298; white-space:nowrap; }
-  .cqArrow { color:#8a6a3a; font-size:14px; opacity:.6; }
-  #nextBtn.pending { opacity:.5; pointer-events:none; }
+    margin-top:16px; padding:12px 16px; border:1px solid rgba(232,182,76,.3); border-radius:16px;
+    background:linear-gradient(180deg,rgba(46,34,14,.6),rgba(24,16,7,.6)); max-width:660px;
+    box-shadow:0 10px 34px -14px rgba(0,0,0,.7), inset 0 1px 0 rgba(232,182,76,.12); }
+  .cqStep { position:relative; display:flex; flex-direction:column; align-items:center; gap:4px;
+    padding:8px 12px; border-radius:12px; opacity:.35; min-width:78px;
+    border:1px solid transparent; transition:opacity .3s, background .3s, border-color .3s, box-shadow .3s; }
+  .cqStep.on { opacity:1; background:rgba(232,182,76,.12); border-color:rgba(232,182,76,.35);
+    box-shadow:0 0 18px rgba(232,182,76,.18); animation:cqpop .42s cubic-bezier(.3,1.5,.5,1); }
+  .cqStep.done .cqIco::after { content:" ✓"; color:#8ce87a; font-size:12px;
+    text-shadow:0 0 8px rgba(140,232,122,.6); }
+  .cqStep.active { background:rgba(120,200,255,.16); border-color:rgba(120,200,255,.5);
+    box-shadow:0 0 20px rgba(120,200,255,.28); animation:cqbeat 1s ease-in-out infinite; }
+  .cqStep.ready { background:rgba(255,214,90,.18); border-color:rgba(255,214,90,.6);
+    animation:cqready 1.1s ease-in-out infinite; }
+  .cqIco { font-size:24px; filter:drop-shadow(0 2px 4px rgba(0,0,0,.4)); }
+  .cqName { font-size:10.5px; letter-spacing:.5px; color:#e0cfa2; white-space:nowrap; font-weight:600; }
+  .cqArrow { color:#a6813e; font-size:15px; opacity:.7; }
+  @keyframes cqpop { 0%{ transform:scale(.6); } 60%{ transform:scale(1.12); } 100%{ transform:scale(1); } }
+  @keyframes cqbeat { 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.08); } }
+  @keyframes cqready { 0%,100%{ transform:scale(1); box-shadow:0 0 18px rgba(255,214,90,.25); }
+    50%{ transform:scale(1.06); box-shadow:0 0 30px rgba(255,214,90,.5); } }
+  #nextBtn.pending { opacity:.45; pointer-events:none; filter:grayscale(.5); }
+  #nextBtn.marchGo { animation:cqready 1.1s ease-in-out infinite; }
+  #endFx { position:fixed; inset:0; width:100%; height:100%; pointer-events:none; z-index:60; display:none; }
   /* V2 буурь — эдийн засаг */
   #campRes { font-size:15px; color:#e8b64c; margin:6px 0 14px; letter-spacing:.5px; }
   #campList { display:flex; flex-direction:column; gap:12px; width:min(560px,92vw); }
   .campCard { display:flex; align-items:center; gap:14px; padding:14px 16px; text-align:left;
-    border:1px solid rgba(232,182,76,.22); border-radius:14px; background:rgba(30,22,10,.5); }
-  .campIco { font-size:34px; flex:0 0 auto; }
+    border:1px solid rgba(232,182,76,.22); border-radius:14px;
+    background:linear-gradient(180deg,rgba(40,30,12,.55),rgba(22,15,7,.55));
+    animation:campIn .4s cubic-bezier(.3,1.3,.5,1) both; transition:box-shadow .3s, border-color .3s; }
+  .campCard.can { border-color:rgba(232,182,76,.5); box-shadow:0 0 20px rgba(232,182,76,.14); }
+  .campCard.maxed { opacity:.72; }
+  @keyframes campIn { from{ opacity:0; transform:translateY(12px);} to{ opacity:1; transform:none;} }
+  @keyframes campFloat { 0%,100%{ transform:translateY(0);} 50%{ transform:translateY(-5px);} }
+  .campIco { font-size:34px; flex:0 0 auto; animation:campFloat 3.2s ease-in-out infinite;
+    filter:drop-shadow(0 3px 5px rgba(0,0,0,.4)); }
   .campBody { flex:1; min-width:0; }
   .campName { font-size:15px; color:#f0e2c4; font-weight:700; }
   .campName b { color:#8ce87a; font-size:12px; }
@@ -387,6 +407,7 @@
 </div>
 
 <div id="lowHp"></div>
+<canvas id="endFx"></canvas>
 
 <!-- ================= ROTATE ================= -->
 <div id="rotate">
@@ -1158,7 +1179,7 @@ function buildCamp(){
   CAMP_UP.forEach(u=>{
     const lvl = save[u.key]||0, cost = u.cost(lvl), have = save[u.res]||0, maxed = lvl>=CAMP_MAX;
     const card = document.createElement('div');
-    card.className = 'campCard';
+    card.className = 'campCard' + (maxed?' maxed':(have>=cost?' can':''));
     card.innerHTML = '<div class="campIco">'+u.icon+'</div>'
       + '<div class="campBody"><div class="campName">'+u.name+' <b>Түв '+lvl+'</b></div>'
       + '<div class="campDesc">'+u.desc+'</div>'
@@ -2881,25 +2902,66 @@ function runConquestLoop(aliveWb, totalWb, canNext){
   cq.classList.remove('hidden');
   const steps = {};
   cq.querySelectorAll('.cqStep').forEach(s => steps[s.dataset.k] = s);
-  Object.values(steps).forEach(s => s.classList.remove('on','done','active'));
+  Object.values(steps).forEach(s => s.classList.remove('on','done','active','ready'));
   const nb = $('nextBtn');
+  nb.classList.remove('marchGo');
   steps.assault.classList.add('on','done');
-  if(canNext) nb.classList.add('pending');   // цугартал мородох боломжгүй (regroup gate)
-  cqTimers.push(setTimeout(()=>{ steps.settle.classList.add('on','done'); Snd.tone(430,.08,'sine',.05); }, 400));
+  Snd.drum();                                 // эзлэлтийн цохилт
+  celebrate();                                // алтан баяр хөөрийн бут
+  if(canNext) nb.classList.add('pending');    // цугартал мородох боломжгүй (regroup gate)
+  cqTimers.push(setTimeout(()=>{ steps.settle.classList.add('on','done'); Snd.tone(430,.09,'sine',.05); Snd.tone(650,.09,'sine',.03); }, 420));
   cqTimers.push(setTimeout(()=>{
     steps.regroup.classList.add('on','active');
     steps.regroup.querySelector('.cqName').textContent = 'Отряд цугларч байна…';
-  }, 800));
+    Snd.tone(360,.12,'sine',.04, 520);
+  }, 820));
   cqTimers.push(setTimeout(()=>{
     steps.regroup.classList.remove('active'); steps.regroup.classList.add('done');
     steps.regroup.querySelector('.cqName').textContent = totalWb ? ('Отряд '+aliveWb+'/'+totalWb+' цугларав') : 'Отряд бэлэн';
-    Snd.tone(560,.1,'sine',.05);
+    Snd.tone(560,.1,'sine',.05); Snd.tone(840,.1,'sine',.03);
   }, 1600));
   cqTimers.push(setTimeout(()=>{
     steps.march.classList.add('on');
-    if(canNext){ nb.classList.remove('pending'); Snd.horn(392,.4,.08); }
-    else steps.march.classList.add('done');
-  }, 1900));
+    if(canNext){ steps.march.classList.add('ready'); nb.classList.remove('pending'); nb.classList.add('marchGo'); Snd.win(); }
+    else { steps.march.classList.add('done'); Snd.fanfare(); }
+  }, 1950));
+}
+
+// Алтан баяр хөөрийн бут (эзлэлтийн ялалтад) — хөнгөн confetti
+let fxTimer = null;
+function celebrate(){
+  const cv = $('endFx'); if(!cv) return;
+  const dpr = Math.min(2, window.devicePixelRatio||1);
+  cv.width = window.innerWidth*dpr; cv.height = window.innerHeight*dpr;
+  cv.style.display = 'block';
+  const g = cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
+  const W = window.innerWidth, H = window.innerHeight;
+  const cols = ['#e8b64c','#f7d67a','#c6473b','#8ce87a','#5fa0da'];
+  const P = [];
+  for(let i=0;i<120;i++){
+    P.push({ x: W*(0.2+Math.random()*0.6), y: -20-Math.random()*H*0.3,
+      vx:(Math.random()*2-1)*90, vy: 120+Math.random()*220,
+      s: 4+Math.random()*6, rot: Math.random()*6.28, vr:(Math.random()*2-1)*8,
+      col: cols[(Math.random()*cols.length)|0], life: 2.2+Math.random()*0.9 });
+  }
+  if(fxTimer) cancelAnimationFrame(fxTimer);
+  let last = performance.now();
+  (function tick(now){
+    const dt = Math.min(0.05,(now-last)/1000); last = now;
+    g.clearRect(0,0,W,H);
+    let alive = 0;
+    for(const p of P){
+      p.life -= dt; if(p.life<=0) continue; alive++;
+      p.vy += 260*dt; p.x += p.vx*dt; p.y += p.vy*dt; p.rot += p.vr*dt;
+      g.save(); g.translate(p.x,p.y); g.rotate(p.rot);
+      g.globalAlpha = Math.min(1,p.life);
+      g.fillStyle = p.col; g.fillRect(-p.s/2,-p.s/2,p.s,p.s*0.6);
+      g.restore();
+    }
+    g.globalAlpha = 1;
+    if(alive>0 && state==='end') fxTimer = requestAnimationFrame(tick);
+    else { cv.style.display='none'; g.clearRect(0,0,W,H); fxTimer=null; }
+  })(last);
 }
 
 function endMatch(win){
