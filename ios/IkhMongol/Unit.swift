@@ -111,9 +111,14 @@ final class Unit: SKNode {
         let r = radius
         let isHero = kind == .hero
 
-        // сүүдэр ба багийн цагираг
-        let shadow = SKShapeNode(ellipseOf: CGSize(width: r * 2.2, height: r * 0.9))
-        shadow.fillColor = SKColor(white: 0, alpha: 0.3)
+        // сүүдэр (зөөлөн — гадна бүдэг + дотор гүн) ба багийн цагираг
+        let softShadow = SKShapeNode(ellipseOf: CGSize(width: r * 2.7, height: r * 1.15))
+        softShadow.fillColor = SKColor(white: 0, alpha: 0.16)
+        softShadow.strokeColor = .clear
+        softShadow.position = CGPoint(x: 0, y: -r * 0.75)
+        addChild(softShadow)
+        let shadow = SKShapeNode(ellipseOf: CGSize(width: r * 2.0, height: r * 0.82))
+        shadow.fillColor = SKColor(white: 0, alpha: 0.34)
         shadow.strokeColor = .clear
         shadow.position = CGPoint(x: 0, y: -r * 0.75)
         addChild(shadow)
@@ -244,6 +249,14 @@ final class Unit: SKNode {
             addChild(band)
         }
 
+        // дуулганы металл гялбаа (specular) — гэрлийн тусгал баруун дээрээс
+        let glint = SKShapeNode(ellipseOf: CGSize(width: r * 0.22, height: r * 0.4))
+        glint.fillColor = SKColor(white: 1, alpha: 0.55)
+        glint.strokeColor = .clear
+        glint.zRotation = 0.5
+        glint.position = CGPoint(x: r * 0.16, y: r * 1.42)
+        addChild(glint)
+
         // зэвсэг — эргэх чиглэлтэй хэсэг
         let frontNode = SKNode()
         addChild(frontNode)
@@ -358,9 +371,13 @@ final class Unit: SKNode {
         bodyNode.position = CGPoint(x: 0, y: 32)
         addChild(bodyNode)
 
-        let shade = SKSpriteNode(color: SKColor(white: 0, alpha: 0.18), size: CGSize(width: 22, height: 125))
-        shade.position = CGPoint(x: 19, y: 32)
+        // чиглэлт гэрэлтүүлэг: зүүн сүүдэр, баруун гэрэлт ирмэг (нар баруун дээрээс)
+        let shade = SKSpriteNode(color: SKColor(white: 0, alpha: 0.24), size: CGSize(width: 22, height: 125))
+        shade.position = CGPoint(x: -19, y: 32)
         addChild(shade)
+        let rim = SKSpriteNode(color: SKColor(red: 1, green: 0.94, blue: 0.8, alpha: 0.28), size: CGSize(width: 4, height: 125))
+        rim.position = CGPoint(x: 28, y: 32)
+        addChild(rim)
 
         for i in -1...1 {
             let merlon = SKSpriteNode(color: stone, size: CGSize(width: 16, height: 18))
@@ -406,9 +423,13 @@ final class Unit: SKNode {
         wall.position = CGPoint(x: 0, y: 38)
         addChild(wall)
 
-        let shade = SKSpriteNode(color: SKColor(white: 0, alpha: 0.18), size: CGSize(width: 52, height: 145))
-        shade.position = CGPoint(x: 46, y: 38)
+        // чиглэлт гэрэлтүүлэг: зүүн сүүдэр, баруун гэрэлт ирмэг
+        let shade = SKSpriteNode(color: SKColor(white: 0, alpha: 0.24), size: CGSize(width: 52, height: 145))
+        shade.position = CGPoint(x: -46, y: 38)
         addChild(shade)
+        let rim = SKSpriteNode(color: SKColor(red: 1, green: 0.94, blue: 0.8, alpha: 0.26), size: CGSize(width: 5, height: 145))
+        rim.position = CGPoint(x: 69, y: 38)
+        addChild(rim)
 
         for i in -3...3 {
             let merlon = SKSpriteNode(color: stone, size: CGSize(width: 16, height: 20))
