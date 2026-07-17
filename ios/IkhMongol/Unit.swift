@@ -131,6 +131,38 @@ final class Unit: SKNode {
         ring.position = CGPoint(x: 0, y: -r * 0.75)
         addChild(ring)
 
+        // Баатрын өвөрмөц хэв маяг (нөмрөг, залаа, ороолт, мөрөвч) — signature.
+        // Ингэснээр 7 баатар өнгөөрөө биш, дүрсээрээ ялгаатай харагдана.
+        let hStyle: HeroSig? = (isHero && team == .mongol) ? heroSignatureStyle(heroDef?.id ?? "") : nil
+        if let st = hStyle, let capeCol = st.cape {
+            let capePath = UIBezierPath()
+            capePath.move(to: CGPoint(x: -r * 0.55, y: r * 0.9))
+            capePath.addQuadCurve(to: CGPoint(x: -r * 0.72, y: -r * 0.5), controlPoint: CGPoint(x: -r * 0.95, y: r * 0.1))
+            capePath.addLine(to: CGPoint(x: r * 0.72, y: -r * 0.5))
+            capePath.addQuadCurve(to: CGPoint(x: r * 0.55, y: r * 0.9), controlPoint: CGPoint(x: r * 0.95, y: r * 0.1))
+            capePath.close()
+            let cape = SKShapeNode(path: capePath.cgPath)
+            cape.fillColor = capeCol
+            cape.strokeColor = SKColor(white: 1, alpha: 0.2)
+            cape.lineWidth = 1.4
+            addChild(cape)
+        }
+        if let st = hStyle, st.quiver {
+            let quiver = SKNode()
+            let sheath = SKSpriteNode(color: SKColor(red: 0.42, green: 0.29, blue: 0.16, alpha: 1),
+                                      size: CGSize(width: r * 0.28, height: r * 0.9))
+            quiver.addChild(sheath)
+            for q in -1...1 {
+                let sh = SKShapeNode(rect: CGRect(x: CGFloat(q) * r * 0.1 - 0.8, y: r * 0.35, width: 1.6, height: r * 0.3))
+                sh.fillColor = st.crestColor
+                sh.strokeColor = .clear
+                quiver.addChild(sh)
+            }
+            quiver.position = CGPoint(x: -face * r * 0.5, y: r * 0.55)
+            quiver.zRotation = face * 0.5
+            addChild(quiver)
+        }
+
         let bodyColor: SKColor
         if isHero {
             bodyColor = heroDef?.color ?? Palette.gold
@@ -257,6 +289,110 @@ final class Unit: SKNode {
         glint.position = CGPoint(x: r * 0.16, y: r * 1.42)
         addChild(glint)
 
+        // баатрын өвөрмөц залаа / ороолт / мөрөвч (signature) — дуулганы дээр
+        if let st = hStyle {
+            let topY = r * 2.05
+            switch st.crest {
+            case "plume":
+                for f in -1...1 {
+                    let pPath = UIBezierPath()
+                    pPath.move(to: CGPoint(x: CGFloat(f) * r * 0.08, y: r * 1.75))
+                    pPath.addQuadCurve(to: CGPoint(x: CGFloat(f) * r * 0.14, y: topY + r * 0.6),
+                                       controlPoint: CGPoint(x: CGFloat(f) * r * 0.1, y: topY + r * 0.2))
+                    let pl = SKShapeNode(path: pPath.cgPath)
+                    pl.strokeColor = st.crestColor
+                    pl.lineWidth = r * 0.16
+                    pl.lineCap = .round
+                    pl.fillColor = .clear
+                    addChild(pl)
+                }
+                let knob = SKShapeNode(circleOfRadius: r * 0.13)
+                knob.fillColor = SKColor(red: 0.54, green: 0.42, blue: 0.16, alpha: 1)
+                knob.strokeColor = .clear
+                knob.position = CGPoint(x: 0, y: r * 1.75)
+                addChild(knob)
+            case "feather":
+                let feather = SKShapeNode(ellipseOf: CGSize(width: r * 0.2, height: r * 1.1))
+                feather.fillColor = st.crestColor
+                feather.strokeColor = .clear
+                feather.position = CGPoint(x: r * 0.12, y: topY + r * 0.2)
+                feather.zRotation = -0.5
+                addChild(feather)
+            case "tail":
+                let tPath = UIBezierPath()
+                tPath.move(to: CGPoint(x: 0, y: r * 1.78))
+                tPath.addQuadCurve(to: CGPoint(x: -r * 0.2, y: r * 1.05), controlPoint: CGPoint(x: -r * 0.3, y: r * 1.5))
+                let tail = SKShapeNode(path: tPath.cgPath)
+                tail.strokeColor = st.crestColor
+                tail.lineWidth = r * 0.2
+                tail.lineCap = .round
+                tail.fillColor = .clear
+                addChild(tail)
+            case "crown":
+                let cPath = UIBezierPath()
+                cPath.move(to: CGPoint(x: -r * 0.5, y: r * 1.5))
+                cPath.addLine(to: CGPoint(x: -r * 0.5, y: r * 1.78))
+                var cc = -2
+                while cc <= 2 {
+                    cPath.addLine(to: CGPoint(x: CGFloat(cc) * r * 0.24, y: r * (2.0 + (cc % 2 == 0 ? 0.18 : 0.0))))
+                    cPath.addLine(to: CGPoint(x: (CGFloat(cc) + 0.5) * r * 0.24, y: r * 1.78))
+                    cc += 1
+                }
+                cPath.addLine(to: CGPoint(x: r * 0.5, y: r * 1.5))
+                cPath.close()
+                let crown = SKShapeNode(path: cPath.cgPath)
+                crown.fillColor = st.crestColor
+                crown.strokeColor = SKColor(red: 1, green: 0.96, blue: 0.82, alpha: 1)
+                crown.lineWidth = 1.4
+                addChild(crown)
+                let gem = SKShapeNode(circleOfRadius: r * 0.1)
+                gem.fillColor = SKColor(red: 0.75, green: 0.22, blue: 0.17, alpha: 1)
+                gem.strokeColor = .clear
+                gem.position = CGPoint(x: 0, y: r * 1.68)
+                addChild(gem)
+                let glow = SKShapeNode(circleOfRadius: r * 1.2)
+                glow.fillColor = SKColor(red: 1, green: 0.86, blue: 0.51, alpha: 0.18)
+                glow.strokeColor = .clear
+                glow.position = CGPoint(x: 0, y: r * 1.9)
+                glow.zPosition = -1
+                addChild(glow)
+            default: break
+            }
+            if let scarfCol = st.scarf {
+                let scarf = SKShapeNode(ellipseOf: CGSize(width: r * 0.88, height: r * 0.32))
+                scarf.fillColor = scarfCol
+                scarf.strokeColor = .clear
+                scarf.position = CGPoint(x: 0, y: r * 0.78)
+                addChild(scarf)
+                let tailPath = UIBezierPath()
+                tailPath.move(to: CGPoint(x: -face * r * 0.2, y: r * 0.78))
+                tailPath.addQuadCurve(to: CGPoint(x: -face * r * 0.3, y: r * 0.05), controlPoint: CGPoint(x: -face * r * 0.4, y: r * 0.4))
+                tailPath.addLine(to: CGPoint(x: -face * r * 0.12, y: r * 0.1))
+                tailPath.addQuadCurve(to: CGPoint(x: -face * r * 0.05, y: r * 0.76), controlPoint: CGPoint(x: -face * r * 0.2, y: r * 0.5))
+                tailPath.close()
+                let scarfTail = SKShapeNode(path: tailPath.cgPath)
+                scarfTail.fillColor = scarfCol
+                scarfTail.strokeColor = .clear
+                addChild(scarfTail)
+            }
+            if st.shoulder {
+                for sgn: CGFloat in [-1, 1] {
+                    let pauldron = SKShapeNode(ellipseOf: CGSize(width: r * 0.6, height: r * 0.44))
+                    pauldron.fillColor = SKColor(white: 0.9, alpha: 0.9)
+                    pauldron.strokeColor = SKColor(white: 0, alpha: 0.3)
+                    pauldron.lineWidth = 1
+                    pauldron.position = CGPoint(x: sgn * r * 0.58, y: r * 0.9)
+                    pauldron.zRotation = sgn * 0.3
+                    addChild(pauldron)
+                    let tint = SKShapeNode(ellipseOf: CGSize(width: r * 0.44, height: r * 0.3))
+                    tint.fillColor = st.crestColor.withAlphaComponent(0.7)
+                    tint.strokeColor = .clear
+                    tint.position = CGPoint(x: sgn * r * 0.62, y: r * 0.86)
+                    addChild(tint)
+                }
+            }
+        }
+
         // зэвсэг — эргэх чиглэлтэй хэсэг
         let frontNode = SKNode()
         addChild(frontNode)
@@ -351,6 +487,23 @@ final class Unit: SKNode {
             }
             nameL.position = CGPoint(x: 0, y: barY + 12)
             addChild(nameL)
+        }
+    }
+
+    // MARK: - Баатрын өвөрмөц хэв маяг (signature)
+
+    private typealias HeroSig = (crest: String, crestColor: SKColor, cape: SKColor?, scarf: SKColor?, shoulder: Bool, quiver: Bool)
+    private func heroSignatureStyle(_ id: String) -> HeroSig {
+        func c(_ r: CGFloat, _ g: CGFloat, _ b: CGFloat) -> SKColor { SKColor(red: r, green: g, blue: b, alpha: 1) }
+        switch id {
+        case "temuujin": return ("tail",    c(0.75, 0.22, 0.17), nil,                 nil,                 false, false)
+        case "zev":      return ("feather", c(0.56, 0.71, 0.45), nil,                 c(0.35, 0.48, 0.23), false, true)
+        case "subedei":  return ("plume",   c(0.81, 0.88, 0.93), c(0.29, 0.35, 0.42), nil,                 true,  false)
+        case "mukhulai": return ("plume",   c(0.90, 0.70, 0.35), c(0.48, 0.29, 0.13), nil,                 true,  false)
+        case "boorchi":  return ("none",    c(0.48, 0.76, 0.69), nil,                 c(0.18, 0.54, 0.46), false, false)
+        case "khasar":   return ("feather", c(0.69, 0.52, 0.84), nil,                 c(0.42, 0.29, 0.54), false, true)
+        case "chinggis": return ("crown",   c(0.95, 0.79, 0.35), c(0.48, 0.12, 0.12), nil,                 true,  false)
+        default:         return ("none",    Palette.gold,        nil,                 nil,                 false, false)
         }
     }
 

@@ -693,34 +693,50 @@ final class BattleScene: SKScene {
             seed = (seed &* 16807) % 2147483647
             return CGFloat(seed) / 2147483647
         }
-        for _ in 0..<24 {
+        // өтгөн салхинд найгах өвс (гэрэлт үзүүртэй)
+        for _ in 0..<46 {
             let x = rnd() * World.width
             let y = World.groundBottom + rnd() * (World.groundTop - World.groundBottom)
+            let s = 0.6 + rnd() * 0.9
             let grass = SKShapeNode()
             let path = UIBezierPath()
-            for i in -1...1 {
-                path.move(to: CGPoint(x: CGFloat(i) * 5, y: 0))
-                path.addQuadCurve(to: CGPoint(x: CGFloat(i) * 8, y: 14),
-                                  controlPoint: CGPoint(x: CGFloat(i) * 8, y: 7))
+            for i in -2...2 {
+                let off = CGFloat(i) * 4 * s
+                let h = (11 + CGFloat(abs(i) % 2) * 7) * s
+                path.move(to: CGPoint(x: off, y: 0))
+                path.addQuadCurve(to: CGPoint(x: off + 3 * s, y: h), controlPoint: CGPoint(x: off + 2 * s, y: h * 0.6))
             }
             grass.path = path.cgPath
-            grass.strokeColor = SKColor(red: 0.16, green: 0.24, blue: 0.08, alpha: 0.5)
-            grass.lineWidth = 2
+            grass.strokeColor = SKColor(red: 0.30, green: 0.44, blue: 0.16, alpha: 0.6)
+            grass.lineWidth = 1.9 * s
+            grass.lineCap = .round
             grass.position = CGPoint(x: x, y: y)
             grass.zPosition = zFor(y: y) - 1
             world.addChild(grass)
         }
-        for _ in 0..<7 {
+        for _ in 0..<10 {
             let x = 200 + rnd() * (World.width - 400)
             let y = World.groundBottom + rnd() * (World.groundTop - World.groundBottom)
             let s = 0.5 + rnd() * 0.9
             let rock = SKShapeNode(ellipseOf: CGSize(width: 32 * s, height: 20 * s))
-            rock.fillColor = SKColor(red: 0.42, green: 0.42, blue: 0.35, alpha: 1)
-            rock.strokeColor = SKColor(white: 0, alpha: 0.2)
+            rock.fillColor = SKColor(red: 0.45, green: 0.45, blue: 0.38, alpha: 1)
+            rock.strokeColor = SKColor(white: 0, alpha: 0.22)
             rock.position = CGPoint(x: x, y: y)
             rock.zPosition = zFor(y: y)
             world.addChild(rock)
+            let hi = SKShapeNode(ellipseOf: CGSize(width: 14 * s, height: 8 * s))
+            hi.fillColor = SKColor(white: 1, alpha: 0.22); hi.strokeColor = .clear
+            hi.position = CGPoint(x: x - 4 * s, y: y + 4 * s); hi.zPosition = zFor(y: y)
+            world.addChild(hi)
+            let mate = SKShapeNode(ellipseOf: CGSize(width: 14 * s, height: 10 * s))
+            mate.fillColor = SKColor(red: 0.40, green: 0.40, blue: 0.34, alpha: 1); mate.strokeColor = .clear
+            mate.position = CGPoint(x: x + 14 * s, y: y - 3 * s); mate.zPosition = zFor(y: y)
+            world.addChild(mate)
         }
+        // амьд орчин: мод, бут, цэцэг
+        for _ in 0..<7  { addTree(x: 120 + rnd() * (World.width - 240), y: World.groundTop - rnd() * 90, scale: 0.75 + rnd() * 0.6) }
+        for _ in 0..<12 { addBush(x: 120 + rnd() * (World.width - 240), y: World.groundBottom + rnd() * (World.groundTop - World.groundBottom), scale: 0.7 + rnd() * 0.7) }
+        for _ in 0..<22 { addFlower(x: rnd() * World.width, y: World.groundBottom + rnd() * (World.groundTop - World.groundBottom), scale: 0.7 + rnd() * 0.7) }
         // Монгол буурь (өөрийн талд): гэр, тэрэг, овоо
         addGer(x: 190, y: 548, scale: 1.2, banner: SKColor(red: 0.72, green: 0.23, blue: 0.16, alpha: 1))
         addGer(x: 315, y: 566, scale: 0.85, banner: SKColor(red: 0.72, green: 0.23, blue: 0.16, alpha: 1))
@@ -737,6 +753,94 @@ final class BattleScene: SKScene {
             addGer(x: 2650, y: 568, scale: 0.85, banner: SKColor(red: 0.23, green: 0.35, blue: 0.55, alpha: 1))
             addCart(x: 2560, y: 556, scale: 0.95)
         }
+    }
+
+    // Талын мод (улиас) — их бие + давхаргатай навч
+    private func addTree(x: CGFloat, y: CGFloat, scale s: CGFloat) {
+        let t = SKNode()
+        let sh = SKShapeNode(ellipseOf: CGSize(width: 56 * s, height: 14 * s))
+        sh.fillColor = SKColor(white: 0, alpha: 0.2); sh.strokeColor = .clear
+        sh.position = CGPoint(x: 0, y: -4 * s); t.addChild(sh)
+        let trunk = SKShapeNode(path: {
+            let p = UIBezierPath()
+            p.move(to: CGPoint(x: -5 * s, y: 0))
+            p.addLine(to: CGPoint(x: -3 * s, y: 42 * s))
+            p.addLine(to: CGPoint(x: 3 * s, y: 42 * s))
+            p.addLine(to: CGPoint(x: 5 * s, y: 0))
+            p.close(); return p.cgPath }())
+        trunk.fillColor = SKColor(red: 0.37, green: 0.26, blue: 0.15, alpha: 1)
+        trunk.strokeColor = .clear
+        t.addChild(trunk)
+        let blobs: [(CGFloat, CGFloat, CGFloat)] = [(0, 70, 27), (-17, 56, 19), (17, 56, 19), (0, 50, 23)]
+        for (bx, by, br) in blobs {
+            let blob = SKShapeNode(circleOfRadius: br * s)
+            blob.fillColor = SKColor(red: 0.36, green: 0.54, blue: 0.24, alpha: 1)
+            blob.strokeColor = .clear
+            blob.position = CGPoint(x: bx * s, y: by * s)
+            t.addChild(blob)
+            let hi = SKShapeNode(circleOfRadius: br * 0.5 * s)
+            hi.fillColor = SKColor(red: 0.56, green: 0.72, blue: 0.37, alpha: 0.55)
+            hi.strokeColor = .clear
+            hi.position = CGPoint(x: bx * s - br * 0.3 * s, y: by * s + br * 0.3 * s)
+            t.addChild(hi)
+        }
+        t.position = CGPoint(x: x, y: y)
+        t.zPosition = zFor(y: y)
+        world.addChild(t)
+    }
+
+    // Бут сөөг
+    private func addBush(x: CGFloat, y: CGFloat, scale s: CGFloat) {
+        let b = SKNode()
+        let sh = SKShapeNode(ellipseOf: CGSize(width: 40 * s, height: 10 * s))
+        sh.fillColor = SKColor(white: 0, alpha: 0.16); sh.strokeColor = .clear
+        sh.position = CGPoint(x: 0, y: -3 * s); b.addChild(sh)
+        for (bx, br) in [(-11, 12), (11, 12), (0, 15)] as [(CGFloat, CGFloat)] {
+            let blob = SKShapeNode(circleOfRadius: br * s)
+            blob.fillColor = SKColor(red: 0.31, green: 0.47, blue: 0.21, alpha: 1)
+            blob.strokeColor = .clear
+            blob.position = CGPoint(x: bx * s, y: br * 0.5 * s)
+            b.addChild(blob)
+            let hi = SKShapeNode(circleOfRadius: br * 0.5 * s)
+            hi.fillColor = SKColor(red: 0.48, green: 0.66, blue: 0.33, alpha: 0.5)
+            hi.strokeColor = .clear
+            hi.position = CGPoint(x: bx * s - br * 0.3 * s, y: br * 0.7 * s)
+            b.addChild(hi)
+        }
+        b.position = CGPoint(x: x, y: y)
+        b.zPosition = zFor(y: y)
+        world.addChild(b)
+    }
+
+    // Талын цэцэг (багц)
+    private func addFlower(x: CGFloat, y: CGFloat, scale s: CGFloat) {
+        let cols = [SKColor(red: 0.91, green: 0.82, blue: 0.29, alpha: 1),
+                    SKColor(red: 0.91, green: 0.42, blue: 0.54, alpha: 1),
+                    SKColor(red: 0.77, green: 0.54, blue: 0.91, alpha: 1),
+                    SKColor(white: 1, alpha: 1)]
+        let f = SKNode()
+        for i in 0..<3 {
+            let fx = CGFloat(i - 1) * 6 * s
+            let fy = (4 + CGFloat(i % 2) * 5) * s
+            let stem = SKShapeNode(path: {
+                let p = UIBezierPath(); p.move(to: CGPoint(x: fx, y: 0)); p.addLine(to: CGPoint(x: fx, y: fy)); return p.cgPath }())
+            stem.strokeColor = SKColor(red: 0.27, green: 0.39, blue: 0.16, alpha: 0.6)
+            stem.lineWidth = 1.4 * s
+            f.addChild(stem)
+            let petal = SKShapeNode(circleOfRadius: 3 * s)
+            petal.fillColor = cols[(Int(x) + i) % cols.count]
+            petal.strokeColor = .clear
+            petal.position = CGPoint(x: fx, y: fy)
+            f.addChild(petal)
+            let core = SKShapeNode(circleOfRadius: 1.4 * s)
+            core.fillColor = SKColor(red: 0.91, green: 0.66, blue: 0.23, alpha: 1)
+            core.strokeColor = .clear
+            core.position = CGPoint(x: fx, y: fy)
+            f.addChild(core)
+        }
+        f.position = CGPoint(x: x, y: y)
+        f.zPosition = zFor(y: y)
+        world.addChild(f)
     }
 
     // Монгол тэрэг (модон дугуйтай)
@@ -790,13 +894,46 @@ final class BattleScene: SKScene {
         world.addChild(ovoo)
     }
 
-    // Хорезмын бөмбөгөр сүм (цэнхэр вааран бөмбөгөр)
+    // Хорезмын бөмбөгөр сүм (цэнхэр вааран бөмбөгөр, хажуугийн бөмбөгөр, хээт хаяавч)
     private func addMosque(x: CGFloat, y: CGFloat, scale s: CGFloat) {
         let m = SKNode()
-        let base = SKSpriteNode(color: SKColor(red: 0.79, green: 0.66, blue: 0.47, alpha: 1),
+        let base = SKSpriteNode(color: SKColor(red: 0.81, green: 0.68, blue: 0.49, alpha: 1),
                                 size: CGSize(width: 80 * s, height: 34 * s))
         base.position = CGPoint(x: 0, y: 17 * s)
         m.addChild(base)
+        // зүүн сүүдэр (эзэлхүүн)
+        let shade = SKSpriteNode(color: SKColor(white: 0, alpha: 0.14), size: CGSize(width: 26 * s, height: 34 * s))
+        shade.position = CGPoint(x: -27 * s, y: 17 * s)
+        m.addChild(shade)
+        // хажуугийн жижиг бөмбөгөрүүд
+        for sgn: CGFloat in [-1, 1] {
+            let sd = SKShapeNode(path: {
+                let p = UIBezierPath()
+                p.move(to: CGPoint(x: sgn * 30 * s - 11 * s, y: 34 * s))
+                p.addCurve(to: CGPoint(x: sgn * 30 * s + 11 * s, y: 34 * s),
+                           controlPoint1: CGPoint(x: sgn * 30 * s - 11 * s, y: 50 * s),
+                           controlPoint2: CGPoint(x: sgn * 30 * s + 11 * s, y: 50 * s))
+                p.close(); return p.cgPath }())
+            sd.fillColor = SKColor(red: 0.27, green: 0.60, blue: 0.77, alpha: 1)
+            sd.strokeColor = .clear
+            m.addChild(sd)
+            let pin = SKSpriteNode(color: SKColor(red: 0.91, green: 0.78, blue: 0.29, alpha: 1), size: CGSize(width: 2 * s, height: 8 * s))
+            pin.position = CGPoint(x: sgn * 30 * s, y: 52 * s)
+            m.addChild(pin)
+        }
+        // хээт хаяавч (тайл)
+        let band = SKSpriteNode(color: SKColor(red: 0.23, green: 0.56, blue: 0.72, alpha: 1), size: CGSize(width: 80 * s, height: 4 * s))
+        band.position = CGPoint(x: 0, y: 34 * s)
+        m.addChild(band)
+        // нуман цонхнууд
+        for wx: CGFloat in [-24, 24] {
+            let win = SKShapeNode(rectOf: CGSize(width: 7 * s, height: 12 * s), cornerRadius: 3 * s)
+            win.fillColor = SKColor(red: 0.16, green: 0.35, blue: 0.47, alpha: 1)
+            win.strokeColor = .clear
+            win.position = CGPoint(x: wx * s, y: 20 * s)
+            m.addChild(win)
+        }
+        // гол бөмбөгөр
         let dome = SKShapeNode(path: {
             let p = UIBezierPath()
             p.move(to: CGPoint(x: -30 * s, y: 34 * s))
@@ -810,16 +947,30 @@ final class BattleScene: SKScene {
         dome.strokeColor = SKColor(red: 0.10, green: 0.31, blue: 0.44, alpha: 1)
         dome.lineWidth = 1
         m.addChild(dome)
+        // бөмбөгөрийн гэрэлт ирмэг
+        let rim = SKShapeNode(path: {
+            let p = UIBezierPath()
+            p.move(to: CGPoint(x: -22 * s, y: 40 * s))
+            p.addQuadCurve(to: CGPoint(x: -4 * s, y: 68 * s), controlPoint: CGPoint(x: -22 * s, y: 62 * s))
+            return p.cgPath }())
+        rim.strokeColor = SKColor(white: 1, alpha: 0.4); rim.lineWidth = 2; rim.fillColor = .clear
+        m.addChild(rim)
         let finial = SKShapeNode(circleOfRadius: 4 * s)
-        finial.fillColor = SKColor(red: 0.91, green: 0.78, blue: 0.29, alpha: 1)
+        finial.fillColor = SKColor(red: 0.95, green: 0.83, blue: 0.35, alpha: 1)
         finial.strokeColor = .clear
         finial.position = CGPoint(x: 0, y: 84 * s)
         m.addChild(finial)
-        let arch = SKShapeNode(rectOf: CGSize(width: 16 * s, height: 22 * s))
-        arch.fillColor = SKColor(red: 0.29, green: 0.22, blue: 0.16, alpha: 1)
+        // нуман хаалга (дулаан гэрэлтэй)
+        let arch = SKShapeNode(rectOf: CGSize(width: 16 * s, height: 22 * s), cornerRadius: 8 * s)
+        arch.fillColor = SKColor(red: 0.23, green: 0.16, blue: 0.09, alpha: 1)
         arch.strokeColor = .clear
         arch.position = CGPoint(x: 0, y: 11 * s)
         m.addChild(arch)
+        let warm = SKShapeNode(rectOf: CGSize(width: 9 * s, height: 14 * s), cornerRadius: 4 * s)
+        warm.fillColor = SKColor(red: 1, green: 0.75, blue: 0.35, alpha: 0.5)
+        warm.strokeColor = .clear
+        warm.position = CGPoint(x: 0, y: 8 * s)
+        m.addChild(warm)
         m.position = CGPoint(x: x, y: y)
         m.zPosition = zFor(y: y)
         world.addChild(m)
@@ -832,6 +983,19 @@ final class BattleScene: SKScene {
                                  size: CGSize(width: 14 * s, height: 74 * s))
         shaft.position = CGPoint(x: 0, y: 37 * s)
         m.addChild(shaft)
+        // цэнхэр хээт бүслүүрүүд
+        for i in 1..<5 {
+            let ring = SKSpriteNode(color: SKColor(red: 0.23, green: 0.56, blue: 0.72, alpha: 1),
+                                    size: CGSize(width: 14 * s, height: 2 * s))
+            ring.position = CGPoint(x: 0, y: CGFloat(i) * 15 * s)
+            m.addChild(ring)
+        }
+        // нуман цонх
+        let win = SKShapeNode(rectOf: CGSize(width: 6 * s, height: 9 * s), cornerRadius: 3 * s)
+        win.fillColor = SKColor(red: 0.16, green: 0.35, blue: 0.47, alpha: 1)
+        win.strokeColor = .clear
+        win.position = CGPoint(x: 0, y: 44 * s)
+        m.addChild(win)
         let balcony = SKSpriteNode(color: SKColor(red: 0.72, green: 0.60, blue: 0.41, alpha: 1),
                                    size: CGSize(width: 20 * s, height: 4 * s))
         balcony.position = CGPoint(x: 0, y: 60 * s)
@@ -846,6 +1010,10 @@ final class BattleScene: SKScene {
         top.fillColor = SKColor(red: 0.23, green: 0.56, blue: 0.72, alpha: 1)
         top.strokeColor = .clear
         m.addChild(top)
+        let crescent = SKSpriteNode(color: SKColor(red: 0.95, green: 0.83, blue: 0.35, alpha: 1),
+                                    size: CGSize(width: 2 * s, height: 8 * s))
+        crescent.position = CGPoint(x: 0, y: 96 * s)
+        m.addChild(crescent)
         m.position = CGPoint(x: x, y: y)
         m.zPosition = zFor(y: y)
         world.addChild(m)
@@ -878,6 +1046,19 @@ final class BattleScene: SKScene {
         roof.lineWidth = 1.5
         ger.addChild(roof)
 
+        // дээврийн хавирга (униа) — тооноос ханын зах руу
+        let apex = CGPoint(x: 0, y: wallH / 2 + 24 * s)
+        for i in -3...3 {
+            let rib = SKShapeNode(path: {
+                let p = UIBezierPath()
+                p.move(to: apex)
+                p.addLine(to: CGPoint(x: CGFloat(i) * 14 * s, y: wallH / 2 - 2))
+                return p.cgPath }())
+            rib.strokeColor = SKColor(red: 0.59, green: 0.50, blue: 0.36, alpha: 0.5)
+            rib.lineWidth = 1
+            ger.addChild(rib)
+        }
+
         let door = SKSpriteNode(color: banner, size: CGSize(width: 16 * s, height: 16 * s))
         door.position = CGPoint(x: 0, y: -wallH / 2 + 8 * s)
         ger.addChild(door)
@@ -889,6 +1070,29 @@ final class BattleScene: SKScene {
         toono.fillColor = .clear
         toono.position = CGPoint(x: 0, y: wallH / 2 + 24 * s)
         ger.addChild(toono)
+
+        // яндангийн утаа — аажим дээшилнэ
+        for i in 0..<3 {
+            let puff = SKShapeNode(circleOfRadius: (3 + CGFloat(i)) * s)
+            puff.fillColor = SKColor(white: 0.86, alpha: 0.16)
+            puff.strokeColor = .clear
+            puff.position = CGPoint(x: 0, y: wallH / 2 + 30 * s)
+            ger.addChild(puff)
+            let rise = SKAction.sequence([
+                .group([.moveBy(x: CGFloat(i - 1) * 6 * s, y: 26 * s, duration: 2.4), .fadeOut(withDuration: 2.4)]),
+                .removeFromParent()
+            ])
+            let spawn = SKAction.run { [weak ger] in
+                guard let ger = ger else { return }
+                let p2 = SKShapeNode(circleOfRadius: (3 + CGFloat(i)) * s)
+                p2.fillColor = SKColor(white: 0.86, alpha: 0.16); p2.strokeColor = .clear
+                p2.position = CGPoint(x: 0, y: wallH / 2 + 30 * s)
+                ger.addChild(p2)
+                p2.run(rise)
+            }
+            puff.run(rise)
+            ger.run(.repeatForever(.sequence([.wait(forDuration: 0.8), spawn, .wait(forDuration: 1.6)])))
+        }
 
         ger.position = CGPoint(x: x, y: y)
         ger.zPosition = zFor(y: y)
