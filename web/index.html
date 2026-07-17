@@ -75,9 +75,27 @@
 
   #announce { position:absolute; top:26%; left:50%; transform:translateX(-50%); font-size:clamp(18px, 4.5vw, 30px); font-weight:800; letter-spacing:3px; color:#f2c96a; text-shadow:0 2px 8px #000, 0 0 30px rgba(232,182,76,.4); opacity:0; transition:opacity .3s; white-space:nowrap; }
 
-  /* joystick */
-  #joy { position:absolute; width:110px; height:110px; border-radius:50%; border:2px solid rgba(240,226,196,.35); background:rgba(0,0,0,.25); display:none; }
-  #joyKnob { position:absolute; width:48px; height:48px; border-radius:50%; background:radial-gradient(circle at 35% 30%, rgba(242,201,106,.9), rgba(168,118,31,.9)); border:2px solid rgba(110,76,18,.8); left:31px; top:31px; }
+  /* joystick — үргэлж зүүн доод буланд харагдана (шинэ тоглогчид ойлгомжтой) */
+  #joy { position:absolute; left:calc(28px + env(safe-area-inset-left)); bottom:calc(30px + env(safe-area-inset-bottom));
+    width:124px; height:124px; border-radius:50%; border:2px solid rgba(240,226,196,.45);
+    background:radial-gradient(circle at 50% 42%, rgba(0,0,0,.30), rgba(0,0,0,.14));
+    box-shadow:0 4px 16px rgba(0,0,0,.45), inset 0 0 22px rgba(0,0,0,.35); pointer-events:none; }
+  #joyKnob { position:absolute; width:54px; height:54px; border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, rgba(242,201,106,.96), rgba(168,118,31,.96));
+    border:2px solid rgba(110,76,18,.85); left:35px; top:35px; box-shadow:0 2px 9px rgba(0,0,0,.5); }
+  /* чиглэлийн сум — жойстик дээр (эхний удаа хэрхэн хөдлөхийг заана) */
+  #joy::before { content:''; position:absolute; inset:14px; border-radius:50%;
+    background:
+      radial-gradient(circle at 50% 8%,  rgba(255,240,200,.5) 0 3px, transparent 4px),
+      radial-gradient(circle at 50% 92%, rgba(255,240,200,.5) 0 3px, transparent 4px),
+      radial-gradient(circle at 8% 50%,  rgba(255,240,200,.5) 0 3px, transparent 4px),
+      radial-gradient(circle at 92% 50%, rgba(255,240,200,.5) 0 3px, transparent 4px);
+    pointer-events:none; }
+  #joyCap { position:absolute; left:calc(20px + env(safe-area-inset-left)); bottom:calc(160px + env(safe-area-inset-bottom));
+    color:rgba(255,235,190,.92); font-size:12px; font-weight:700; letter-spacing:1px; text-shadow:0 1px 3px #000;
+    background:rgba(20,14,6,.55); padding:4px 10px; border-radius:11px; pointer-events:none;
+    transition:opacity .5s; white-space:nowrap; }
+  #joyCap.faded { opacity:0; }
 
   /* ХАР ХОРУМ — hub HUD */
   #hubHud { position:absolute; inset:0; display:none; pointer-events:none; z-index:5; }
@@ -93,10 +111,27 @@
     background:rgba(20,14,6,.86); border:1.5px solid #e8b64c; color:#ffe9b0; font-size:14px; font-weight:700;
     padding:9px 18px; border-radius:13px; box-shadow:0 4px 16px rgba(0,0,0,.5); text-align:center; animation:hubPulse 1.3s ease-in-out infinite; }
   @keyframes hubPulse { 0%,100%{ transform:translateX(-50%) scale(1);} 50%{ transform:translateX(-50%) scale(1.05);} }
+  #hubPrompt.hidden { display:none; }
   #hubExitBtn { position:absolute; top:calc(8px + env(safe-area-inset-top)); right:calc(10px + env(safe-area-inset-right));
     pointer-events:auto; background:rgba(20,14,6,.72); border:1px solid rgba(168,129,58,.7); color:#f0e2c4; font-size:13px; padding:5px 12px; border-radius:11px; cursor:pointer; }
-  #hubJoy { position:absolute; width:110px; height:110px; border-radius:50%; border:2px solid rgba(240,226,196,.35); background:rgba(0,0,0,.25); display:none; }
-  #hubJoyKnob { position:absolute; width:48px; height:48px; border-radius:50%; background:radial-gradient(circle at 35% 30%, rgba(242,201,106,.9), rgba(168,118,31,.9)); border:2px solid rgba(110,76,18,.8); left:31px; top:31px; }
+  #hubJoy { position:absolute; left:calc(28px + env(safe-area-inset-left)); bottom:calc(30px + env(safe-area-inset-bottom));
+    width:124px; height:124px; border-radius:50%; border:2px solid rgba(240,226,196,.45);
+    background:radial-gradient(circle at 50% 42%, rgba(0,0,0,.30), rgba(0,0,0,.14));
+    box-shadow:0 4px 16px rgba(0,0,0,.45), inset 0 0 22px rgba(0,0,0,.35); pointer-events:none; display:block; }
+  #hubJoyKnob { position:absolute; width:54px; height:54px; border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, rgba(242,201,106,.96), rgba(168,118,31,.96));
+    border:2px solid rgba(110,76,18,.85); left:35px; top:35px; box-shadow:0 2px 9px rgba(0,0,0,.5); }
+  #hubJoy::before { content:''; position:absolute; inset:14px; border-radius:50%;
+    background:
+      radial-gradient(circle at 50% 8%,  rgba(255,240,200,.5) 0 3px, transparent 4px),
+      radial-gradient(circle at 50% 92%, rgba(255,240,200,.5) 0 3px, transparent 4px),
+      radial-gradient(circle at 8% 50%,  rgba(255,240,200,.5) 0 3px, transparent 4px),
+      radial-gradient(circle at 92% 50%, rgba(255,240,200,.5) 0 3px, transparent 4px);
+    pointer-events:none; }
+  #hubJoyCap { position:absolute; left:calc(20px + env(safe-area-inset-left)); bottom:calc(160px + env(safe-area-inset-bottom));
+    color:rgba(255,235,190,.92); font-size:12px; font-weight:700; letter-spacing:1px; text-shadow:0 1px 3px #000;
+    background:rgba(20,14,6,.55); padding:4px 10px; border-radius:11px; pointer-events:none; transition:opacity .5s; white-space:nowrap; }
+  #hubJoyCap.faded { opacity:0; }
   .hubPanel .qcard { background:linear-gradient(180deg,rgba(46,34,16,.9),rgba(28,20,8,.9)); border:1px solid rgba(168,129,58,.5); border-radius:12px; padding:11px 13px; margin:7px auto; max-width:520px; text-align:left; }
   .hubPanel .qcard.locked { opacity:.6; }
   .hubPanel .qcard.done { border-color:#4fbf6a; }
@@ -355,6 +390,7 @@
   </div>
   <div id="hubPrompt" class="hidden"></div>
   <button id="hubExitBtn">✕ Цэс</button>
+  <div id="hubJoyCap">🕹 Чирж хот дотор алх</div>
   <div id="hubJoy"><div id="hubJoyKnob"></div></div>
 </div>
 
@@ -456,6 +492,7 @@
   <button id="muteBtn">🔊</button>
   <button id="exitBtn">✕</button>
   <div id="announce"></div>
+  <div id="joyCap">🕹 Чирж хөдөл</div>
   <div id="joy"><div id="joyKnob"></div></div>
   <div id="skills">
     <button class="skillBtn" id="btnS2">
@@ -1227,7 +1264,7 @@ function setState(s){
   $('codexScreen').classList.toggle('hidden', s!=='codex');
   $('campScreen').classList.toggle('hidden', s!=='camp');
   $('hubHud').classList.toggle('on', s==='hub');
-  if(s!=='hub'){ hideHubPanels && hideHubPanels(); const p=$('hubPrompt'); if(p) p.classList.add('hidden'); const hj=$('hubJoy'); if(hj) hj.style.display='none'; }
+  if(s!=='hub'){ hideHubPanels && hideHubPanels(); const p=$('hubPrompt'); if(p) p.classList.add('hidden'); if(typeof hubJoyHome==='function') hubJoyHome(); }
   $('hud').classList.toggle('on', s==='play');
   $('rotate').classList.toggle('armed', s==='play' || s==='hub');
   if(s==='menu') updateStoryBadge();
@@ -1976,22 +2013,28 @@ const keys = {};
 
 function joyStart(x, y){
   joyBase = {x, y};
-  joyEl.style.display = 'block';
-  joyEl.style.left = (x-55)+'px';
-  joyEl.style.top  = (y-55)+'px';
-  knobEl.style.left='31px'; knobEl.style.top='31px';
+  // жойстикийг хурууны байрлал руу зөөнө (floating), гэхдээ үргэлж харагдана
+  joyEl.style.left = (x-62)+'px';
+  joyEl.style.top  = (y-62)+'px';
+  joyEl.style.bottom = 'auto';
+  knobEl.style.left='35px'; knobEl.style.top='35px';
+  const cap=$('joyCap'); if(cap) cap.classList.add('faded');
 }
 function joyMove(x, y){
   let dx = x-joyBase.x, dy = y-joyBase.y;
-  const d = Math.hypot(dx,dy), max = 48;
+  const d = Math.hypot(dx,dy), max = 44;
   if(d > max){ dx = dx/d*max; dy = dy/d*max; }
   joyVec = {x: dx/max, y: dy/max};
-  knobEl.style.left = (31+dx)+'px';
-  knobEl.style.top  = (31+dy)+'px';
+  knobEl.style.left = (35+dx)+'px';
+  knobEl.style.top  = (35+dy)+'px';
+}
+function joyHome(){
+  joyEl.style.left = ''; joyEl.style.top = ''; joyEl.style.bottom = '';
+  knobEl.style.left='35px'; knobEl.style.top='35px';
 }
 function joyEnd(){
   joyId = null; joyVec = {x:0,y:0};
-  joyEl.style.display = 'none';
+  joyHome();
 }
 
 window.addEventListener('touchstart', e=>{
@@ -3834,9 +3877,10 @@ function refreshHubHud(){
 // ---------- hub joystick (тусдаа #hubJoy) ----------
 const hubJoyEl = $('hubJoy'), hubKnob = $('hubJoyKnob');
 let hubJoyId = null, hubJoyBase = {x:0,y:0}, hubJoyVec = {x:0,y:0};
-function hubJoyStart(x,y){ hubJoyBase={x,y}; hubJoyEl.style.display='block'; hubJoyEl.style.left=(x-55)+'px'; hubJoyEl.style.top=(y-55)+'px'; hubKnob.style.left='31px'; hubKnob.style.top='31px'; }
-function hubJoyMove(x,y){ let dx=x-hubJoyBase.x, dy=y-hubJoyBase.y; const max=48, d=Math.hypot(dx,dy); if(d>max){ dx=dx/d*max; dy=dy/d*max; } hubJoyVec={x:dx/max,y:dy/max}; hubKnob.style.left=(31+dx)+'px'; hubKnob.style.top=(31+dy)+'px'; }
-function hubJoyEnd(){ hubJoyId=null; hubJoyVec={x:0,y:0}; hubJoyEl.style.display='none'; }
+function hubJoyStart(x,y){ hubJoyBase={x,y}; hubJoyEl.style.left=(x-62)+'px'; hubJoyEl.style.top=(y-62)+'px'; hubJoyEl.style.bottom='auto'; hubKnob.style.left='35px'; hubKnob.style.top='35px'; const c=$('hubJoyCap'); if(c) c.classList.add('faded'); }
+function hubJoyMove(x,y){ let dx=x-hubJoyBase.x, dy=y-hubJoyBase.y; const max=44, d=Math.hypot(dx,dy); if(d>max){ dx=dx/d*max; dy=dy/d*max; } hubJoyVec={x:dx/max,y:dy/max}; hubKnob.style.left=(35+dx)+'px'; hubKnob.style.top=(35+dy)+'px'; }
+function hubJoyHome(){ hubJoyEl.style.left=''; hubJoyEl.style.top=''; hubJoyEl.style.bottom=''; hubKnob.style.left='35px'; hubKnob.style.top='35px'; }
+function hubJoyEnd(){ hubJoyId=null; hubJoyVec={x:0,y:0}; hubJoyHome(); }
 window.addEventListener('touchstart', e=>{
   if(state!=='hub' || hubPanelOpen) return;
   for(const t of e.changedTouches){
