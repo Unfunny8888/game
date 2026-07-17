@@ -117,4 +117,77 @@ enum Progress {
         UserDefaults.standard.set(index + 1, forKey: campaignKey)
         return true
     }
+
+    // MARK: - Хар Хорум төв хот (MMO-lite lobby)
+
+    private static let hubLevelKey = "im_hub_level"
+    private static let hubXpKey = "im_hub_xp"
+    private static let questsDoneKey = "im_quests_done"
+    private static let itemsKey = "im_items"
+    private static let partyKey = "im_party"
+
+    /// Хотын зэрэг (доод тал нь 1)
+    static var hubLevel: Int {
+        get { max(1, UserDefaults.standard.integer(forKey: hubLevelKey)) }
+        set { UserDefaults.standard.set(max(1, newValue), forKey: hubLevelKey) }
+    }
+    static var hubXp: Int {
+        get { UserDefaults.standard.integer(forKey: hubXpKey) }
+        set { UserDefaults.standard.set(max(0, newValue), forKey: hubXpKey) }
+    }
+    static var questsDone: [String] { UserDefaults.standard.stringArray(forKey: questsDoneKey) ?? [] }
+    static func questDone(_ id: String) -> Bool { questsDone.contains(id) }
+    static var items: [String] { UserDefaults.standard.stringArray(forKey: itemsKey) ?? [] }
+    static func ownsItem(_ id: String) -> Bool { items.contains(id) }
+    static var party: [String] { UserDefaults.standard.stringArray(forKey: partyKey) ?? [] }
+    static var partySize: Int { 1 + party.count }
+    static func isRecruited(_ id: String) -> Bool { party.contains(id) }
+
+    /// Багийн гишүүн элсүүлнэ (хангалттай алттай бол). Амжилттай бол true.
+    @discardableResult
+    static func recruit(_ id: String, cost: Int) -> Bool {
+        guard !isRecruited(id), gold >= cost else { return false }
+        gold -= cost
+        var arr = party; arr.append(id)
+        UserDefaults.standard.set(arr, forKey: partyKey)
+        return true
+    }
+
+    /// Зэвсэг/хуяг худалдаж авна. Амжилттай бол true.
+    @discardableResult
+    static func buyItem(_ id: String, cost: Int) -> Bool {
+        guard !ownsItem(id), gold >= cost else { return false }
+        gold -= cost
+        var arr = items; arr.append(id)
+        UserDefaults.standard.set(arr, forKey: itemsKey)
+        return true
+    }
+
+    /// Эд өлгийн нийт бонусын үржүүлэгчид (тулаанд player-т нэмэгдэнэ)
+    static var itemDamageMul: CGFloat { 1 + items.compactMap { HubData.shopItem($0)?.dmg }.reduce(0, +) }
+    static var itemHpMul: CGFloat { 1 + items.compactMap { HubData.shopItem($0)?.hp }.reduce(0, +) }
+    static var itemSpeedMul: CGFloat { 1 + items.compactMap { HubData.shopItem($0)?.spd }.reduce(0, +) }
+
+    /// Даалгавар гүйцэтгэвэл туршлага/зэвсэг олгож зэрэг ахиулна (алтыг тусад нь өгнө).
+    /// Дэлгэцэд харуулах шагналын мөрийг буцаана.
+    static func completeHubQuest(_ q: HubQuest) -> String {
+        let already = questDone(q.id)
+        var xp = hubXp + q.xp
+        var lv = hubLevel
+        var leveled = false
+        while xp >= HubData.xpForLevel(lv) { xp -= HubData.xpForLevel(lv); lv += 1; leveled = true }
+        hubXp = xp
+        hubLevel = lv
+        if !already {
+            var arr = questsDone; arr.append(q.id)
+            UserDefaults.standard.set(arr, forKey: questsDoneKey)
+        }
+        var itemLine = ""
+        if !q.item.isEmpty, !ownsItem(q.item) {
+            var arr = items; arr.append(q.item)
+            UserDefaults.standard.set(arr, forKey: itemsKey)
+            if let it = HubData.shopItem(q.item) { itemLine = "\n🎁 Шагнал: \(it.icon) \(it.name) (\(it.desc))" }
+        }
+        return "⭐ +\(q.xp) туршлага" + (leveled ? " · ЗЭРЭГ АХЛАА → \(lv)!" : "") + itemLine
+    }
 }

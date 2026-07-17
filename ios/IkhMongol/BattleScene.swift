@@ -456,10 +456,15 @@ final class BattleScene: SKScene {
             player.dmg = (def.dmg * (1 + 0.03 * CGFloat(mastery))).rounded()
             player.updateBars()
         }
-        // буурийн шинэчлэл: адууны сүрэг → хурд, дархны зэвсэг → хүч (PvP-д үйлчлэхгүй)
+        // буурийн шинэчлэл + Хар Хорумын зэвсэг: хурд, хүч, амин хүч (PvP-д үйлчлэхгүй)
         if !isPvp {
-            player.moveSpeed = (player.moveSpeed * Progress.horseSpeedMul).rounded()
-            player.dmg = (player.dmg * Progress.ironDamageMul).rounded()
+            player.moveSpeed = (player.moveSpeed * Progress.horseSpeedMul * Progress.itemSpeedMul).rounded()
+            player.dmg = (player.dmg * Progress.ironDamageMul * Progress.itemDamageMul).rounded()
+            if Progress.itemHpMul > 1 {
+                player.maxHp = (player.maxHp * Progress.itemHpMul).rounded()
+                player.hp = player.maxHp
+                player.updateBars()
+            }
         }
         player.position = CGPoint(x: World.pGateX + 130, y: World.laneY)
         world.addChild(player)
@@ -1400,19 +1405,31 @@ final class BattleScene: SKScene {
 
     /// Нөхдийн отряд — тоглогчийг дагаж хамт байлдах жанжид (V2 co-op мэдрэмжийн прототип).
     private func setupWarband(level: Int) {
-        let mates = GameData.heroes.filter { $0.id != GameData.heroes[heroIndex].id && $0.id != "chinggis" }.prefix(2)
-        let offs = [CGPoint(x: -48, y: 48), CGPoint(x: -48, y: -48)]
-        for (i, h) in mates.enumerated() {
-            let ranged = h.range > 150
-            let hp = 720 + CGFloat(level) * 42
-            let c = Unit(kind: .minion, team: .mongol, displayName: h.name,
+        // Хар Хорумын даалгаварт элссэн багийн гишүүд гарна (party-1); бусад үед 2 жанжин.
+        var mates: [(name: String, ranged: Bool, hp: CGFloat, dmg: CGFloat)] = []
+        if let q = HubContext.activeQuest {
+            let count = max(0, q.partyReq - 1)
+            for r in Progress.party.compactMap({ HubData.recruit($0) }).prefix(count) {
+                mates.append((r.name, r.ranged, r.hp, r.dmg))
+            }
+        } else {
+            for h in GameData.heroes.filter({ $0.id != GameData.heroes[heroIndex].id && $0.id != "chinggis" }).prefix(2) {
+                mates.append((h.name, h.range > 150, 720, 42))
+            }
+        }
+        let offs = [CGPoint(x: -48, y: 48), CGPoint(x: -48, y: -48),
+                    CGPoint(x: -92, y: 0), CGPoint(x: -92, y: -72)]
+        for (i, m) in mates.enumerated() {
+            let ranged = m.ranged
+            let hp = m.hp + CGFloat(level) * 42
+            let c = Unit(kind: .minion, team: .mongol, displayName: m.name,
                          radius: 18, hp: hp,
-                         dmg: ((42 + CGFloat(level) * 2.6) * Progress.ironDamageMul).rounded(),
+                         dmg: ((m.dmg + CGFloat(level) * 2.6) * Progress.ironDamageMul).rounded(),
                          range: ranged ? 200 : 64,
                          atkCd: 0.85, moveSpeed: (178 * Progress.horseSpeedMul).rounded(),
                          aggro: 250, archer: ranged)
-            let off = offs[i]
-            c.markCompanion(name: h.name, offset: off)
+            let off = offs[i % offs.count]
+            c.markCompanion(name: m.name, offset: off)
             c.position = CGPoint(x: player.position.x + off.x,
                                  y: clampF(player.position.y + off.y, World.groundBottom, World.groundTop))
             c.face = 1
@@ -2773,9 +2790,17 @@ final class BattleScene: SKScene {
         let warband = units.filter { $0.isCompanion }
         let warbandAlive = warband.filter { !$0.isDead }.count
 
-        // Аян дайн: анх удаа даван туулбал түвшин ахьж, бонус алт өгнө
+        // Хар Хорумын даалгавар: туршлага, алт, зэвсэг олгож, зэрэг ахиулна
+        let hubActive = HubContext.activeQuest != nil
+        var hubLine: String? = nil
+        if let q = HubContext.activeQuest, win {
+            earned += q.gold
+            hubLine = Progress.completeHubQuest(q)
+        }
+
+        // Аян дайн: анх удаа даван туулбал түвшин ахьж, бонус алт өгнө (Хар Хорумд оролцохгүй)
         var campaignCleared: (index: Int, reward: Int, last: Bool)? = nil
-        if let level = campaignLevel, win, Progress.clearCampaignLevel(level) {
+        if let level = campaignLevel, win, !hubActive, Progress.clearCampaignLevel(level) {
             let L = GameData.campaign[level]
             earned += L.reward
             campaignCleared = (level, L.reward, level + 1 >= GameData.campaign.count)
@@ -2808,7 +2833,8 @@ final class BattleScene: SKScene {
                                campaignLevel: campaignLevel, campaignLine: campaignLine,
                                cityTitle: campaignLevel.map { GameData.campaign[$0].title },
                                lootHorses: lootHorses, lootIron: lootIron,
-                               warbandAlive: warbandAlive, warbandTotal: warband.count)
+                               warbandAlive: warbandAlive, warbandTotal: warband.count,
+                               hubActive: hubActive, hubLine: hubLine)
         run(.sequence([
             .wait(forDuration: 0.9),
             .run { [weak self] in
@@ -2944,6 +2970,9 @@ struct MatchStats {
     var lootIron: Int = 0
     var warbandAlive: Int = 0
     var warbandTotal: Int = 0
+    // Хар Хорумын даалгавар
+    var hubActive: Bool = false
+    var hubLine: String? = nil
 }
 
 // MARK: - PvP мессеж хүлээн авах (хост)

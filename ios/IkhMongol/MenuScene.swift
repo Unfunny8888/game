@@ -66,30 +66,34 @@ final class MenuScene: SKScene {
         tagline.position = CGPoint(x: cx, y: size.height * 0.45)
         c.addChild(tagline)
 
-        let campaign = UIFactory.button(text: "⚔️ АЯН ДАЙН", name: "campaign")
-        campaign.position = CGPoint(x: cx, y: size.height * 0.345)
+        let hub = UIFactory.button(text: "🏛 ХАР ХОРУМ — ТӨВ ХОТ", name: "hub", width: 300, height: 54)
+        hub.position = CGPoint(x: cx, y: size.height * 0.37)
+        c.addChild(hub)
+
+        let campaign = UIFactory.button(text: "⚔️ АЯН ДАЙН", name: "campaign", width: 200, height: 40, primary: false)
+        campaign.position = CGPoint(x: cx - 110, y: size.height * 0.265)
         c.addChild(campaign)
 
         let play = UIFactory.button(text: "Чөлөөт тулаан", name: "play", width: 200, height: 40, primary: false)
-        play.position = CGPoint(x: cx - 110, y: size.height * 0.215)
+        play.position = CGPoint(x: cx + 110, y: size.height * 0.265)
         c.addChild(play)
 
         let pvp = UIFactory.button(text: "🤝 НАЙЗТАЙГАА", name: "pvp", width: 200, height: 40, primary: false)
-        pvp.position = CGPoint(x: cx + 110, y: size.height * 0.215)
+        pvp.position = CGPoint(x: cx - 110, y: size.height * 0.185)
         c.addChild(pvp)
 
         let camp = UIFactory.button(text: "🏕️ БУУРЬ", name: "camp", width: 200, height: 40, primary: false)
-        camp.position = CGPoint(x: cx - 110, y: size.height * 0.13)
+        camp.position = CGPoint(x: cx + 110, y: size.height * 0.185)
         c.addChild(camp)
 
         let unread = GameData.unreadChapterCount
         let storyText = unread > 0 ? "📜 ТҮҮХ (\(unread))" : "📜 ТҮҮХ"
         let story = UIFactory.button(text: storyText, name: "story", width: 200, height: 40, primary: false)
-        story.position = CGPoint(x: cx + 110, y: size.height * 0.13)
+        story.position = CGPoint(x: cx - 110, y: size.height * 0.105)
         c.addChild(story)
 
-        let codex = UIFactory.button(text: "📚 НЭВТЭРХИЙ ТОЛЬ", name: "codex", width: 240, height: 40, primary: false)
-        codex.position = CGPoint(x: cx, y: size.height * 0.045)
+        let codex = UIFactory.button(text: "📚 НЭВТЭРХИЙ", name: "codex", width: 200, height: 40, primary: false)
+        codex.position = CGPoint(x: cx + 110, y: size.height * 0.105)
         c.addChild(codex)
     }
 
@@ -166,7 +170,13 @@ final class MenuScene: SKScene {
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let t = touches.first else { return }
         let name = UIFactory.nodeName(at: t.location(in: self), in: self)
-        if name == "campaign", let view = view {
+        if name == "hub", let view = view {
+            Haptics.skill()
+            Audio.shared.play("tap")
+            let hub = HubScene(size: size)
+            hub.scaleMode = .resizeFill
+            view.presentScene(hub, transition: .fade(withDuration: 0.4))
+        } else if name == "campaign", let view = view {
             Haptics.skill()
             Audio.shared.play("tap")
             let camp = CampaignScene(size: size)

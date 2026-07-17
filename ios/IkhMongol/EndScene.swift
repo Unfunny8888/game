@@ -45,9 +45,11 @@ final class EndScene: SKScene {
         c.addChild(bg)
 
         let cx = size.width / 2
-        let isConquest = stats.win && stats.campaignLevel != nil
+        let isHub = stats.hubActive
+        let isConquest = stats.win && stats.campaignLevel != nil && !isHub
 
-        let title = UIFactory.label(isConquest ? "⚔️ ЭЗЛЭГДЛЭЭ" : (stats.win ? "ЯЛАЛТ!" : "ЯЛАГДАЛ"),
+        let title = UIFactory.label(isHub ? (stats.win ? "⚔️ ДААЛГАВАР ДУУСЛАА" : "ЯЛАГДАЛ")
+                                    : (isConquest ? "⚔️ ЭЗЛЭГДЛЭЭ" : (stats.win ? "ЯЛАЛТ!" : "ЯЛАГДАЛ")),
                                     font: Fonts.heavy,
                                     size: isConquest ? min(44, size.width * 0.08) : min(58, size.width * 0.1),
                                     color: stats.win
@@ -62,22 +64,27 @@ final class EndScene: SKScene {
             celebrateConquest(in: c)
         }
 
-        let flavour = isConquest
-            ? "\(stats.cityTitle ?? "Хот") хотыг эзлэн авлаа!"
-            : (stats.win
-                ? "Мөнх тэнгэрийн хүчин дор дайсны хаалга нурлаа!"
-                : "Их хаалга нурсан ч дайн дуусаагүй...")
+        let flavour = isHub
+            ? (stats.win ? "«\(stats.cityTitle ?? "Даалгавар")» гүйцэтгэлээ!" : "Багаа хүчирхэгжүүлж дахин оролдоорой.")
+            : (isConquest
+                ? "\(stats.cityTitle ?? "Хот") хотыг эзлэн авлаа!"
+                : (stats.win
+                    ? "Мөнх тэнгэрийн хүчин дор дайсны хаалга нурлаа!"
+                    : "Их хаалга нурсан ч дайн дуусаагүй..."))
         let mins = stats.seconds / 60
         let secs = stats.seconds % 60
         let modeName = stats.campaignLevel.map { "\($0 + 1)-р түвшин" }
             ?? GameData.difficulties[stats.difficultyIndex].name
         var statsText = "\(flavour)\nАлалт: \(stats.kills)  ·  Түвшин: \(stats.level)  ·  Хугацаа: \(mins):\(String(format: "%02d", secs))  ·  \(modeName)"
         statsText += "\n🪙 Олсон алт: +\(stats.goldEarned)  ·  Нийт: \(stats.totalGold)"
-        if isConquest && (stats.lootHorses > 0 || stats.lootIron > 0) {
+        if (isConquest || isHub) && (stats.lootHorses > 0 || stats.lootIron > 0) {
             statsText += "\n🐎 +\(stats.lootHorses) адуу · ⚒️ +\(stats.lootIron) төмөр (буурьт цуглав)"
         }
         if let line = stats.campaignLine {
             statsText += "\n\(line)"
+        }
+        if let hl = stats.hubLine {
+            statsText += "\n\(hl)"
         }
         if stats.gainedStar {
             let hero = GameData.heroes[stats.heroIndex]
@@ -100,7 +107,17 @@ final class EndScene: SKScene {
         statsL.position = CGPoint(x: cx, y: size.height * (isConquest ? 0.40 : 0.44))
         c.addChild(statsL)
 
-        if stats.isPvp {
+        if isHub {
+            // Хар Хорумын даалгавар: төв хот руу буцах (ялбал), эс бөгөөс дахин оролдох
+            let toHub = UIFactory.button(text: "🏛 ХАР ХОРУМ РУУ", name: "hub", width: 250, height: 50)
+            toHub.position = CGPoint(x: stats.win ? cx : cx - 140, y: size.height * 0.2)
+            c.addChild(toHub)
+            if !stats.win {
+                let retry = UIFactory.button(text: "ДАХИН ОРОЛДОХ", name: "againHub", width: 210, height: 50, primary: false)
+                retry.position = CGPoint(x: cx + 140, y: size.height * 0.2)
+                c.addChild(retry)
+            }
+        } else if stats.isPvp {
             // PvP: дахин тоглохын тулд лобби руу, эсвэл цэс рүү
             let again = UIFactory.button(text: "🤝 ДАХИН ХОЛБОГДОХ", name: "pvpAgain", width: 250, height: 50)
             again.position = CGPoint(x: cx - 140, y: size.height * 0.2)
@@ -249,7 +266,21 @@ final class EndScene: SKScene {
             return
         }
 
-        if name == "again" {
+        if name == "hub" {
+            Haptics.skill()
+            Audio.shared.play("tap")
+            let hub = HubScene(size: size)
+            hub.scaleMode = .resizeFill
+            view.presentScene(hub, transition: .fade(withDuration: 0.4))
+        } else if name == "againHub", let level = stats.campaignLevel {
+            Haptics.skill()
+            Audio.shared.play("tap")
+            // Хар Хорумын даалгаврыг дахин оролдоно (HubContext хэвээр)
+            let battle = BattleScene(size: size, heroIndex: stats.heroIndex,
+                                     difficultyIndex: stats.difficultyIndex,
+                                     campaignLevel: level)
+            view.presentScene(battle, transition: .fade(withDuration: 0.5))
+        } else if name == "again" {
             Haptics.skill()
             Audio.shared.play("tap")
             if let level = stats.campaignLevel {
