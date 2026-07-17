@@ -15,3 +15,16 @@ build/
 
 # Node (web demo tooling)
 node_modules/
+
+# Unity (v2/unity) — generated, not committed
+v2/unity/[Ll]ibrary/
+v2/unity/[Tt]emp/
+v2/unity/[Oo]bj/
+v2/unity/[Ll]ogs/
+v2/unity/[Uu]serSettings/
+v2/unity/[Bb]uild/
+v2/unity/[Bb]uilds/
+v2/unity/.vs/
+v2/unity/*.csproj
+v2/unity/*.sln
+v2/unity/*.user
