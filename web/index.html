@@ -79,6 +79,40 @@
   #joy { position:absolute; width:110px; height:110px; border-radius:50%; border:2px solid rgba(240,226,196,.35); background:rgba(0,0,0,.25); display:none; }
   #joyKnob { position:absolute; width:48px; height:48px; border-radius:50%; background:radial-gradient(circle at 35% 30%, rgba(242,201,106,.9), rgba(168,118,31,.9)); border:2px solid rgba(110,76,18,.8); left:31px; top:31px; }
 
+  /* ХАР ХОРУМ — hub HUD */
+  #hubHud { position:absolute; inset:0; display:none; pointer-events:none; z-index:5; }
+  #hubHud.on { display:block; }
+  #hubTop { position:absolute; top:calc(8px + env(safe-area-inset-top)); left:calc(10px + env(safe-area-inset-left)); display:flex; flex-direction:column; gap:6px; }
+  #hubStats { display:flex; gap:7px; flex-wrap:wrap; }
+  .hubBadge { background:rgba(20,14,6,.72); border:1px solid rgba(168,129,58,.7); color:#f0e2c4; font-size:12px; padding:3px 9px; border-radius:11px; }
+  .hubBadge b { color:#ffd873; }
+  #hubXpBar { position:relative; width:210px; height:12px; background:rgba(20,14,6,.72); border:1px solid rgba(168,129,58,.6); border-radius:7px; overflow:hidden; }
+  #hubXpFill { position:absolute; left:0; top:0; height:100%; width:0%; background:linear-gradient(90deg,#8ce87a,#4fbf6a); transition:width .4s; }
+  #hubXpTxt { position:absolute; inset:0; text-align:center; font-size:9px; line-height:12px; color:#fff; text-shadow:0 1px 2px #000; letter-spacing:.5px; }
+  #hubPrompt { position:absolute; left:50%; bottom:96px; transform:translateX(-50%); pointer-events:none;
+    background:rgba(20,14,6,.86); border:1.5px solid #e8b64c; color:#ffe9b0; font-size:14px; font-weight:700;
+    padding:9px 18px; border-radius:13px; box-shadow:0 4px 16px rgba(0,0,0,.5); text-align:center; animation:hubPulse 1.3s ease-in-out infinite; }
+  @keyframes hubPulse { 0%,100%{ transform:translateX(-50%) scale(1);} 50%{ transform:translateX(-50%) scale(1.05);} }
+  #hubExitBtn { position:absolute; top:calc(8px + env(safe-area-inset-top)); right:calc(10px + env(safe-area-inset-right));
+    pointer-events:auto; background:rgba(20,14,6,.72); border:1px solid rgba(168,129,58,.7); color:#f0e2c4; font-size:13px; padding:5px 12px; border-radius:11px; cursor:pointer; }
+  #hubJoy { position:absolute; width:110px; height:110px; border-radius:50%; border:2px solid rgba(240,226,196,.35); background:rgba(0,0,0,.25); display:none; }
+  #hubJoyKnob { position:absolute; width:48px; height:48px; border-radius:50%; background:radial-gradient(circle at 35% 30%, rgba(242,201,106,.9), rgba(168,118,31,.9)); border:2px solid rgba(110,76,18,.8); left:31px; top:31px; }
+  .hubPanel .qcard { background:linear-gradient(180deg,rgba(46,34,16,.9),rgba(28,20,8,.9)); border:1px solid rgba(168,129,58,.5); border-radius:12px; padding:11px 13px; margin:7px auto; max-width:520px; text-align:left; }
+  .hubPanel .qcard.locked { opacity:.6; }
+  .hubPanel .qcard.done { border-color:#4fbf6a; }
+  .hubPanel .qhead { display:flex; align-items:center; gap:8px; }
+  .hubPanel .qhead .qico { font-size:20px; }
+  .hubPanel .qtitle { font-weight:700; color:#f0e2c4; font-size:15px; }
+  .hubPanel .qgiver { font-size:11px; color:#c9a86a; }
+  .hubPanel .qbrief { font-size:12px; color:#b8a684; margin:5px 0; line-height:1.35; }
+  .hubPanel .qmeta { display:flex; gap:8px; flex-wrap:wrap; font-size:11px; margin:5px 0; }
+  .hubPanel .qtag { background:rgba(0,0,0,.3); border:1px solid rgba(168,129,58,.4); border-radius:8px; padding:2px 8px; color:#d8c69a; }
+  .hubPanel .qstatus { font-size:12px; margin-top:3px; }
+  .hubPanel .qbtn { margin-top:6px; padding:7px 16px; border-radius:9px; border:1px solid #a8813a; background:linear-gradient(180deg,#3a2c12,#241a08); color:#f0e2c4; font-weight:700; cursor:pointer; }
+  .hubPanel .qbtn:disabled { opacity:.45; cursor:not-allowed; }
+  .hubPanel .qbtn.go { background:linear-gradient(180deg,#7a5a1e,#4a3410); border-color:#e8b64c; }
+  .hubList { max-height:62vh; overflow-y:auto; width:100%; }
+
   /* ML-маягийн товчнууд: том довтлох товч буланд, жижиг чадварууд нумд */
   #skills { position:absolute; right:calc(14px + env(safe-area-inset-right)); bottom:calc(14px + env(safe-area-inset-bottom)); width:200px; height:170px; pointer-events:auto; }
   .skillBtn { position:absolute; width:56px; height:56px; border-radius:50%; border:2px solid #a8813a; overflow:hidden;
@@ -278,8 +312,9 @@
   <h1 class="title">ИХ МОНГОЛ</h1>
   <div class="subtitle">ТУЛААНЫ ТАЛБАР</div>
   <div class="tagline">Мөнх тэнгэрийн хүчин дор — Чингис хааны дайчдыг удирдан, Хорезмын их хаалгыг нурааж, талбарыг эзэгнэ!</div>
-  <button class="btn" id="campaignBtn">⚔️ АЯН ДАЙН</button>
+  <button class="btn" id="hubBtn">🏛 ХАР ХОРУМ — ТӨВ ХОТ</button>
   <div style="display:flex; gap:12px; margin-top:14px; flex-wrap:wrap; justify-content:center">
+    <button class="btn secondary" id="campaignBtn">⚔️ АЯН ДАЙН</button>
     <button class="btn secondary" id="coopBtn">👥 2 ТОГЛОГЧ</button>
     <button class="btn secondary" id="playBtn">Чөлөөт тулаан</button>
     <button class="btn secondary" id="campBtn">🏕️ БУУРЬ</button>
@@ -305,6 +340,46 @@
   <div id="campRes"></div>
   <div id="campList"></div>
   <button class="btn secondary" id="campBackBtn" style="margin-top:10px">БУЦАХ</button>
+</div>
+
+<!-- ================= ХАР ХОРУМ — hub HUD (canvas дээр давхарлана) ================= -->
+<div id="hubHud">
+  <div id="hubTop">
+    <div id="hubStats">
+      <span class="hubBadge">🏛 Хар Хорум</span>
+      <span class="hubBadge">⭐ Зэрэг <b id="hubLevelN">1</b></span>
+      <span class="hubBadge">🪙 <b id="hubGoldN">0</b></span>
+      <span class="hubBadge">👥 Баг <b id="hubPartyN">1</b></span>
+    </div>
+    <div id="hubXpBar"><div id="hubXpFill"></div><span id="hubXpTxt"></span></div>
+  </div>
+  <div id="hubPrompt" class="hidden"></div>
+  <button id="hubExitBtn">✕ Цэс</button>
+  <div id="hubJoy"><div id="hubJoyKnob"></div></div>
+</div>
+
+<!-- ХАР ХОРУМ — quest board -->
+<div id="hubQuestPanel" class="screen hidden hubPanel">
+  <h2 style="letter-spacing:3px;color:#e8b64c">📜 Зарлигийн самбар</h2>
+  <div style="font-size:11px;color:#8a7550;margin:2px 0 4px">Түүхэн даалгавар аваарай · Зэрэг ба багийн хэмжээгээр нээгдэнэ</div>
+  <div id="hubQuestList" class="hubList"></div>
+  <button class="btn secondary hubClose" style="margin-top:8px">ХААХ</button>
+</div>
+
+<!-- ХАР ХОРУМ — Нөхдийн өргөө (party recruit) -->
+<div id="hubPartyPanel" class="screen hidden hubPanel">
+  <h2 style="letter-spacing:3px;color:#e8b64c">🤝 Нөхдийн өргөө</h2>
+  <div style="font-size:11px;color:#8a7550;margin:2px 0 4px">Жанжид элсүүлж багаа бүрдүүл · Хэцүү даалгавар олон гишүүн шаардана</div>
+  <div id="hubPartyList" class="hubList"></div>
+  <button class="btn secondary hubClose" style="margin-top:8px">ХААХ</button>
+</div>
+
+<!-- ХАР ХОРУМ — Дархны газар (supply / weapon shop) -->
+<div id="hubShopPanel" class="screen hidden hubPanel">
+  <h2 style="letter-spacing:3px;color:#e8b64c">⚒️ Дархны газар</h2>
+  <div style="font-size:11px;color:#8a7550;margin:2px 0 4px">Зэвсэг хуяг худалдан аваарай · Байнгын хүчийг нэмнэ</div>
+  <div id="hubShopList" class="hubList"></div>
+  <button class="btn secondary hubClose" style="margin-top:8px">ХААХ</button>
 </div>
 
 <!-- ================= CAMPAIGN (MAP) ================= -->
@@ -695,7 +770,10 @@ let selDiff = 1;
 const SAVE_KEY = 'ikhmongol_save';
 const HERO_COST = { temuujin:0, zev:0, subedei:150, mukhulai:300, boorchi:500, khasar:750, chinggis:1500 };
 const SAVE_DEFAULT = { gold:0, unlocked:['temuujin','zev'], mastery:{}, matches:0, wins:0,
-                       readChapters:[], campaign:0, horses:0, iron:0, horseLvl:0, ironLvl:0 };
+                       readChapters:[], campaign:0, horses:0, iron:0, horseLvl:0, ironLvl:0,
+                       // Хар Хорум төв хот (MMO-lite төв): түвшин, туршлага, гүйцэтгэсэн даалгавар,
+                       // цуглуулсан зэвсэг/эд өлөг, элссэн багийн гишүүд
+                       hubLevel:1, hubXp:0, questsDone:[], items:[], party:[] };
 function loadSave(){
   try{
     const s = JSON.parse(localStorage.getItem(SAVE_KEY));
@@ -798,8 +876,90 @@ const LEVELS = [
 let campaignLevel = null;   // null = энгийн тулаан
 let justCleared = -1;       // сая дуусгасан түвшин (газрын зураг дээр анимацлах)
 
+// ======================================================================
+// ХАР ХОРУМ — төв хот (MMO-lite lobby). Тоглогч эндээс төрж, даалгавар авч,
+// түвшин ахьж, зэвсэг олж, багаа бүрдүүлээд дараагийн эзлэлт рүү мордоно.
+// Ганц тоглогчийн бүрхүүл: жинхэнэ онлайн «бусад тоглогчтой уулзах» нь ирээдүйн
+// Unity/netcode замд. Энд AK багийн гишүүд элсүүлж, багийн хэмжээний шаардлагыг хангана.
+// ======================================================================
+
+// Багийн гишүүдэд элсэх боломжтой нөхөд (жанжид). Тоглогч + элссэн гишүүд = багийн хэмжээ.
+const RECRUITS = [
+  { id:'jelme',  name:'Зэлмэ',   role:'Догшин нохой', icon:'🗡️', color:'#7ac2b0', cost:60,  ranged:false, hp:820, dmg:48 },
+  { id:'boorchu',name:'Боорчи',  role:'Дөрвөн хүлэг', icon:'🐎', color:'#c98a4b', cost:90,  ranged:false, hp:900, dmg:52 },
+  { id:'jebe',   name:'Зэв',     role:'Мэргэн харваач',icon:'🏹', color:'#8fb573', cost:120, ranged:true,  hp:760, dmg:56 },
+  { id:'subutai',name:'Сүбээдэй',role:'Их жанжин',    icon:'🛡️', color:'#9fb6c9', cost:180, ranged:false, hp:1150,dmg:58 },
+  { id:'khubilai',name:'Хубилай',role:'Догшин нохой', icon:'⚔️', color:'#d8a35a', cost:150, ranged:false, hp:980, dmg:60 }
+];
+const recruitOf = id => RECRUITS.find(r => r.id === id);
+
+// Дэлгүүрийн эд өлөг (Дархны газар / худалдаачин) — жижиг байнгын бонус өгнө.
+const SHOP_ITEMS = [
+  { id:'steel_sword', name:'Ган сэлэм',     icon:'⚔️', cost:80,  desc:'Довтолгооны хүч +8%',   effect:{dmg:0.08} },
+  { id:'iron_armor',  name:'Төмөр хуяг',    icon:'🛡️', cost:120, desc:'Амин хүч +12%',        effect:{hp:0.12} },
+  { id:'war_horse',   name:'Байлдааны хүлэг',icon:'🐎', cost:100, desc:'Хурд +10%',            effect:{spd:0.10} },
+  { id:'horn_bow',    name:'Эвэр нум',       icon:'🏹', cost:140, desc:'Довтолгооны хүч +10%',  effect:{dmg:0.10} },
+  { id:'silk_robe',   name:'Торгон дээл',    icon:'🧥', cost:160, desc:'Амин хүч +15%',        effect:{hp:0.15} }
+];
+const shopItemOf = id => SHOP_ITEMS.find(s => s.id === id);
+
+// Хар Хорумын даалгаврууд — Монголын эзэнт гүрний түүхээр. Түвшин ба багийн
+// хэмжээгээр хаалттай. Эхлээд ганцаараа, дараа нь 2, дараа нь илүү олуулаа.
+// lvl → шаардагдах хот-түвшин, party → шаардагдах багийн хэмжээ, level → LEVELS индекс.
+const HUB_QUESTS = [
+  { id:'q1', level:0, lvl:1, party:1, xp:90,  gold:80,  item:'steel_sword',
+    title:'Боолчлолоос зугтах',   giver:'Хатагтай Өэлүн',
+    brief:'Тайчиудын хавчлагаас ганцаараа зугт. Энэ бол чиний анхны сорилт — эр зоригоо харуул.' },
+  { id:'q2', level:1, lvl:2, party:1, xp:90,  gold:100, item:'war_horse',
+    title:'Найман шарга морь',    giver:'Малчин өвгөн',
+    brief:'Хулгайлагдсан найман хүлэгээ ганцаараа мөрдөж буцаа. Морьгүй монгол хүн юу ч биш.' },
+  { id:'q3', level:2, lvl:2, party:2, xp:130, gold:140, item:'iron_armor',
+    title:'Бөртэг аврах',         giver:'Тэмүжин',
+    brief:'Мэргэдээс хатан Бөртэг аврахад нэг найз хэрэгтэй. Ганцаараа хийж болохгүй — багаа бүрдүүл.' },
+  { id:'q4', level:3, lvl:3, party:2, xp:170, gold:180, item:'horn_bow',
+    title:'Анд ба дайсан',        giver:'Хасар',
+    brief:'Далан балжудад анд Жамухатай хоёулаа нүүр тул. Хос дайчин шаардлагатай.' },
+  { id:'q5', level:4, lvl:4, party:3, xp:220, gold:230, item:'silk_robe',
+    title:'Хэрэйдийн уналт',       giver:'Мухулай',
+    brief:'Ван ханы их цэргийг буулгахад гурван дайчны хүч хэрэгтэй.' },
+  { id:'q6', level:5, lvl:5, party:3, xp:270, gold:280, item:'steel_sword',
+    title:'Найманы төгсгөл',       giver:'Сүбээдэй',
+    brief:'Таян ханы хаалгыг нурааж талыг нэгтгэ. Гурван жанжин зэрэг довтол.' },
+  { id:'q7', level:6, lvl:6, party:4, xp:330, gold:340, item:'iron_armor',
+    title:'Хорезмын аян',          giver:'Чингис хаан',
+    brief:'Их баруун аян. Дөрвөн хүлэг жанжин цугларч байж л Хорезмыг эзэлнэ.' },
+  { id:'q8', level:7, lvl:7, party:4, xp:400, gold:420, item:'horn_bow',
+    title:'Инду мөрний тулаан',    giver:'Чингис хаан',
+    brief:'Зоригт Жалал ад-Диныг эцэслэ. Бүрэн бүрэлдэхүүнтэй отряд хэрэгтэй.' }
+];
+// Түвшин ахих туршлагын босго
+function hubXpForLevel(lv){ return 80 + (lv-1)*90; }   // 80,170,260,...
+const partySize = () => 1 + (save.party ? save.party.length : 0);
+function questDone(id){ return (save.questsDone||[]).includes(id); }
+function itemOwned(id){ return (save.items||[]).includes(id); }
+// Эд өлгийн нийт бонус (тулаанд player-т нэмэгдэнэ)
+function itemBonus(){
+  let b = {dmg:0, hp:0, spd:0};
+  for(const id of (save.items||[])){
+    const it = shopItemOf(id); if(!it) continue;
+    if(it.effect.dmg) b.dmg += it.effect.dmg;
+    if(it.effect.hp)  b.hp  += it.effect.hp;
+    if(it.effect.spd) b.spd += it.effect.spd;
+  }
+  return b;
+}
+// Даалгавар эхлүүлэх боломжтой эсэх ба шалтгаан
+function questStatus(q){
+  if(questDone(q.id)) return {ok:false, done:true, reason:'Дуусгасан ✓'};
+  if((save.hubLevel||1) < q.lvl) return {ok:false, reason:'🔒 '+q.lvl+'-р зэрэг шаардана (одоо '+(save.hubLevel||1)+')'};
+  if(partySize() < q.party) return {ok:false, reason:'👥 '+q.party+' гишүүн хэрэгтэй (одоо '+partySize()+'). Нөхдийн өргөөнөөс элсүүл.'};
+  return {ok:true, reason:'Мордоход бэлэн ⚔️'};
+}
+let hubQuest = null;   // идэвхтэй даалгавар (тулаанаас буцахад шагнал өгөхөд)
+let endReturnHub = false;   // төгсгөлийн дэлгэцээс Хар Хорум руу буцах эсэх
+
 // ---------- game state ----------
-let state = 'menu';           // menu | select | play | end
+let state = 'menu';           // menu | select | play | end | hub
 let units = [], projectiles = [], particles = [], floaters = [], zones = [], strikes = [];
 let player = null, aiHero = null, pGate=null, eGate=null;
 let player2 = null, coop = false;   // 2-р тоглогч (нэг дэлгэц дээрх co-op прототип)
@@ -882,6 +1042,11 @@ function startMatch(){
   // буурийн шинэчлэл: адууны сүрэг → хурд, дархны зэвсэг → хүч (тоглогч + отряд)
   player.speed = Math.round(player.speed * horseSpeedMul());
   player.dmg = Math.round(player.dmg * ironDmgMul());
+  // Хар Хорумын дэлгүүрээс авсан зэвсэг/хуяг → байнгын бонус
+  const ib = itemBonus();
+  if(ib.hp){ player.maxHp = Math.round(player.maxHp * (1+ib.hp)); player.hp = player.maxHp; }
+  if(ib.dmg) player.dmg = Math.round(player.dmg * (1+ib.dmg));
+  if(ib.spd) player.speed = Math.round(player.speed * (1+ib.spd));
   units.push(player);
 
   // 2-р тоглогч (co-op) — өөр баатар, сумны товчлуураар удирдана
@@ -945,16 +1110,25 @@ function ironDmgMul(){ return 1 + (save.ironLvl||0)*0.05; }
 
 function setupWarband(){
   const lvl = campaignLevel || 0;
-  const mates = HEROES.filter(h => h.id !== HEROES[selHero].id && h.id !== 'chinggis').slice(0, 2);
-  const offs = [{x:-48,y:-48}, {x:-48,y:48}];
-  mates.forEach((h, i)=>{
-    const ranged = h.range > 150;
-    const hp = Math.round(720 + lvl*42);
+  // Хар Хорумын даалгаварт элссэн багийн гишүүд гарна; бусад үед 2 жанжин дагана.
+  let mates;
+  if(hubQuest){
+    mates = (save.party||[]).map(id => recruitOf(id)).filter(Boolean)
+      .slice(0, Math.max(0, (hubQuest.party||1) - 1))
+      .map(r => ({ name:r.name, color:r.color, ranged:r.ranged, baseHp:r.hp, baseDmg:r.dmg }));
+  } else {
+    mates = HEROES.filter(h => h.id !== HEROES[selHero].id && h.id !== 'chinggis').slice(0, 2)
+      .map(h => ({ name:h.name, color:h.color, ranged:h.range>150, baseHp:720, baseDmg:0 }));
+  }
+  const offs = [{x:-48,y:-48}, {x:-48,y:48}, {x:-92,y:0}, {x:-92,y:-72}];
+  mates.forEach((m, i)=>{
+    const ranged = m.ranged;
+    const hp = Math.round((m.baseHp||720) + lvl*42);
     units.push(makeUnit({
-      type:'minion', team:0, companion:true, name:h.name, color:h.color,
-      compOff: offs[i],
-      x: player.x + offs[i].x, y: clamp(player.y + offs[i].y, GROUND_TOP, GROUND_BOT),
-      r:18, hp, maxHp:hp, dmg: Math.round((42 + lvl*2.6) * ironDmgMul()),
+      type:'minion', team:0, companion:true, name:m.name, color:m.color,
+      compOff: offs[i%offs.length],
+      x: player.x + offs[i%offs.length].x, y: clamp(player.y + offs[i%offs.length].y, GROUND_TOP, GROUND_BOT),
+      r:18, hp, maxHp:hp, dmg: Math.round(((m.baseDmg||42) + lvl*2.6) * ironDmgMul()),
       range: ranged ? 200 : 64, archer: ranged,
       atkCd: 0.85, speed: Math.round(178 * horseSpeedMul()), aggro: 250, face: 1
     }));
@@ -1041,8 +1215,10 @@ function setState(s){
   $('introScreen').classList.toggle('hidden', s!=='intro');
   $('codexScreen').classList.toggle('hidden', s!=='codex');
   $('campScreen').classList.toggle('hidden', s!=='camp');
+  $('hubHud').classList.toggle('on', s==='hub');
+  if(s!=='hub'){ hideHubPanels && hideHubPanels(); const p=$('hubPrompt'); if(p) p.classList.add('hidden'); const hj=$('hubJoy'); if(hj) hj.style.display='none'; }
   $('hud').classList.toggle('on', s==='play');
-  $('rotate').classList.toggle('armed', s==='play');
+  $('rotate').classList.toggle('armed', s==='play' || s==='hub');
   if(s==='menu') updateStoryBadge();
 }
 
@@ -3149,7 +3325,8 @@ function endMatch(win){
 
   // шагнал: тулааны алт + түвшин + ялалтын урамшуулал, хэцүү байдлаар үржүүлнэ
   const chBefore = new Set(chaptersUnlocked().map(c => c.id));
-  const inCampaign = campaignLevel !== null;
+  const inHub = !!hubQuest;   // Хар Хорумын даалгавраас ирсэн эсэх
+  const inCampaign = campaignLevel !== null && !inHub;
   let earned = Math.round((matchGold + player.level*5 + (win? 80 : 20)) * matchDiff.gold);
   save.matches = (save.matches||0) + 1;
   if(win) save.wins = (save.wins||0) + 1;
@@ -3181,6 +3358,31 @@ function endMatch(win){
     }
   }
 
+  // Хар Хорумын даалгавар: туршлага, алт, зэвсэг олгож, зэрэг ахиулна
+  let hubLine = '', hubLevelUp = false;
+  if(inHub && win){
+    const q = hubQuest;
+    const already = questDone(q.id);
+    earned += q.gold;
+    save.hubXp = (save.hubXp||0) + q.xp;
+    let lv = save.hubLevel||1;
+    while(save.hubXp >= hubXpForLevel(lv)){ save.hubXp -= hubXpForLevel(lv); lv++; hubLevelUp = true; }
+    save.hubLevel = lv;
+    if(!already) save.questsDone = (save.questsDone||[]).concat(q.id);
+    let itemLine = '';
+    if(q.item && !itemOwned(q.item)){
+      save.items = (save.items||[]).concat(q.item);
+      const it = shopItemOf(q.item);
+      if(it) itemLine = '<br><span style="color:#7ac2b0">🎁 Шагнал: '+it.icon+' '+it.name+' ('+it.desc+')</span>';
+    }
+    const gotHorses = 2 + Math.floor(q.level*0.7), gotIron = 1 + Math.floor(q.level*0.6);
+    save.horses += gotHorses; save.iron += gotIron;
+    hubLine = '<br><span style="color:#8ce87a">⭐ +'+q.xp+' туршлага'
+      + (hubLevelUp? ' · <b>ЗЭРЭГ АХЛАА → '+save.hubLevel+'</b>!' : '') + '</span>'
+      + itemLine
+      + '<br><span style="color:#cdb98a">🐎 +'+gotHorses+' адуу · ⚒️ +'+gotIron+' төмөр</span>';
+  }
+
   save.gold += earned;
   const heroId = player.hero.id;
   let masteryLine = '';
@@ -3204,7 +3406,7 @@ function endMatch(win){
     : '';
 
   const t = $('endTitle');
-  const modeLabel = inCampaign ? (campaignLevel+1)+'-р түвшин' : DIFFS[selDiff].name;
+  const modeLabel = inHub ? 'Хар Хорум' : inCampaign ? (campaignLevel+1)+'-р түвшин' : DIFFS[selDiff].name;
   const common = 'Алалт: <b>'+kills+'</b> · Түвшин: <b>'+player.level+'</b> · Хугацаа: <b>'+mins+':'+String(secs).padStart(2,'0')+'</b> · '+modeLabel
     + '<br>🪙 Олсон алт: <b id="goldCount" style="color:#ffd873">+0</b> · Нийт: <b style="color:#ffd873">'+save.gold+'</b>'
     + lootLine + campaignLine + masteryLine + chapterLine + unlockHint;
@@ -3233,6 +3435,26 @@ function endMatch(win){
   } else {
     clearConquestLoop();
     $('conquestLoop').classList.add('hidden');
+  }
+
+  // Хар Хорумын даалгаврын төгсгөл — шагнал ба төв хот руу буцах
+  if(inHub){
+    const q = hubQuest;
+    if(win){
+      t.textContent = '⚔️ ' + q.title.toUpperCase(); t.className = 'win';
+      $('endStats').innerHTML = '<b style="color:#f2c96a">'+q.title+'</b> даалгаврыг гүйцэтгэлээ!<br>'+common+hubLine;
+      if(hubLevelUp && Snd.level) Snd.level();
+    } else {
+      t.textContent = 'ЯЛАГДАЛ'; t.className = 'lose';
+      $('endStats').innerHTML = '<b style="color:#c85a4a">'+q.title+'</b> — багаа хүчирхэгжүүлж дахин оролдоорой.<br>'+common;
+    }
+    $('nextBtn').style.display = 'none';
+    $('againBtn').textContent = 'ДАХИН ОРОЛДОХ';
+    $('menuBtn').textContent = '🏛 ХАР ХОРУМ РУУ БУЦАХ';
+    endReturnHub = true;
+  } else {
+    $('menuBtn').textContent = 'ҮНДСЭН ЦЭС';
+    endReturnHub = false;
   }
 
   // алт тоолох анимаци
@@ -3332,16 +3554,470 @@ $('introBackBtn').addEventListener('click', ()=>{ buildLevels(); setState('campa
 $('nextBtn').addEventListener('click', ()=>{ Snd.init(); campaignLevel = campaignLevel + 1; showIntro(); });
 $('againBtn').addEventListener('click', ()=>{ Snd.init(); if(campaignLevel !== null) showIntro(); else startMatch(); });
 $('changeBtn').addEventListener('click', ()=>{ buildCards(); buildDiffs(); setState('select'); });
-$('menuBtn').addEventListener('click', ()=>{ Snd.init(); setState('menu'); });
+$('menuBtn').addEventListener('click', ()=>{ Snd.init(); if(endReturnHub){ enterHub(); } else { setState('menu'); } });
 $('storyBtn').addEventListener('click', ()=>{ Snd.init(); buildChapters(); setState('story'); });
 $('codexBtn').addEventListener('click', ()=>{ Snd.init(); Snd.startMusic(); buildCodex(); setState('codex'); });
 $('codexBackBtn').addEventListener('click', ()=>{ setState('menu'); });
-$('campBtn').addEventListener('click', ()=>{ Snd.init(); Snd.startMusic(); buildCamp(); setState('camp'); });
-$('campBackBtn').addEventListener('click', ()=>{ setState('menu'); });
+$('campBtn').addEventListener('click', ()=>{ Snd.init(); Snd.startMusic(); hubFromCamp=false; buildCamp(); setState('camp'); });
+$('campBackBtn').addEventListener('click', ()=>{ if(hubFromCamp){ hubFromCamp=false; enterHub(); } else { setState('menu'); } });
+$('hubBtn').addEventListener('click', ()=>{ Snd.init(); Snd.startMusic(); enterHub(); });
 $('storyBackBtn').addEventListener('click', ()=>{ setState('menu'); });
 $('readerBackBtn').addEventListener('click', ()=>{ buildChapters(); setState('story'); });
 $('readerNextBtn').addEventListener('click', ()=>{ openChapter(readerIdx+1); });
 updateStoryBadge();
+
+// ======================================================================
+//  ХАР ХОРУМ — hub engine (walkable lobby city)
+// ======================================================================
+const HUB_W = 2500;
+const hubHero = { x:360, y:560, face:1, step:0, vx:0, vy:0 };
+let hubCamX = 0, hubT = 0, hubNear = null, hubPanelOpen = null;
+const HUB_YTOP = GROUND_TOP + 70, HUB_YBOT = GROUND_BOT;
+
+// Хотын барилгууд (араар нь эгнэнэ). prompt байвал ойртоход харилцан үйлдэнэ.
+const HUB_BUILDINGS = [
+  { id:'quest',  x:560,  label:'Зарлигийн самбар', icon:'📜', prompt:'Даалгавар авах',       kind:'board'  },
+  { id:'party',  x:920,  label:'Нөхдийн өргөө',    icon:'🤝', prompt:'Багаа бүрдүүлэх',       kind:'ger'    },
+  { id:'palace', x:1250, label:'Тумэн амгалант ордон', icon:'🏯', prompt:null,               kind:'palace' },
+  { id:'shop',   x:1600, label:'Дархны газар',     icon:'⚒️', prompt:'Зэвсэг худалдаж авах',  kind:'forge'  },
+  { id:'camp',   x:1980, label:'Буурь',            icon:'🏕️', prompt:'Адуу малла · зэвсэг давт', kind:'camp' }
+];
+
+function enterHub(){
+  hubQuest = null; endReturnHub = false;
+  hubPanelOpen = null; hubNear = null;
+  hideHubPanels();
+  if(hubHero.x < 120 || hubHero.x > HUB_W-120){ hubHero.x = 360; hubHero.y = 560; }
+  hubHero.vx = hubHero.vy = 0;
+  setState('hub');
+  refreshHubHud();
+}
+function hideHubPanels(){
+  $('hubQuestPanel').classList.add('hidden');
+  $('hubPartyPanel').classList.add('hidden');
+  $('hubShopPanel').classList.add('hidden');
+}
+function refreshHubHud(){
+  $('hubLevelN').textContent = save.hubLevel||1;
+  $('hubGoldN').textContent = save.gold||0;
+  $('hubPartyN').textContent = partySize();
+  const lv = save.hubLevel||1, need = hubXpForLevel(lv), cur = save.hubXp||0;
+  $('hubXpFill').style.width = Math.min(100, cur/need*100) + '%';
+  $('hubXpTxt').textContent = cur + ' / ' + need + ' XP';
+}
+
+// ---------- hub joystick (тусдаа #hubJoy) ----------
+const hubJoyEl = $('hubJoy'), hubKnob = $('hubJoyKnob');
+let hubJoyId = null, hubJoyBase = {x:0,y:0}, hubJoyVec = {x:0,y:0};
+function hubJoyStart(x,y){ hubJoyBase={x,y}; hubJoyEl.style.display='block'; hubJoyEl.style.left=(x-55)+'px'; hubJoyEl.style.top=(y-55)+'px'; hubKnob.style.left='31px'; hubKnob.style.top='31px'; }
+function hubJoyMove(x,y){ let dx=x-hubJoyBase.x, dy=y-hubJoyBase.y; const max=48, d=Math.hypot(dx,dy); if(d>max){ dx=dx/d*max; dy=dy/d*max; } hubJoyVec={x:dx/max,y:dy/max}; hubKnob.style.left=(31+dx)+'px'; hubKnob.style.top=(31+dy)+'px'; }
+function hubJoyEnd(){ hubJoyId=null; hubJoyVec={x:0,y:0}; hubJoyEl.style.display='none'; }
+window.addEventListener('touchstart', e=>{
+  if(state!=='hub' || hubPanelOpen) return;
+  for(const t of e.changedTouches){
+    if(hubJoyId===null && t.clientX < window.innerWidth*0.55){ hubJoyId=t.identifier; hubJoyStart(t.clientX,t.clientY); }
+    else if(t.clientX >= window.innerWidth*0.55 && hubNear){ hubInteract(); }
+  }
+}, {passive:false});
+window.addEventListener('touchmove', e=>{ if(state!=='hub') return; for(const t of e.changedTouches) if(t.identifier===hubJoyId) hubJoyMove(t.clientX,t.clientY); });
+window.addEventListener('touchend',  e=>{ for(const t of e.changedTouches) if(t.identifier===hubJoyId) hubJoyEnd(); });
+window.addEventListener('touchcancel',e=>{ for(const t of e.changedTouches) if(t.identifier===hubJoyId) hubJoyEnd(); });
+let hubMouseJoy=false;
+canvas.addEventListener('mousedown', e=>{ if(state!=='hub'||hubPanelOpen) return; if(e.clientX<window.innerWidth*0.55){ hubMouseJoy=true; hubJoyStart(e.clientX,e.clientY); } else if(hubNear){ hubInteract(); } });
+window.addEventListener('mousemove', e=>{ if(hubMouseJoy) hubJoyMove(e.clientX,e.clientY); });
+window.addEventListener('mouseup', ()=>{ if(hubMouseJoy){ hubMouseJoy=false; hubJoyEnd(); } });
+window.addEventListener('keydown', e=>{
+  if(state!=='hub') return;
+  const k = e.key.toLowerCase();
+  if((k==='e'||k==='enter'||k===' ') && hubNear && !hubPanelOpen){ e.preventDefault(); hubInteract(); }
+  if(k==='escape'){ if(hubPanelOpen){ hubClosePanel(); } else { setState('menu'); } }
+});
+$('hubExitBtn').addEventListener('click', ()=>{ hubJoyEnd(); setState('menu'); });
+$('hubPrompt').addEventListener('click', ()=>{ if(hubNear) hubInteract(); });
+document.querySelectorAll('.hubClose').forEach(b=> b.addEventListener('click', hubClosePanel));
+
+function hubClosePanel(){ hubPanelOpen=null; hideHubPanels(); Snd.tone && Snd.tone(360,.05,'sine',.04); refreshHubHud(); }
+
+// ---------- hub update ----------
+function updateHub(dt){
+  hubT += dt;
+  if(hubPanelOpen){ hubHero.vx=hubHero.vy=0; return; }
+  let mx = hubJoyVec.x, my = hubJoyVec.y;
+  if(keys['w']||keys['arrowup'])    my -= 1;
+  if(keys['s']||keys['arrowdown'])  my += 1;
+  if(keys['a']||keys['arrowleft'])  mx -= 1;
+  if(keys['d']||keys['arrowright']) mx += 1;
+  const m = Math.hypot(mx,my);
+  const sp = 210;
+  if(m>0.05){
+    mx/=m; my/=m;
+    hubHero.x = clamp(hubHero.x + mx*sp*dt, 80, HUB_W-80);
+    hubHero.y = clamp(hubHero.y + my*sp*dt, HUB_YTOP, HUB_YBOT);
+    if(mx>0.1) hubHero.face=1; else if(mx<-0.1) hubHero.face=-1;
+    hubHero.step += dt*10;
+  } else { hubHero.step = 0; }
+  // хамгийн ойрын харилцан үйлдэх барилга
+  let near=null, best=100;
+  for(const b of HUB_BUILDINGS){
+    if(!b.prompt) continue;
+    const d = Math.abs(hubHero.x - b.x);
+    if(d < best && d < 96){ best=d; near=b; }
+  }
+  if(near!==hubNear){
+    hubNear = near;
+    const p = $('hubPrompt');
+    if(near){ p.innerHTML = near.icon+' '+near.label+'<br><span style="font-size:11px;opacity:.85">'+near.prompt+' — дар (E)</span>'; p.classList.remove('hidden'); }
+    else p.classList.add('hidden');
+  }
+  // камер
+  hubCamX = clamp(hubHero.x - viewW/2, 0, Math.max(0, HUB_W - viewW));
+}
+
+function hubInteract(){
+  if(!hubNear) return;
+  Snd.init(); Snd.tone && Snd.tone(520,.06,'sine',.05);
+  switch(hubNear.id){
+    case 'quest': buildHubQuests(); hubPanelOpen='quest'; $('hubQuestPanel').classList.remove('hidden'); break;
+    case 'party': buildHubParty();  hubPanelOpen='party'; $('hubPartyPanel').classList.remove('hidden'); break;
+    case 'shop':  buildHubShop();   hubPanelOpen='shop';  $('hubShopPanel').classList.remove('hidden');  break;
+    case 'camp':  buildCamp(); hubFromCamp=true; setState('camp'); break;
+  }
+}
+let hubFromCamp = false;
+
+// ---------- hub panels ----------
+function buildHubQuests(){
+  const wrap = $('hubQuestList'); wrap.innerHTML='';
+  HUB_QUESTS.forEach(q=>{
+    const st = questStatus(q);
+    const done = questDone(q.id);
+    const card = document.createElement('div');
+    card.className = 'qcard' + (done?' done':'') + (!st.ok&&!done?' locked':'');
+    card.innerHTML =
+      '<div class="qhead"><span class="qico">'+(shopItemOf(q.item)?shopItemOf(q.item).icon:'📜')+'</span>'
+        +'<span><span class="qtitle">'+q.title+'</span> <span class="qgiver">— '+q.giver+'</span></span></div>'
+      +'<div class="qbrief">'+q.brief+'</div>'
+      +'<div class="qmeta"><span class="qtag">⭐ '+q.lvl+'-р зэрэг</span>'
+        +'<span class="qtag">👥 '+q.party+' гишүүн</span>'
+        +'<span class="qtag">🎁 +'+q.xp+' XP · '+q.gold+' 🪙</span>'
+        +(shopItemOf(q.item)?'<span class="qtag">'+shopItemOf(q.item).icon+' '+shopItemOf(q.item).name+'</span>':'')+'</div>'
+      +'<div class="qstatus" style="color:'+(done?'#4fbf6a':st.ok?'#8ce87a':'#c9a06a')+'">'+st.reason+'</div>';
+    const btn = document.createElement('button');
+    btn.className = 'qbtn' + (st.ok?' go':'');
+    btn.textContent = done ? 'Дахин мордох ⚔️' : (st.ok? 'МОРДОХ ⚔️' : 'Боломжгүй');
+    btn.disabled = !st.ok && !done;
+    btn.addEventListener('click', ()=> startHubQuest(q));
+    card.appendChild(btn);
+    wrap.appendChild(card);
+  });
+}
+function startHubQuest(q){
+  Snd.init(); Snd.startMusic && Snd.startMusic();
+  hubClosePanel();
+  hubQuest = q;
+  coop = false;
+  campaignLevel = q.level;   // тулааны тохиргоог LEVELS-ээс авна
+  startMatch();
+}
+function buildHubParty(){
+  const wrap = $('hubPartyList'); wrap.innerHTML='';
+  const info = document.createElement('div');
+  info.style.cssText='font-size:12px;color:#cdb98a;margin-bottom:4px';
+  info.innerHTML = 'Одоогийн баг: <b style="color:#ffd873">'+partySize()+'</b> гишүүн (та + '+(partySize()-1)+' нөхөр) · 🪙 '+save.gold;
+  wrap.appendChild(info);
+  RECRUITS.forEach(r=>{
+    const joined = (save.party||[]).includes(r.id);
+    const card = document.createElement('div');
+    card.className = 'qcard' + (joined?' done':'');
+    card.innerHTML =
+      '<div class="qhead"><span class="qico">'+r.icon+'</span>'
+        +'<span><span class="qtitle">'+r.name+'</span> <span class="qgiver">— '+r.role+'</span></span></div>'
+      +'<div class="qmeta"><span class="qtag">❤️ '+r.hp+'</span><span class="qtag">⚔️ '+r.dmg+'</span>'
+        +'<span class="qtag">'+(r.ranged?'🏹 Харваач':'🗡️ Ойрын')+'</span></div>';
+    const btn = document.createElement('button');
+    btn.className='qbtn'+(joined?'':' go');
+    if(joined){ btn.textContent='Багт нэгдсэн ✓'; btn.disabled=true; }
+    else { btn.textContent='Элсүүлэх · 🪙 '+r.cost; }
+    btn.addEventListener('click', ()=>{
+      if(joined) return;
+      if((save.gold||0) >= r.cost){
+        save.gold -= r.cost; save.party=(save.party||[]).concat(r.id); persistSave();
+        Snd.level && Snd.level(); buildHubParty(); refreshHubHud();
+      } else { btn.textContent='Алт хүрэлцэхгүй! ('+(r.cost-(save.gold||0))+' дутуу)'; Snd.tone && Snd.tone(180,.15,'square',.05); }
+    });
+    card.appendChild(btn); wrap.appendChild(card);
+  });
+}
+function buildHubShop(){
+  const wrap = $('hubShopList'); wrap.innerHTML='';
+  const info = document.createElement('div');
+  info.style.cssText='font-size:12px;color:#cdb98a;margin-bottom:4px';
+  info.innerHTML = '🪙 '+save.gold+' алт · Худалдаж авсан зэвсэг байнга нэмэгдэнэ';
+  wrap.appendChild(info);
+  SHOP_ITEMS.forEach(it=>{
+    const owned = itemOwned(it.id);
+    const card = document.createElement('div');
+    card.className='qcard'+(owned?' done':'');
+    card.innerHTML =
+      '<div class="qhead"><span class="qico">'+it.icon+'</span>'
+        +'<span><span class="qtitle">'+it.name+'</span></span></div>'
+      +'<div class="qbrief">'+it.desc+'</div>';
+    const btn=document.createElement('button');
+    btn.className='qbtn'+(owned?'':' go');
+    if(owned){ btn.textContent='Эзэмшсэн ✓'; btn.disabled=true; }
+    else btn.textContent='Худалдаж авах · 🪙 '+it.cost;
+    btn.addEventListener('click', ()=>{
+      if(owned) return;
+      if((save.gold||0) >= it.cost){
+        save.gold -= it.cost; save.items=(save.items||[]).concat(it.id); persistSave();
+        Snd.level && Snd.level(); buildHubShop(); refreshHubHud();
+      } else { btn.textContent='Алт хүрэлцэхгүй! ('+(it.cost-(save.gold||0))+' дутуу)'; Snd.tone && Snd.tone(180,.15,'square',.05); }
+    });
+    card.appendChild(btn); wrap.appendChild(card);
+  });
+}
+
+// ---------- hub render ----------
+function renderHub(){
+  ctx.setTransform(scaleF,0,0,scaleF,0,0);
+  const vw = viewW, P = SKIES.steppe;
+  // тэнгэр
+  const sky = ctx.createLinearGradient(0,0,0,GROUND_TOP+80);
+  sky.addColorStop(0,P.sky[0]); sky.addColorStop(.4,P.sky[1]); sky.addColorStop(.78,P.sky[2]); sky.addColorStop(1,P.sky[3]);
+  ctx.fillStyle=sky; ctx.fillRect(0,0,vw,GROUND_TOP+80);
+  // нар
+  const sunX = vw*0.7 - hubCamX*0.04, sunY=100;
+  const glow = ctx.createRadialGradient(sunX,sunY,10,sunX,sunY,150);
+  glow.addColorStop(0,'rgba('+P.sun+',.5)'); glow.addColorStop(1,'rgba('+P.sun+',0)');
+  ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(sunX,sunY,150,0,TAU); ctx.fill();
+  ctx.fillStyle='rgba('+P.sun+',.95)'; ctx.beginPath(); ctx.arc(sunX,sunY,40,0,TAU); ctx.fill();
+  // үүл
+  ctx.fillStyle='rgba(255,250,240,.16)';
+  for(let i=0;i<4;i++){ const cx=((i*720 + hubT*8)%(vw+400))-200; drawCloud(cx, 58+(i%2)*40, .7+(i%3)*.22); }
+  // алс уулс
+  ctx.fillStyle=P.far;  drawHubRange(0.16,128,96);
+  ctx.fillStyle=P.mid;  drawHubRange(0.30,158,78);
+  ctx.fillStyle=P.near; drawHubRange(0.46,190,60);
+  // газар
+  const g = ctx.createLinearGradient(0,GROUND_TOP-40,0,VIEW_H);
+  g.addColorStop(0,P.ground[0]); g.addColorStop(.4,P.ground[1]); g.addColorStop(1,P.ground[2]);
+  ctx.fillStyle=g; ctx.fillRect(0,GROUND_TOP-40,vw,VIEW_H-(GROUND_TOP-40));
+  // нарны тусгал
+  const lpX=sunX, lpY=GROUND_TOP+130;
+  const pool=ctx.createRadialGradient(lpX,lpY,40,lpX,lpY,vw*0.7);
+  pool.addColorStop(0,'rgba('+P.sun+',.14)'); pool.addColorStop(1,'rgba('+P.sun+',0)');
+  ctx.fillStyle=pool; ctx.fillRect(0,GROUND_TOP-40,vw,VIEW_H-(GROUND_TOP-40));
+
+  ctx.save();
+  ctx.translate(-hubCamX,0);
+
+  // хотын гол зам (тал талд өргөн шороон зам)
+  const road = ctx.createLinearGradient(0,HUB_YTOP-10,0,HUB_YBOT);
+  road.addColorStop(0,'rgba(150,120,78,.0)'); road.addColorStop(.35,'rgba(158,128,84,.55)'); road.addColorStop(1,'rgba(120,96,60,.65)');
+  ctx.fillStyle=road; ctx.fillRect(0, HUB_YTOP-10, HUB_W, HUB_YBOT-HUB_YTOP+10);
+  // замын хайрга/толбо
+  ctx.fillStyle='rgba(0,0,0,.05)';
+  for(let i=0;i<60;i++){ const px=(i*137)%HUB_W, py=HUB_YTOP+((i*89)%(HUB_YBOT-HUB_YTOP)); ctx.beginPath(); ctx.ellipse(px,py,10+(i%3)*6,4,0,0,TAU); ctx.fill(); }
+
+  // хотын хэрэм (арын хаяа)
+  drawHubWall();
+
+  // барилгууд + туг (гүнээр эрэмбэлж зурна)
+  const sorted = HUB_BUILDINGS.slice().sort((a,b)=> a.x-b.x);
+  for(const b of sorted) drawHubBuilding(b);
+
+  // хотын иргэд (NPC-ууд)
+  drawHubTownsfolk();
+
+  // баатар
+  drawHubHero(hubHero.x, hubHero.y, hubHero.face, hubHero.step);
+
+  ctx.restore();
+
+  // урд талын гүн ба вигнет
+  const fg=ctx.createLinearGradient(0,VIEW_H-140,0,VIEW_H);
+  fg.addColorStop(0,'rgba(20,14,6,0)'); fg.addColorStop(1,'rgba(20,14,6,.4)');
+  ctx.fillStyle=fg; ctx.fillRect(0,VIEW_H-140,vw,140);
+  const vig=ctx.createRadialGradient(vw/2,VIEW_H*0.42,vw*0.3,vw/2,VIEW_H*0.5,vw*0.75);
+  vig.addColorStop(0,'rgba(0,0,0,0)'); vig.addColorStop(1,'rgba(0,0,0,.32)');
+  ctx.fillStyle=vig; ctx.fillRect(0,0,vw,VIEW_H);
+}
+function drawHubRange(par, base, amp){
+  const off = hubCamX*par;
+  ctx.beginPath(); ctx.moveTo(0,VIEW_H);
+  for(let x=-100;x<=viewW+100;x+=40){
+    const wx=x+off;
+    const y=GROUND_TOP - base + Math.sin(wx*0.006)*amp*0.4 + Math.sin(wx*0.013+2)*amp*0.3 + Math.cos(wx*0.02)*amp*0.2;
+    ctx.lineTo(x,y);
+  }
+  ctx.lineTo(viewW+100,VIEW_H); ctx.closePath(); ctx.fill();
+}
+function drawHubWall(){
+  const wy = HUB_YTOP - 14;
+  // хос үзүүрт хэрэм зөвхөн хотын хоёр захад
+  for(const seg of [[0,120],[HUB_W-120,HUB_W]]){
+    ctx.fillStyle='#6a5636';
+    ctx.fillRect(seg[0], wy-46, seg[1]-seg[0], 60);
+    ctx.fillStyle='#7a663f';
+    for(let x=seg[0]; x<seg[1]; x+=24){ ctx.fillRect(x, wy-56, 14, 12); }
+    // гэрэлт тал
+    ctx.fillStyle='rgba(255,220,150,.12)'; ctx.fillRect(seg[0], wy-46, seg[1]-seg[0], 8);
+  }
+}
+function hubShadow(x,y,w){ ctx.fillStyle='rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(x,y,w,w*0.28,0,0,TAU); ctx.fill(); }
+
+function drawHubBuilding(b){
+  const x=b.x, gy=HUB_YTOP+8;
+  const near = (hubNear===b);
+  if(b.kind==='board'){
+    hubShadow(x, gy+30, 46);
+    // хоёр модон багана
+    ctx.fillStyle='#5a3f22'; ctx.fillRect(x-40,gy-70,10,100); ctx.fillRect(x+30,gy-70,10,100);
+    // гулдмай самбар
+    ctx.fillStyle='#7a5a34'; ctx.fillRect(x-46,gy-78,92,52);
+    ctx.fillStyle='#efe4c6'; ctx.fillRect(x-40,gy-72,80,40);
+    // гулсмал бичээс (шугам)
+    ctx.strokeStyle='rgba(90,60,30,.55)'; ctx.lineWidth=1.2;
+    for(let i=0;i<4;i++){ ctx.beginPath(); ctx.moveTo(x-34,gy-64+i*8); ctx.lineTo(x+30,gy-64+i*8); ctx.stroke(); }
+    // өлгөөтэй тамга
+    ctx.fillStyle='#c0392b'; ctx.beginPath(); ctx.arc(x+26,gy-40,5,0,TAU); ctx.fill();
+  } else if(b.kind==='ger'){
+    hubShadow(x, gy+24, 54);
+    drawGer(x, gy-4, 1.5, '#2f6d5f');
+    // туг
+    ctx.strokeStyle='#5a3f22'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(x+58,gy-6); ctx.lineTo(x+58,gy-74); ctx.stroke();
+    ctx.fillStyle='#2f6d5f'; ctx.beginPath(); ctx.moveTo(x+58,gy-74); ctx.lineTo(x+92,gy-66); ctx.lineTo(x+58,gy-56); ctx.closePath(); ctx.fill();
+  } else if(b.kind==='palace'){
+    hubShadow(x, gy+34, 96);
+    // суурь тавцан
+    ctx.fillStyle='#6a5030'; ctx.fillRect(x-90,gy+10,180,26);
+    ctx.fillStyle='#7a5f3a'; ctx.fillRect(x-78,gy-40,156,54);
+    // баганууд
+    ctx.fillStyle='#8a3b2a';
+    for(let i=-3;i<=3;i++) ctx.fillRect(x+i*22-4,gy-38,8,50);
+    // алтан бөмбөгөр дээвэр (гурван шат)
+    for(let t=0;t<3;t++){
+      const w=94-t*26, ry=gy-40-t*26;
+      ctx.fillStyle= t===2?'#f2c96a':'#d8a83e';
+      ctx.beginPath(); ctx.moveTo(x-w,ry); ctx.quadraticCurveTo(x, ry-30, x+w, ry);
+      ctx.quadraticCurveTo(x+w-8, ry-6, x, ry-8); ctx.quadraticCurveTo(x-w+8, ry-6, x-w, ry); ctx.closePath(); ctx.fill();
+    }
+    // орой
+    ctx.fillStyle='#f2c96a'; ctx.beginPath(); ctx.arc(x,gy-118,6,0,TAU); ctx.fill();
+    ctx.fillRect(x-1.5,gy-134,3,16);
+    // гэрэлт ирмэг
+    ctx.strokeStyle='rgba(255,235,180,.4)'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(x-78,gy-40); ctx.lineTo(x+78,gy-40); ctx.stroke();
+  } else if(b.kind==='forge'){
+    hubShadow(x, gy+28, 52);
+    // чулуун байшин
+    ctx.fillStyle='#5c5148'; ctx.fillRect(x-42,gy-52,84,64);
+    ctx.fillStyle='#6b5f54'; ctx.fillRect(x-42,gy-52,84,10);
+    // дээвэр
+    ctx.fillStyle='#3f3830'; ctx.beginPath(); ctx.moveTo(x-50,gy-52); ctx.lineTo(x,gy-82); ctx.lineTo(x+50,gy-52); ctx.closePath(); ctx.fill();
+    // зуухны улаан гэрэл
+    const fx=x-14, fy=gy-14;
+    const fglow=ctx.createRadialGradient(fx,fy,2,fx,fy,26);
+    fglow.addColorStop(0,'rgba(255,150,40,.9)'); fglow.addColorStop(1,'rgba(255,120,20,0)');
+    ctx.fillStyle=fglow; ctx.beginPath(); ctx.arc(fx,fy,26,0,TAU); ctx.fill();
+    ctx.fillStyle='#2a2320'; ctx.fillRect(x-26,gy-24,24,22);
+    ctx.fillStyle='rgba(255,170,60,'+(0.6+0.3*Math.sin(hubT*6))+')'; ctx.fillRect(x-22,gy-20,16,16);
+    // дөш
+    ctx.fillStyle='#3a3a40'; ctx.fillRect(x+14,gy-6,22,8); ctx.fillRect(x+22,gy-2,6,12);
+  } else if(b.kind==='camp'){
+    hubShadow(x, gy+24, 60);
+    drawGer(x-24, gy-2, 0.95, '#b8452a');
+    drawGer(x+26, gy-8, 0.8, '#7a5a34');
+    // адуу (энгийн дүрс)
+    drawHubHorse(x+2, gy+18, 0.9);
+  }
+  // нэрийн хаяг
+  ctx.font='bold 13px Georgia, serif'; ctx.textAlign='center';
+  ctx.fillStyle='rgba(20,14,6,.72)';
+  const tw=ctx.measureText(b.icon+' '+b.label).width+16;
+  const ly = gy - (b.kind==='palace'?150:b.kind==='ger'?94:96);
+  roundRectHub(x-tw/2, ly-16, tw, 22, 6); ctx.fill();
+  ctx.fillStyle = near? '#ffe9b0':'#e8d9b0';
+  ctx.fillText(b.icon+' '+b.label, x, ly);
+  ctx.textAlign='left';
+  // ойртсон тэмдэг
+  if(near){
+    ctx.strokeStyle='rgba(242,201,106,'+(0.5+0.4*Math.sin(hubT*5))+')'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.ellipse(x, gy+30, 52, 16, 0,0,TAU); ctx.stroke();
+  }
+}
+function roundRectHub(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function drawHubHorse(x,y,s){
+  ctx.fillStyle='#6a4a2a';
+  ctx.beginPath(); ctx.ellipse(x,y-8*s,14*s,7*s,0,0,TAU); ctx.fill();
+  ctx.fillRect(x+8*s,y-20*s,7*s,12*s); // хүзүү
+  ctx.beginPath(); ctx.ellipse(x+13*s,y-22*s,5*s,4*s,0,0,TAU); ctx.fill(); // толгой
+  ctx.strokeStyle='#4a3018'; ctx.lineWidth=2.5*s;
+  for(const lx of [-8,-3,4,9]){ ctx.beginPath(); ctx.moveTo(x+lx*s,y-4*s); ctx.lineTo(x+lx*s,y+8*s); ctx.stroke(); }
+  ctx.strokeStyle='#2a1a0e'; ctx.lineWidth=2*s; ctx.beginPath(); ctx.moveTo(x-13*s,y-10*s); ctx.lineTo(x-20*s,y-2*s); ctx.stroke(); // сүүл
+}
+// хотын иргэд — тайван зогсох/алхах жижиг дүрс
+const HUB_NPCS = [
+  { x:700,  y:600, col:'#8a6a3a', hat:'#5a3f22' },
+  { x:1080, y:560, col:'#6a7a4a', hat:'#3f5a2a' },
+  { x:1360, y:620, col:'#7a5a5a', hat:'#5a2f2f' },
+  { x:1700, y:580, col:'#5a6a7a', hat:'#2f3f5a' },
+  { x:2050, y:610, col:'#8a5a3a', hat:'#5a3a1a' }
+];
+function drawHubTownsfolk(){
+  for(let i=0;i<HUB_NPCS.length;i++){
+    const n=HUB_NPCS[i];
+    const wob = Math.sin(hubT*0.8 + i)*10;
+    drawHubFigure(n.x+wob, n.y, n.col, n.hat, 0.86, Math.sin(hubT*2+i)>0.9? (hubT*8):0);
+  }
+}
+function drawHubFigure(x,y,coat,hat,s,step){
+  hubShadow(x, y+2, 15*s);
+  const sw = Math.sin(step)*3;
+  // хөл
+  ctx.strokeStyle='#3a2a18'; ctx.lineWidth=4*s;
+  ctx.beginPath(); ctx.moveTo(x-3*s,y-8*s); ctx.lineTo(x-4*s+sw,y+2*s); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x+3*s,y-8*s); ctx.lineTo(x+4*s-sw,y+2*s); ctx.stroke();
+  // дээл (бие)
+  ctx.fillStyle=coat;
+  ctx.beginPath(); ctx.moveTo(x-9*s,y-8*s); ctx.lineTo(x-7*s,y-30*s); ctx.lineTo(x+7*s,y-30*s); ctx.lineTo(x+9*s,y-8*s); ctx.closePath(); ctx.fill();
+  // бүс
+  ctx.fillStyle='rgba(0,0,0,.25)'; ctx.fillRect(x-8*s,y-20*s,16*s,4*s);
+  // толгой
+  ctx.fillStyle='#e6b98a'; ctx.beginPath(); ctx.arc(x,y-36*s,6*s,0,TAU); ctx.fill();
+  // малгай
+  ctx.fillStyle=hat; ctx.beginPath(); ctx.moveTo(x-7*s,y-38*s); ctx.lineTo(x,y-48*s); ctx.lineTo(x+7*s,y-38*s); ctx.closePath(); ctx.fill();
+  ctx.fillRect(x-7*s,y-39*s,14*s,3*s);
+}
+function drawHubHero(x,y,face,step){
+  hubShadow(x, y+2, 18);
+  const sw = Math.sin(step)*4;
+  ctx.save(); ctx.translate(x,y); ctx.scale(face,1);
+  // хөл
+  ctx.strokeStyle='#2a1c0e'; ctx.lineWidth=5;
+  ctx.beginPath(); ctx.moveTo(-4,-10); ctx.lineTo(-5+sw,4); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(4,-10); ctx.lineTo(5-sw,4); ctx.stroke();
+  // дээл — язгууртны хүрэн-алтан
+  const body=ctx.createLinearGradient(-12,-40,12,-8);
+  body.addColorStop(0,'#a8752e'); body.addColorStop(1,'#7a5220');
+  ctx.fillStyle=body;
+  ctx.beginPath(); ctx.moveTo(-12,-8); ctx.lineTo(-9,-38); ctx.lineTo(9,-38); ctx.lineTo(12,-8); ctx.closePath(); ctx.fill();
+  // мөрний хуяг
+  ctx.fillStyle='#c9a24a'; ctx.beginPath(); ctx.ellipse(-8,-34,5,4,0,0,TAU); ctx.fill(); ctx.beginPath(); ctx.ellipse(8,-34,5,4,0,0,TAU); ctx.fill();
+  // бүс
+  ctx.fillStyle='#5a3a18'; ctx.fillRect(-11,-22,22,5);
+  ctx.fillStyle='#f2c96a'; ctx.fillRect(-3,-22,6,5);
+  // толгой
+  ctx.fillStyle='#e6b98a'; ctx.beginPath(); ctx.arc(0,-46,7,0,TAU); ctx.fill();
+  // дуулга
+  ctx.fillStyle='#8a6a2a'; ctx.beginPath(); ctx.arc(0,-48,8,Math.PI,0); ctx.fill();
+  ctx.fillStyle='#c9a24a'; ctx.fillRect(-1,-58,2,8); // орой
+  // сэлэм нуруун дээр
+  ctx.strokeStyle='#b0b6be'; ctx.lineWidth=2.5; ctx.beginPath(); ctx.moveTo(-10,-30); ctx.lineTo(-18,-14); ctx.stroke();
+  // rim light баруун талаас
+  ctx.strokeStyle='rgba(255,230,170,.4)'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(9,-38); ctx.lineTo(12,-8); ctx.stroke();
+  ctx.restore();
+}
 
 // ---------- main loop ----------
 let lastT = performance.now();
@@ -3349,7 +4025,9 @@ function frame(now){
   const dt = Math.min((now-lastT)/1000, 0.05);
   lastT = now;
   if(state==='play') update(dt);
+  else if(state==='hub') updateHub(dt);
   if(state==='play' || state==='end') render();
+  else if(state==='hub') renderHub();
   else {
     // idle backdrop
     ctx.setTransform(scaleF,0,0,scaleF,0,0);
@@ -3395,7 +4073,22 @@ window.GAME = {
   get rescuee(){ return rescuee; },
   get campaignLevel(){ return campaignLevel; },
   winNow(){ if(state==='play') endMatch(true); },
-  useSkill
+  useSkill,
+  // ---- Хар Хорум hub ----
+  enterHub(){ enterHub(); },
+  get hubHero(){ return hubHero; },
+  get hubNear(){ return hubNear? hubNear.id : null; },
+  get hubPanel(){ return hubPanelOpen; },
+  get hubBuildings(){ return HUB_BUILDINGS.map(b=>({id:b.id,x:b.x,label:b.label})); },
+  get quests(){ return HUB_QUESTS.map(q=>({id:q.id, ...questStatus(q)})); },
+  get partySize(){ return partySize(); },
+  moveHubTo(x,y){ if(state==='hub'){ hubHero.x=clamp(x,80,HUB_W-80); hubHero.y=clamp(y===undefined?hubHero.y:y,HUB_YTOP,HUB_YBOT); } },
+  hubInteract(){ hubInteract(); },
+  recruit(id){ const r=recruitOf(id); if(r && !(save.party||[]).includes(id)){ save.party=(save.party||[]).concat(id); persistSave(); } return partySize(); },
+  buyItem(id){ if(shopItemOf(id) && !itemOwned(id)){ save.items=(save.items||[]).concat(id); persistSave(); } return (save.items||[]).slice(); },
+  startHubQuest(qid){ const q=HUB_QUESTS.find(x=>x.id===qid); if(q) startHubQuest(q); },
+  get hubLevel(){ return save.hubLevel||1; }, get hubXp(){ return save.hubXp||0; },
+  get questsDone(){ return (save.questsDone||[]).slice(); }, get items(){ return (save.items||[]).slice(); }
 };
 </script>
 </body>
