@@ -757,6 +757,17 @@ const HEROES = [
   }
 ];
 let selHero = 0;
+// Баатар бүрийн өвөрмөц дүр төрх — толгойн залаа, нөмрөг, ороолт, мөрөвч.
+// Ингэснээр 7 баатар өнгөөрөө биш, дүрсээрээ ялгаатай харагдана.
+const HERO_STYLE = {
+  temuujin:{ crest:'tail',    crestCol:'#c0392b', cape:null,      scarf:null,      shoulder:false },
+  zev:     { crest:'feather', crestCol:'#8fb573', cape:null,      scarf:'#5a7a3a', shoulder:false, quiver:true },
+  subedei: { crest:'plume',   crestCol:'#cfe0ee', cape:'#4a5a6a', scarf:null,      shoulder:true  },
+  mukhulai:{ crest:'plume',   crestCol:'#e6b45a', cape:'#7a4a20', scarf:null,      shoulder:true  },
+  boorchi: { crest:null,      crestCol:'#7ac2b0', cape:null,      scarf:'#2f8a76', shoulder:false },
+  khasar:  { crest:'feather', crestCol:'#b085d6', cape:null,      scarf:'#6a4a8a', shoulder:false, quiver:true },
+  chinggis:{ crest:'crown',   crestCol:'#f2c96a', cape:'#7a1f1f', scarf:null,      shoulder:true, glow:true }
+};
 
 // ---------- хэцүү байдал ----------
 const DIFFS = [
@@ -2424,8 +2435,12 @@ function setupDeco(theme){
   deco = [];
   let seed = 7;
   const rnd = ()=> (seed = (seed*16807)%2147483647) / 2147483647;
-  for(let i=0;i<26;i++) deco.push({ kind:'grass', x:rnd()*WORLD_W, y:GROUND_TOP+rnd()*(GROUND_BOT-GROUND_TOP), s:.6+rnd()*.8 });
-  for(let i=0;i<8;i++)  deco.push({ kind:'rock',  x:200+rnd()*(WORLD_W-400), y:GROUND_TOP+rnd()*(GROUND_BOT-GROUND_TOP), s:.5+rnd()*.9 });
+  for(let i=0;i<48;i++) deco.push({ kind:'grass', x:rnd()*WORLD_W, y:GROUND_TOP+rnd()*(GROUND_BOT-GROUND_TOP), s:.6+rnd()*.9 });
+  for(let i=0;i<10;i++) deco.push({ kind:'rock',  x:200+rnd()*(WORLD_W-400), y:GROUND_TOP+rnd()*(GROUND_BOT-GROUND_TOP), s:.5+rnd()*.9 });
+  // амьд орчин: мод, бут, цэцэг (тал нутгийг өтгөн, амьд болгоно)
+  for(let i=0;i<7;i++)  deco.push({ kind:'tree',   x:120+rnd()*(WORLD_W-240), y:GROUND_TOP+8+rnd()*90, s:.75+rnd()*.6 });
+  for(let i=0;i<12;i++) deco.push({ kind:'bush',   x:120+rnd()*(WORLD_W-240), y:GROUND_TOP+rnd()*(GROUND_BOT-GROUND_TOP), s:.7+rnd()*.7 });
+  for(let i=0;i<22;i++) deco.push({ kind:'flower', x:rnd()*WORLD_W, y:GROUND_TOP+30+rnd()*(GROUND_BOT-GROUND_TOP-30), s:.7+rnd()*.7 });
   // ── Монгол тал (зүүн, тоглогчийн буурь): гэр, тэрэг, овоо ──
   deco.push({kind:'ger',  x:175, y:GROUND_TOP-38, s:1.2});
   deco.push({kind:'ger',  x:300, y:GROUND_TOP-58, s:0.85});
@@ -2443,6 +2458,7 @@ function setupDeco(theme){
     deco.push({kind:'gerE', x:2650, y:GROUND_TOP-60, s:0.85});
     deco.push({kind:'cart', x:2560, y:GROUND_TOP-28, s:0.95});
   }
+  deco.sort((a,b)=> a.y - b.y);   // гүнээр эрэмбэлж, зөв давхаргаар зурна
 }
 setupDeco('steppe');
 
@@ -2603,6 +2619,9 @@ function render(){
     switch(d.kind){
       case 'grass':   drawGrass(d.x, d.y, d.s); break;
       case 'rock':    drawRock(d.x, d.y, d.s); break;
+      case 'tree':    drawTree(d.x, d.y, d.s); break;
+      case 'bush':    drawBush(d.x, d.y, d.s); break;
+      case 'flower':  drawFlower(d.x, d.y, d.s); break;
       case 'ger':     drawGer(d.x, d.y, d.s, '#b83a2a'); break;
       case 'gerE':    drawGer(d.x, d.y, d.s, '#3a5a8a'); break;
       case 'cart':    drawCart(d.x, d.y, d.s); break;
@@ -2612,6 +2631,19 @@ function render(){
       case 'minaret': drawMinaret(d.x, d.y, d.s); break;
       case 'tent':    drawTent(d.x, d.y, d.s); break;
     }
+  }
+
+  // эрвээхэй — өвсөн дээгүүр нисэн амьд уур амьсгал нэмнэ
+  const bcols = ['#ffd24a','#ff8ab0','#a8d0ff','#f0f0e0'];
+  for(let i=0;i<7;i++){
+    const bx = ((i*421 + gameT*26) % (WORLD_W)) ;
+    if(bx < camX-40 || bx > camX+vw+40) continue;
+    const by = GROUND_TOP + 40 + Math.sin(gameT*1.2+i*2)*30 + (i*140)%(GROUND_BOT-GROUND_TOP-80);
+    const flap = Math.abs(Math.sin(gameT*9 + i))*3.2 + 1;
+    ctx.fillStyle = bcols[i%bcols.length]; ctx.globalAlpha = .85;
+    ctx.beginPath(); ctx.ellipse(bx-2, by, flap, 3.2, -0.5, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(bx+2, by, flap, 3.2, 0.5, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 1;
   }
 
   // zones
@@ -2832,16 +2864,79 @@ function drawRange(par, base, amp){
 }
 
 function drawGrass(x,y,s){
-  ctx.strokeStyle = 'rgba(40,60,20,.5)'; ctx.lineWidth = 2;
-  for(let i=-1;i<=1;i++){
-    ctx.beginPath(); ctx.moveTo(x+i*5, y); ctx.quadraticCurveTo(x+i*5+i*3, y-10*s, x+i*8, y-16*s); ctx.stroke();
+  // салхинд найгах өтгөн өвсний баглаа (гэрэлт үзүүртэй)
+  const sway = Math.sin(gameT*1.6 + x*0.05)*3.4*s;
+  const blades = 5;
+  for(let i=0;i<blades;i++){
+    const off = (i-(blades-1)/2)*4*s;
+    const hgt = (11 + (i%2)*7)*s;
+    const g = ctx.createLinearGradient(x+off, y, x+off, y-hgt);
+    g.addColorStop(0,'rgba(38,58,20,.6)'); g.addColorStop(1,'rgba(126,158,64,.55)');
+    ctx.strokeStyle = g; ctx.lineWidth = 1.9*s; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(x+off, y);
+    ctx.quadraticCurveTo(x+off+sway*0.5, y-hgt*0.6, x+off+sway, y-hgt); ctx.stroke();
   }
+  ctx.lineCap='butt';
 }
 function drawRock(x,y,s){
-  ctx.fillStyle = '#6a6a5a';
+  ctx.fillStyle='rgba(0,0,0,.16)'; ctx.beginPath(); ctx.ellipse(x, y+4*s, 18*s, 5*s, 0,0,TAU); ctx.fill();
+  const g = ctx.createLinearGradient(x, y-10*s, x, y+8*s);
+  g.addColorStop(0,'#7a7a68'); g.addColorStop(1,'#4f4f42');
+  ctx.fillStyle = g;
   ctx.beginPath(); ctx.ellipse(x, y, 16*s, 10*s, 0, 0, TAU); ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,.15)';
-  ctx.beginPath(); ctx.ellipse(x-4*s, y-3*s, 7*s, 4*s, 0, 0, TAU); ctx.fill();
+  // жижиг хамтрагч чулуу
+  ctx.beginPath(); ctx.ellipse(x+14*s, y+3*s, 7*s, 5*s, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = 'rgba(255,248,225,.22)';
+  ctx.beginPath(); ctx.ellipse(x-4*s, y-4*s, 7*s, 4*s, -0.3, 0, TAU); ctx.fill();
+  // хагаралын шугам
+  ctx.strokeStyle='rgba(0,0,0,.22)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(x-6*s,y-2*s); ctx.lineTo(x+2*s,y+3*s); ctx.stroke();
+}
+// Талын мод (улиас/хайлаас) — давхаргатай навч, салхинд найгана
+function drawTree(x,y,s){
+  ctx.fillStyle='rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(x, y+4*s, 28*s, 8*s, 0,0,TAU); ctx.fill();
+  // их бие
+  const tg = ctx.createLinearGradient(x-6*s, y, x+6*s, y);
+  tg.addColorStop(0,'#3f2a16'); tg.addColorStop(.5,'#5f4326'); tg.addColorStop(1,'#3a2614');
+  ctx.fillStyle = tg;
+  ctx.beginPath(); ctx.moveTo(x-5*s,y); ctx.lineTo(x-3*s,y-42*s); ctx.lineTo(x+3*s,y-42*s); ctx.lineTo(x+5*s,y); ctx.closePath(); ctx.fill();
+  // навчны давхаргууд (салхинд найгах)
+  const sway = Math.sin(gameT*1.1 + x*0.03)*3.5*s;
+  const blobs = [[0,-70,27],[-17,-56,19],[17,-56,19],[0,-50,23]];
+  for(const [bx,by,br] of blobs){
+    const cx = x+bx+sway*(by<-58?1:0.5), cy = y+by*s;
+    const g = ctx.createRadialGradient(cx-br*0.3*s, cy-br*0.35*s, 2, cx, cy, br*s);
+    g.addColorStop(0,'#8fb85e'); g.addColorStop(.6,'#5c8a3c'); g.addColorStop(1,'#3f6a2a');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(cx, cy, br*s, 0, TAU); ctx.fill();
+  }
+  // нарны rim
+  ctx.strokeStyle='rgba(220,240,170,.4)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(x+sway, y-70*s, 27*s, -2.2, -0.5); ctx.stroke();
+}
+// Бут сөөг
+function drawBush(x,y,s){
+  ctx.fillStyle='rgba(0,0,0,.16)'; ctx.beginPath(); ctx.ellipse(x, y+3*s, 20*s, 5*s, 0,0,TAU); ctx.fill();
+  const sway = Math.sin(gameT*1.4 + x*0.06)*2*s;
+  for(const [bx,br] of [[-11,12],[11,12],[0,15]]){
+    const cx=x+bx+sway, cy=y-br*0.5*s;
+    const g=ctx.createRadialGradient(cx-br*0.3*s, cy-br*0.3*s, 1, cx, cy, br*s);
+    g.addColorStop(0,'#7baa54'); g.addColorStop(1,'#456a2e');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx, cy, br*s, 0, TAU); ctx.fill();
+  }
+}
+// Талын цэцэг (багц)
+function drawFlower(x,y,s){
+  const cols = ['#e8d24a','#e86a8a','#c48ae8','#ffffff'];
+  for(let i=0;i<3;i++){
+    const fx = x+(i-1)*6*s, fy = y-(4+(i%2)*5)*s;
+    ctx.strokeStyle='rgba(70,100,40,.6)'; ctx.lineWidth=1.4*s;
+    ctx.beginPath(); ctx.moveTo(fx, y); ctx.lineTo(fx, fy); ctx.stroke();
+    const c = cols[(Math.floor(x)+i)%cols.length];
+    ctx.fillStyle=c;
+    for(let p=0;p<5;p++){ const a=p/5*TAU; ctx.beginPath(); ctx.arc(fx+Math.cos(a)*2.4*s, fy+Math.sin(a)*2.4*s, 1.8*s, 0, TAU); ctx.fill(); }
+    ctx.fillStyle='#e8a83a'; ctx.beginPath(); ctx.arc(fx, fy, 1.5*s, 0, TAU); ctx.fill();
+  }
 }
 // Монгол гэр (тооно, ханын хээтэй) — banner нь тугны өнгө
 function drawGer(x,y,s,banner){
@@ -2854,10 +2949,16 @@ function drawGer(x,y,s,banner){
   ctx.fillRect(x-w, y, w*2, 18*s);
   // бөмбөгөр дээвэр
   ctx.beginPath(); ctx.moveTo(x-w-2, y+2); ctx.quadraticCurveTo(x, y-30*s, x+w+2, y+2); ctx.closePath(); ctx.fill();
+  // дээврийн хавирга (униа) — тооноос ханын зах руу
+  ctx.strokeStyle = 'rgba(150,128,92,.5)'; ctx.lineWidth = 1;
+  for(let i=-3;i<=3;i++){ ctx.beginPath(); ctx.moveTo(x, y-26*s); ctx.lineTo(x+i*(w*0.32), y+2*s); ctx.stroke(); }
   // тооно (орой)
   ctx.strokeStyle = '#8a7a5a'; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.ellipse(x, y-26*s, 9*s, 4*s, 0, 0, TAU); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(x-9*s, y-26*s); ctx.lineTo(x, y-30*s); ctx.lineTo(x+9*s, y-26*s); ctx.stroke();
+  // яндангийн утаа (аажим дээшилнэ)
+  ctx.fillStyle = 'rgba(220,215,205,.16)';
+  for(let i=0;i<3;i++){ const t=(gameT*0.5+i*0.6)%1.6; ctx.beginPath(); ctx.arc(x+Math.sin(gameT+i)*4*s, y-30*s-t*22*s, (2+t*3)*s, 0, TAU); ctx.fill(); }
   // хаалга (өнгөт)
   ctx.fillStyle = banner || '#b8452a';
   ctx.fillRect(x-9*s, y+1*s, 18*s, 17*s);
@@ -2916,37 +3017,70 @@ function drawHorse(x,y,s){
 }
 // Хорезмын бөмбөгөр сүм (цэнхэр вааран бөмбөгөр)
 function drawMosque(x,y,s){
-  ctx.fillStyle='rgba(0,0,0,.2)';
-  ctx.beginPath(); ctx.ellipse(x, y+18*s, 46*s, 9*s, 0,0,TAU); ctx.fill();
-  // үндсэн барилга (шавар)
-  ctx.fillStyle='#c9a878'; ctx.fillRect(x-40*s, y-14*s, 80*s, 32*s);
-  ctx.strokeStyle='#a88858'; ctx.lineWidth=1.5; ctx.strokeRect(x-40*s, y-14*s, 80*s, 32*s);
-  // нуман хаалга
-  ctx.fillStyle='#4a3828';
+  ctx.fillStyle='rgba(0,0,0,.22)';
+  ctx.beginPath(); ctx.ellipse(x, y+18*s, 50*s, 10*s, 0,0,TAU); ctx.fill();
+  // үндсэн барилга (шавар, гэрэл-сүүдэртэй)
+  const wg = ctx.createLinearGradient(x-40*s, 0, x+40*s, 0);
+  wg.addColorStop(0,'#b89868'); wg.addColorStop(.5,'#cfae7e'); wg.addColorStop(1,'#a88052');
+  ctx.fillStyle=wg; ctx.fillRect(x-40*s, y-14*s, 80*s, 32*s);
+  ctx.strokeStyle='#8a6a42'; ctx.lineWidth=1.5; ctx.strokeRect(x-40*s, y-14*s, 80*s, 32*s);
+  // хажуугийн жижиг бөмбөгөрүүд
+  for(const sgn of [-1,1]){
+    const sx = x+sgn*30*s;
+    const sg = ctx.createLinearGradient(sx, y-30*s, sx, y-14*s);
+    sg.addColorStop(0,'#4aa0c8'); sg.addColorStop(1,'#256088');
+    ctx.fillStyle=sg;
+    ctx.beginPath(); ctx.moveTo(sx-11*s, y-14*s); ctx.bezierCurveTo(sx-11*s, y-30*s, sx+11*s, y-30*s, sx+11*s, y-14*s); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#e8c84a'; ctx.fillRect(sx-1*s, y-36*s, 2*s, 8*s);
+  }
+  // хээт хавтгаан хаяавч (тайл)
+  ctx.fillStyle='#3a90b8'; ctx.fillRect(x-40*s, y-14*s, 80*s, 4*s);
+  ctx.fillStyle='#e8c84a';
+  for(let i=-4;i<=4;i++){ ctx.beginPath(); ctx.arc(x+i*9*s, y-12*s, 1.4*s, 0, TAU); ctx.fill(); }
+  // нуман цонхнууд
+  ctx.fillStyle='#2a5878';
+  for(const wx2 of [-24,24]){
+    ctx.beginPath(); ctx.moveTo(x+wx2*s-4*s,y+8*s); ctx.lineTo(x+wx2*s-4*s,y-2*s); ctx.arc(x+wx2*s,y-2*s,4*s,Math.PI,0); ctx.lineTo(x+wx2*s+4*s,y+8*s); ctx.closePath(); ctx.fill();
+  }
+  // нуман хаалга (дулаан гэрэлтэй)
+  ctx.fillStyle='#3a2818';
   ctx.beginPath(); ctx.moveTo(x-9*s,y+18*s); ctx.lineTo(x-9*s,y-2*s); ctx.arc(x,y-2*s,9*s,Math.PI,0); ctx.lineTo(x+9*s,y+18*s); ctx.closePath(); ctx.fill();
-  // цэнхэр бөмбөгөр (сонгодог)
+  ctx.fillStyle='rgba(255,190,90,.5)';
+  ctx.beginPath(); ctx.moveTo(x-5*s,y+18*s); ctx.lineTo(x-5*s,y+2*s); ctx.arc(x,y+2*s,5*s,Math.PI,0); ctx.lineTo(x+5*s,y+18*s); ctx.closePath(); ctx.fill();
+  // цэнхэр гол бөмбөгөр (тайлтай)
   const g = ctx.createLinearGradient(x, y-58*s, x, y-14*s);
-  g.addColorStop(0,'#5ab0d8'); g.addColorStop(1,'#2a7098');
+  g.addColorStop(0,'#6ec0e4'); g.addColorStop(.5,'#3a90b8'); g.addColorStop(1,'#256088');
   ctx.fillStyle=g;
   ctx.beginPath(); ctx.moveTo(x-30*s, y-14*s);
   ctx.bezierCurveTo(x-30*s, y-52*s, x+30*s, y-52*s, x+30*s, y-14*s); ctx.closePath(); ctx.fill();
-  ctx.strokeStyle='#1a5070'; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(x, y-14*s); ctx.lineTo(x, y-50*s); ctx.stroke();
+  // бөмбөгөрийн ирмэгийн шугам (хавирга)
+  ctx.strokeStyle='rgba(255,255,255,.25)'; ctx.lineWidth=1;
+  for(const a of [-0.5,0,0.5]){ ctx.beginPath(); ctx.moveTo(x, y-14*s); ctx.quadraticCurveTo(x+a*30*s, y-46*s, x+a*10*s, y-50*s); ctx.stroke(); }
+  ctx.strokeStyle='rgba(255,248,220,.5)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(x, y-30*s, 26*s, -2.3, -1.2); ctx.stroke();   // rim
   // орой + сар
-  ctx.strokeStyle='#e8c84a'; ctx.lineWidth=2;
-  ctx.beginPath(); ctx.moveTo(x, y-50*s); ctx.lineTo(x, y-62*s); ctx.stroke();
-  ctx.fillStyle='#e8c84a';
-  ctx.beginPath(); ctx.arc(x, y-66*s, 4*s, 0.4, Math.PI*1.6); ctx.fill();
+  ctx.strokeStyle='#e8c84a'; ctx.lineWidth=2.5;
+  ctx.beginPath(); ctx.moveTo(x, y-50*s); ctx.lineTo(x, y-64*s); ctx.stroke();
+  ctx.fillStyle='#f2d45a';
+  ctx.beginPath(); ctx.arc(x, y-68*s, 4.5*s, 0.4, Math.PI*1.6); ctx.fill();
 }
 // Минарет (өндөр цамхаг)
 function drawMinaret(x,y,s){
   ctx.fillStyle='rgba(0,0,0,.2)';
   ctx.beginPath(); ctx.ellipse(x, y+14*s, 12*s, 4*s, 0,0,TAU); ctx.fill();
-  ctx.fillStyle='#d8b888'; ctx.fillRect(x-7*s, y-60*s, 14*s, 74*s);
-  ctx.strokeStyle='#a88858'; ctx.lineWidth=1;
-  for(let i=1;i<5;i++){ ctx.beginPath(); ctx.moveTo(x-7*s, y-60*s+i*15*s); ctx.lineTo(x+7*s, y-60*s+i*15*s); ctx.stroke(); }
+  const mg = ctx.createLinearGradient(x-7*s,0,x+7*s,0);
+  mg.addColorStop(0,'#c9a878'); mg.addColorStop(.5,'#e0c090'); mg.addColorStop(1,'#b08858');
+  ctx.fillStyle=mg; ctx.fillRect(x-7*s, y-60*s, 14*s, 74*s);
+  // цэнхэр хээт бүслүүр
+  ctx.fillStyle='#3a90b8';
+  for(let i=1;i<5;i++){ ctx.fillRect(x-7*s, y-60*s+i*15*s-1*s, 14*s, 2*s); }
+  // нуман цонх
+  ctx.fillStyle='#2a5878';
+  ctx.beginPath(); ctx.moveTo(x-3*s,y-16*s); ctx.lineTo(x-3*s,y-24*s); ctx.arc(x,y-24*s,3*s,Math.PI,0); ctx.lineTo(x+3*s,y-16*s); ctx.closePath(); ctx.fill();
   // тагт
   ctx.fillStyle='#b89868'; ctx.fillRect(x-10*s, y-46*s, 20*s, 4*s);
+  ctx.strokeStyle='#8a6a42'; ctx.lineWidth=1;
+  for(let i=-4;i<=4;i++){ ctx.beginPath(); ctx.moveTo(x+i*2.3*s, y-46*s); ctx.lineTo(x+i*2.3*s, y-42*s); ctx.stroke(); }
   // цэнхэр бөмбөгөр орой
   ctx.fillStyle='#3a90b8';
   ctx.beginPath(); ctx.moveTo(x-8*s, y-60*s); ctx.quadraticCurveTo(x, y-78*s, x+8*s, y-60*s); ctx.closePath(); ctx.fill();
@@ -3014,6 +3148,34 @@ function drawUnit(u){
 
   ctx.save();
   ctx.translate(lunge, -bob);
+
+  // ── нөмрөг (баатрын ард намирна) — signature ──
+  const HS = (isHero && u.hero) ? HERO_STYLE[u.hero.id] : null;
+  if(HS && HS.cape){
+    const sway = Math.sin(gameT*3 + u.x*0.03)*R*0.14 + (u.moving? wob*R*0.2:0);
+    ctx.save();
+    const cg = ctx.createLinearGradient(u.x, u.y-R*1.0, u.x, u.y+R*0.9);
+    cg.addColorStop(0, HS.cape); cg.addColorStop(1, 'rgba(0,0,0,.4)');
+    ctx.fillStyle = cg;
+    ctx.beginPath();
+    ctx.moveTo(u.x - R*0.55, u.y-R*0.95);
+    ctx.quadraticCurveTo(u.x - R*0.9 - sway, u.y-R*0.1, u.x - R*0.72 - sway, u.y+R*0.85);
+    ctx.lineTo(u.x + R*0.72 + sway*0.5, u.y+R*0.85);
+    ctx.quadraticCurveTo(u.x + R*0.9 + sway*0.5, u.y-R*0.1, u.x + R*0.55, u.y-R*0.95);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,240,205,.28)'; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(u.x - R*0.55, u.y-R*0.95); ctx.quadraticCurveTo(u.x - R*0.9 - sway, u.y-R*0.1, u.x - R*0.72 - sway, u.y+R*0.85); ctx.stroke();
+    ctx.restore();
+  }
+  // ── нум сумны хөр (харваачид, нурууны цаана) — signature ──
+  if(HS && HS.quiver){
+    ctx.save(); ctx.translate(u.x - u.face*R*0.5, u.y-R*0.55); ctx.rotate(u.face*0.5);
+    ctx.fillStyle = '#6a4a28'; ctx.fillRect(-R*0.14, -R*0.1, R*0.28, R*0.9);
+    ctx.strokeStyle = HS.crestCol; ctx.lineWidth = 1.6;
+    for(let q=-1;q<=1;q++){ ctx.beginPath(); ctx.moveTo(q*R*0.1, -R*0.1); ctx.lineTo(q*R*0.1, -R*0.4); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(q*R*0.1-2, -R*0.34); ctx.lineTo(q*R*0.1, -R*0.42); ctx.lineTo(q*R*0.1+2, -R*0.34); ctx.stroke(); }
+    ctx.restore();
+  }
 
   // ── хөл (алхалтын алхаа) ──
   const legCol = u.team? '#3a2418' : '#402a18';
@@ -3094,6 +3256,69 @@ function drawUnit(u){
   // дуулганы металл гялбаа (specular) — эзэлхүүн, гэрлийн тусгал
   ctx.fillStyle = 'rgba(255,252,240,.6)';
   ctx.beginPath(); ctx.ellipse(u.x + R*0.16, u.y-R*1.42, R*0.12, R*0.2, -0.5, 0, TAU); ctx.fill();
+
+  // ── баатрын өвөрмөц залаа / мөрөвч / ороолт (signature) ──
+  if(HS){
+    const topY = u.y - R*2.05;   // дуулганы орой орчим
+    if(HS.crest==='plume'){
+      // өндөр өдөн залаа (намирна)
+      const sw2 = Math.sin(gameT*4 + u.x*0.05)*R*0.3;
+      ctx.strokeStyle = HS.crestCol; ctx.lineWidth = R*0.16; ctx.lineCap='round';
+      for(let f=-1;f<=1;f++){
+        ctx.beginPath(); ctx.moveTo(u.x+f*R*0.08, u.y-R*1.75);
+        ctx.quadraticCurveTo(u.x+f*R*0.1+sw2*0.5, topY-R*0.2, u.x+f*R*0.14+sw2, topY-R*0.6); ctx.stroke();
+      }
+      ctx.lineCap='butt';
+      ctx.fillStyle='#8a6a2a'; ctx.beginPath(); ctx.arc(u.x, u.y-R*1.75, R*0.13, 0, TAU); ctx.fill();
+    } else if(HS.crest==='feather'){
+      // ганц бүргэдийн өд, налуу
+      const sw2 = Math.sin(gameT*3 + u.x*0.04)*R*0.15;
+      ctx.save(); ctx.translate(u.x+R*0.1, u.y-R*1.75); ctx.rotate(0.5+sw2*0.02);
+      ctx.fillStyle = HS.crestCol;
+      ctx.beginPath(); ctx.ellipse(0,-R*0.5, R*0.1, R*0.55, 0, 0, TAU); ctx.fill();
+      ctx.strokeStyle='rgba(0,0,0,.3)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(0,-R*0.05); ctx.lineTo(0,-R*1.0); ctx.stroke();
+      ctx.restore();
+    } else if(HS.crest==='tail'){
+      // морь/чонын сүүл — дуулганы оройноос унжина
+      const sw2 = Math.sin(gameT*5 + u.x*0.06)*R*0.12;
+      ctx.strokeStyle = HS.crestCol; ctx.lineWidth = R*0.2; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(u.x, u.y-R*1.78);
+      ctx.quadraticCurveTo(u.x-R*0.3+sw2, u.y-R*1.5, u.x-R*0.2+sw2, u.y-R*1.05); ctx.stroke();
+      ctx.lineCap='butt';
+    } else if(HS.crest==='crown'){
+      // хааны алтан титэм + өндөр залаа + гэрэлт
+      ctx.fillStyle = HS.crestCol;
+      ctx.beginPath(); ctx.moveTo(u.x-R*0.5, u.y-R*1.5); ctx.lineTo(u.x-R*0.5, u.y-R*1.78);
+      for(let c=-2;c<=2;c++){ ctx.lineTo(u.x+c*R*0.24, u.y-R*(2.0+ (c%2?0:0.18))); ctx.lineTo(u.x+(c+0.5)*R*0.24, u.y-R*1.78); }
+      ctx.lineTo(u.x+R*0.5, u.y-R*1.5); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle='#fff4d0'; ctx.lineWidth=1.4; ctx.stroke();
+      // титмийн улаан чулуу
+      ctx.fillStyle='#c0392b'; ctx.beginPath(); ctx.arc(u.x, u.y-R*1.68, R*0.1, 0, TAU); ctx.fill();
+      // тэнгэрийн гэрэл
+      const gg = ctx.createRadialGradient(u.x, u.y-R*1.9, 1, u.x, u.y-R*1.9, R*1.2);
+      gg.addColorStop(0,'rgba(255,220,130,.35)'); gg.addColorStop(1,'rgba(255,220,130,0)');
+      ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(u.x, u.y-R*1.9, R*1.2, 0, TAU); ctx.fill();
+    }
+    // хүзүүний ороолт (scarf)
+    if(HS.scarf){
+      ctx.fillStyle = HS.scarf;
+      ctx.beginPath(); ctx.ellipse(u.x, u.y-R*0.78, R*0.44, R*0.16, 0, 0, TAU); ctx.fill();
+      const fsw = Math.sin(gameT*4+u.x*0.05)*R*0.12;
+      ctx.beginPath(); ctx.moveTo(u.x-u.face*R*0.2, u.y-R*0.78);
+      ctx.quadraticCurveTo(u.x-u.face*R*0.4+fsw, u.y-R*0.4, u.x-u.face*R*0.3+fsw, u.y-R*0.05);
+      ctx.lineTo(u.x-u.face*R*0.12+fsw, u.y-R*0.1); ctx.quadraticCurveTo(u.x-u.face*R*0.2, u.y-R*0.5, u.x-u.face*R*0.05, u.y-R*0.76); ctx.closePath(); ctx.fill();
+    }
+    // металл мөрөвч (pauldron)
+    if(HS.shoulder){
+      for(const sgn of [-1,1]){
+        const pg = ctx.createRadialGradient(u.x+sgn*R*0.6-R*0.1, u.y-R*0.92, 1, u.x+sgn*R*0.6, u.y-R*0.9, R*0.42);
+        pg.addColorStop(0,'#e8dcc0'); pg.addColorStop(1, HS.crestCol);
+        ctx.fillStyle = pg;
+        ctx.beginPath(); ctx.ellipse(u.x+sgn*R*0.58, u.y-R*0.9, R*0.3, R*0.22, sgn*0.3, 0, TAU); ctx.fill();
+        ctx.strokeStyle='rgba(0,0,0,.3)'; ctx.lineWidth=1; ctx.stroke();
+      }
+    }
+  }
 
   // Хорезмын явган цэрэг — дугуй бамбай (нурууны цаана)
   if(u.team===1 && matchTheme==='khwarezm' && !u.archer && !isHero){
